@@ -1,0 +1,15 @@
+{
+  "descripcion": "Cuentas de origen para localizar recetas. El campo 'usuario' se referencia en fuente.cuenta de cada receta.",
+  "cuentas": [
+    { "usuario": "chefbosquet", "plataforma": "instagram", "notas": "" },
+    { "usuario": "ugar90", "plataforma": "instagram", "notas": "" },
+    { "usuario": "dondaviking", "plataforma": "instagram", "notas": "" },
+    { "usuario": "essen.noezaffrani", "plataforma": "instagram", "notas": "" },
+    { "usuario": "jonenutricion", "plataforma": "instagram", "notas": "Enfoque nutricional." },
+    { "usuario": "patrimediolimon", "plataforma": "instagram", "notas": "" },
+    { "usuario": "nuclimed", "plataforma": "instagram", "notas": "OJO: mezcla recetas reales con recetas paródicas/humorísticas. Descartar las parodias al validar." },
+    { "usuario": "rvbengarcia", "plataforma": "instagram", "notas": "" },
+    { "usuario": "yoelvegan", "plataforma": "instagram", "notas": "Recetas veganas." },
+    { "usuario": "gloriacarrion_", "plataforma": "instagram", "notas": "" }
+  ]
+}
