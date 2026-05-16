@@ -1,0 +1,40 @@
+{
+  "slug": "tortilla-de-patatas",
+  "titulo": "Tortilla de patatas",
+  "estado": "aprobada",
+  "descripcion": "La tortilla de patatas de toda la vida, jugosa por dentro y cuajada al gusto. Un clásico que sale bien con pocos ingredientes.",
+  "imagen": "/images/tortilla-de-patatas.svg",
+  "fuente": {
+    "tipo": "manual",
+    "referencia": "Receta de ejemplo",
+    "cuenta": null
+  },
+  "tiempoPreparacionMin": 15,
+  "tiempoCoccionMin": 30,
+  "raciones": 4,
+  "dificultad": "Fácil",
+  "categorias": ["Plato principal", "Vegetariano"],
+  "etiquetas": ["clásico", "español", "económico"],
+  "ingredientes": [
+    { "cantidad": "5", "unidad": "ud", "nombre": "patatas medianas" },
+    { "cantidad": "6", "unidad": "ud", "nombre": "huevos" },
+    { "cantidad": "1", "unidad": "ud", "nombre": "cebolla (opcional)" },
+    { "cantidad": "", "unidad": "", "nombre": "Aceite de oliva virgen extra" },
+    { "cantidad": "", "unidad": "", "nombre": "Sal" }
+  ],
+  "pasos": [
+    "Pela y corta las patatas en láminas finas. Si usas cebolla, córtala en juliana.",
+    "Fríe las patatas (y la cebolla) a fuego medio en abundante aceite hasta que estén tiernas, sin que lleguen a dorarse. Escurre bien.",
+    "Bate los huevos en un bol grande, sala al gusto y añade las patatas escurridas. Mezcla y deja reposar 5 minutos.",
+    "Calienta una sartén con un poco de aceite y vierte la mezcla. Cuaja a fuego medio-bajo 3-4 minutos.",
+    "Da la vuelta con ayuda de un plato y cuaja el otro lado otros 2-3 minutos, al punto que más te guste."
+  ],
+  "nutricion": {
+    "caloriasPorRacion": 320,
+    "proteinasG": 14,
+    "carbohidratosG": 28,
+    "grasasG": 17
+  },
+  "notas": "Para una versión más ligera, cuece las patatas al vapor en lugar de freírlas.",
+  "fechaAnadida": "2026-05-16"
+}

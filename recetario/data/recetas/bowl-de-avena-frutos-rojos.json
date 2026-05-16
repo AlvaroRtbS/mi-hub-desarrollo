@@ -1,0 +1,66 @@
+{
+  "slug": "bowl-de-avena-frutos-rojos",
+  "titulo": "Bowl de avena con frutos rojos",
+  "estado": "candidata",
+  "descripcion": "Desayuno rápido, saciante y rico en fibra. Ideal para empezar el día con energía.",
+  "imagen": "/images/bowl-de-avena-frutos-rojos.svg",
+  "fuente": {
+    "tipo": "scraping",
+    "referencia": "Ejemplo de receta localizada por scraping",
+    "cuenta": "@cuenta_de_ejemplo"
+  },
+  "tiempoPreparacionMin": 5,
+  "tiempoCoccionMin": 5,
+  "raciones": 1,
+  "dificultad": "Fácil",
+  "categorias": [
+    "Desayuno",
+    "Saludable"
+  ],
+  "etiquetas": [
+    "rápido",
+    "fibra",
+    "sin gluten"
+  ],
+  "ingredientes": [
+    {
+      "cantidad": "50",
+      "unidad": "g",
+      "nombre": "copos de avena"
+    },
+    {
+      "cantidad": "200",
+      "unidad": "ml",
+      "nombre": "leche o bebida vegetal"
+    },
+    {
+      "cantidad": "80",
+      "unidad": "g",
+      "nombre": "frutos rojos"
+    },
+    {
+      "cantidad": "1",
+      "unidad": "cda",
+      "nombre": "semillas de chía"
+    },
+    {
+      "cantidad": "1",
+      "unidad": "cdta",
+      "nombre": "miel o sirope (opcional)"
+    }
+  ],
+  "pasos": [
+    "Calienta la avena con la leche en un cazo a fuego medio 4-5 minutos, removiendo, hasta que espese.",
+    "Vierte en un bol y deja templar un par de minutos.",
+    "Añade por encima los frutos rojos y las semillas de chía.",
+    "Endulza con un poco de miel o sirope si lo deseas y sirve."
+  ],
+  "nutricion": {
+    "caloriasPorRacion": 290,
+    "proteinasG": 11,
+    "carbohidratosG": 42,
+    "grasasG": 8
+  },
+  "notas": "Receta de ejemplo en estado 'candidata'. Revísala en la página Validar y apruébala para que aparezca en el índice.",
+  "fechaAnadida": "2026-05-16"
+}
