@@ -1,22 +1,38 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { Boton } from "@/components/ui/boton";
+import { EtiquetaEstado } from "@/components/ui/etiqueta-estado";
+import { formatearFecha, inicialesNombre } from "@/lib/utilidades";
+import type { Clienta, EstadoClienta } from "@/lib/supabase/tipos";
 
-type Clienta = {
-  id: string;
-  nombre: string;
-  apellidos: string | null;
-  email: string;
-  estado: "invitada" | "activa" | "archivada";
-  foto_url: string | null;
-  creada_en: string;
-};
+const FILTROS: Array<{ valor: EstadoClienta | "todas"; label: string }> = [
+  { valor: "activa", label: "Activas" },
+  { valor: "invitada", label: "Invitadas" },
+  { valor: "archivada", label: "Archivadas" },
+  { valor: "todas", label: "Todas" },
+];
 
-export default async function ClientasPage() {
+export default async function ClientasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ estado?: string; q?: string }>;
+}) {
+  const params = await searchParams;
+  const filtro = (FILTROS.find((f) => f.valor === params.estado)?.valor ?? "activa") as
+    | EstadoClienta
+    | "todas";
+  const q = (params.q ?? "").trim();
+
   const supabase = await createSupabaseServerClient();
-  const { data: clientas, error } = await supabase
+  let query = supabase
     .from("clientas")
     .select("id, nombre, apellidos, email, estado, foto_url, creada_en")
     .order("nombre");
+
+  if (filtro !== "todas") query = query.eq("estado", filtro);
+  if (q) query = query.or(`nombre.ilike.%${q}%,apellidos.ilike.%${q}%,email.ilike.%${q}%`);
+
+  const { data: clientas, error } = await query;
 
   return (
     <div className="p-8 max-w-6xl">
@@ -27,12 +43,44 @@ export default async function ClientasPage() {
             Gestiona tu lista de clientas, ve su estado y accede a sus perfiles.
           </p>
         </div>
-        <Link
-          href="/clientas/nueva"
-          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg"
-        >
-          + Añadir clienta
-        </Link>
+        <Boton href="/clientas/nueva">+ Añadir clienta</Boton>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="flex gap-1">
+          {FILTROS.map((f) => {
+            const activo = f.valor === filtro;
+            const params = new URLSearchParams();
+            if (f.valor !== "activa") params.set("estado", f.valor);
+            if (q) params.set("q", q);
+            const href = "/clientas" + (params.toString() ? `?${params}` : "");
+            return (
+              <Link
+                key={f.valor}
+                href={href}
+                className={
+                  "text-sm px-3 py-1.5 rounded-lg border " +
+                  (activo
+                    ? "bg-neutral-800 border-neutral-700 text-white"
+                    : "border-transparent text-neutral-400 hover:text-white hover:bg-neutral-900")
+                }
+              >
+                {f.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        <form className="w-full max-w-xs">
+          {filtro !== "activa" && <input type="hidden" name="estado" value={filtro} />}
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Buscar..."
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand-500"
+          />
+        </form>
       </div>
 
       {error && (
@@ -43,10 +91,14 @@ export default async function ClientasPage() {
 
       {!clientas || clientas.length === 0 ? (
         <div className="border border-dashed border-neutral-800 rounded-2xl p-12 text-center">
-          <div className="text-neutral-400">Aún no tienes clientas.</div>
-          <div className="text-sm text-neutral-500 mt-2">
-            Cuando migremos desde TrainerStudio o añadas la primera, aparecerá aquí.
+          <div className="text-neutral-400">
+            {q ? "Ninguna clienta coincide con la búsqueda." : "Aún no tienes clientas con este estado."}
           </div>
+          {!q && (
+            <div className="text-sm text-neutral-500 mt-2">
+              Cuando migremos desde TrainerStudio o añadas la primera, aparecerá aquí.
+            </div>
+          )}
         </div>
       ) : (
         <div className="border border-neutral-800 rounded-2xl overflow-hidden">
@@ -61,29 +113,29 @@ export default async function ClientasPage() {
             </thead>
             <tbody>
               {(clientas as Clienta[]).map((c) => (
-                <tr key={c.id} className="border-t border-neutral-800 hover:bg-neutral-900/50">
+                <tr
+                  key={c.id}
+                  className="border-t border-neutral-800 hover:bg-neutral-900/50"
+                >
                   <td className="px-4 py-3">
-                    <Link href={`/clientas/${c.id}`} className="hover:text-brand-500">
-                      {c.nombre} {c.apellidos ?? ""}
+                    <Link
+                      href={`/clientas/${c.id}`}
+                      className="flex items-center gap-3 hover:text-brand-500"
+                    >
+                      <span className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-medium text-neutral-300">
+                        {inicialesNombre(c.nombre, c.apellidos)}
+                      </span>
+                      <span>
+                        {c.nombre} {c.apellidos ?? ""}
+                      </span>
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-neutral-400">{c.email}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={
-                        "inline-block text-xs px-2 py-0.5 rounded-full " +
-                        (c.estado === "activa"
-                          ? "bg-green-950/50 text-green-400 border border-green-900/50"
-                          : c.estado === "invitada"
-                          ? "bg-amber-950/50 text-amber-400 border border-amber-900/50"
-                          : "bg-neutral-900 text-neutral-500 border border-neutral-800")
-                      }
-                    >
-                      {c.estado}
-                    </span>
+                    <EtiquetaEstado estado={c.estado} />
                   </td>
                   <td className="px-4 py-3 text-neutral-400">
-                    {new Date(c.creada_en).toLocaleDateString("es-ES")}
+                    {formatearFecha(c.creada_en)}
                   </td>
                 </tr>
               ))}
