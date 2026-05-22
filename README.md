@@ -38,10 +38,14 @@ npm install
 ```
 
 ### 2. Configurar Supabase
-1. Crear cuenta gratis en https://supabase.com y un proyecto nuevo.
+1. Crear cuenta gratis en https://supabase.com y un proyecto nuevo (región Frankfurt va bien para Europa).
 2. En **Settings → API** copiar `URL` y `anon key`.
 3. Copiar `.env.example` a `web/.env.local` y pegar los valores.
-4. En el **SQL Editor** de Supabase, ejecutar el contenido de `supabase/migrations/20260522000000_initial_schema.sql`.
+4. En el **SQL Editor** de Supabase, ejecutar **en este orden**:
+   - `supabase/migrations/20260522000000_initial_schema.sql` (tablas + RLS)
+   - `supabase/migrations/20260522000001_storage_buckets.sql` (buckets para vídeos, imágenes, PDFs)
+
+   Cada migración tiene que terminar con "Success. No rows returned".
 
 ### 3. Arrancar la web
 ```bash
