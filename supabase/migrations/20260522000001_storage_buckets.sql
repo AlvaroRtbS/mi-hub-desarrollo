@@ -32,6 +32,12 @@ declare
   bucket_ids text[] := array['ejercicios-videos','ejercicios-imagenes','fotos-progreso','nutricion-pdfs'];
 begin
   foreach b in array bucket_ids loop
+    -- Borrar políticas antiguas si existen (idempotente)
+    execute format('drop policy if exists %I on storage.objects', b || '_select');
+    execute format('drop policy if exists %I on storage.objects', b || '_insert');
+    execute format('drop policy if exists %I on storage.objects', b || '_update');
+    execute format('drop policy if exists %I on storage.objects', b || '_delete');
+
     -- SELECT
     execute format(
       'create policy %I on storage.objects for select using (bucket_id = %L and public.storage_path_coach_id(name) = public.current_coach_id())',
@@ -56,6 +62,11 @@ begin
 end $$;
 
 -- Avatares de coaches son públicos (cualquiera puede ver), pero solo el dueño puede subir/editar
+drop policy if exists coach_avatares_public_read on storage.objects;
+drop policy if exists coach_avatares_owner_insert on storage.objects;
+drop policy if exists coach_avatares_owner_update on storage.objects;
+drop policy if exists coach_avatares_owner_delete on storage.objects;
+
 create policy coach_avatares_public_read on storage.objects for select using (bucket_id = 'coach-avatares');
 create policy coach_avatares_owner_insert on storage.objects for insert with check (bucket_id = 'coach-avatares' and public.storage_path_coach_id(name) = public.current_coach_id());
 create policy coach_avatares_owner_update on storage.objects for update using (bucket_id = 'coach-avatares' and public.storage_path_coach_id(name) = public.current_coach_id());
