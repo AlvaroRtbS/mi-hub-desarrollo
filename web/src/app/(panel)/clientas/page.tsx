@@ -26,13 +26,20 @@ export default async function ClientasPage({
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("clientas")
-    .select("id, nombre, apellidos, email, estado, foto_url, creada_en")
+    .select(
+      "id, nombre, apellidos, email, estado, foto_url, creada_en, asignaciones(programas(nombre), activa)"
+    )
     .order("nombre");
 
   if (filtro !== "todas") query = query.eq("estado", filtro);
   if (q) query = query.or(`nombre.ilike.%${q}%,apellidos.ilike.%${q}%,email.ilike.%${q}%`);
 
-  const { data: clientas, error } = await query;
+  const { data: clientasData, error } = await query;
+  const clientas = (clientasData ?? []) as unknown as Array<
+    Clienta & {
+      asignaciones: Array<{ activa: boolean; programas: { nombre: string } | null }>;
+    }
+  >;
 
   return (
     <div className="p-8 max-w-6xl">
@@ -89,7 +96,7 @@ export default async function ClientasPage({
         </div>
       )}
 
-      {!clientas || clientas.length === 0 ? (
+      {clientas.length === 0 ? (
         <div className="border border-dashed border-neutral-800 rounded-2xl p-12 text-center">
           <div className="text-neutral-400">
             {q ? "Ninguna clienta coincide con la búsqueda." : "Aún no tienes clientas con este estado."}
@@ -106,39 +113,51 @@ export default async function ClientasPage({
             <thead className="bg-neutral-900 text-neutral-400">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium">Email</th>
+                <th className="text-left px-4 py-3 font-medium">Programa activo</th>
                 <th className="text-left px-4 py-3 font-medium">Estado</th>
                 <th className="text-left px-4 py-3 font-medium">Alta</th>
               </tr>
             </thead>
             <tbody>
-              {(clientas as Clienta[]).map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-t border-neutral-800 hover:bg-neutral-900/50"
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/clientas/${c.id}`}
-                      className="flex items-center gap-3 hover:text-brand-500"
-                    >
-                      <span className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-medium text-neutral-300">
-                        {inicialesNombre(c.nombre, c.apellidos)}
-                      </span>
-                      <span>
-                        {c.nombre} {c.apellidos ?? ""}
-                      </span>
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-400">{c.email}</td>
-                  <td className="px-4 py-3">
-                    <EtiquetaEstado estado={c.estado} />
-                  </td>
-                  <td className="px-4 py-3 text-neutral-400">
-                    {formatearFecha(c.creada_en)}
-                  </td>
-                </tr>
-              ))}
+              {clientas.map((c) => {
+                const activo = c.asignaciones?.find((a) => a.activa);
+                return (
+                  <tr
+                    key={c.id}
+                    className="border-t border-neutral-800 hover:bg-neutral-900/50"
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/clientas/${c.id}`}
+                        className="flex items-center gap-3 hover:text-brand-500"
+                      >
+                        <span className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-medium text-neutral-300">
+                          {inicialesNombre(c.nombre, c.apellidos)}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate">
+                            {c.nombre} {c.apellidos ?? ""}
+                          </span>
+                          <span className="block text-xs text-neutral-500 truncate">
+                            {c.email}
+                          </span>
+                        </span>
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-neutral-400">
+                      {activo?.programas?.nombre ?? (
+                        <span className="text-neutral-600">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <EtiquetaEstado estado={c.estado} />
+                    </td>
+                    <td className="px-4 py-3 text-neutral-400">
+                      {formatearFecha(c.creada_en)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

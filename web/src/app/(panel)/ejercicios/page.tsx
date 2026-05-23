@@ -7,10 +7,11 @@ import type { Ejercicio } from "@/lib/supabase/tipos";
 export default async function EjerciciosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; grupo?: string }>;
 }) {
   const params = await searchParams;
   const q = (params.q ?? "").trim();
+  const grupo = (params.grupo ?? "").trim();
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -19,8 +20,20 @@ export default async function EjerciciosPage({
     .order("nombre");
 
   if (q) query = query.ilike("nombre", `%${q}%`);
+  if (grupo) query = query.contains("grupos_musculares", [grupo]);
 
   const { data: ejercicios, error } = await query;
+
+  const { data: todosParaGrupos } = await supabase
+    .from("ejercicios")
+    .select("grupos_musculares");
+  const gruposDisponibles = Array.from(
+    new Set(
+      (todosParaGrupos ?? [])
+        .flatMap((r) => (r.grupos_musculares as string[] | null) ?? [])
+        .filter(Boolean)
+    )
+  ).sort();
 
   const imagenes = await obtenerUrlsFirmadas(
     "ejercicios-imagenes",
@@ -40,7 +53,8 @@ export default async function EjerciciosPage({
         <Boton href="/ejercicios/nuevo">+ Crear</Boton>
       </div>
 
-      <form className="mb-4 max-w-sm">
+      <form className="mb-3 max-w-sm">
+        {grupo && <input type="hidden" name="grupo" value={grupo} />}
         <input
           type="search"
           name="q"
@@ -49,6 +63,41 @@ export default async function EjerciciosPage({
           className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
         />
       </form>
+
+      {gruposDisponibles.length > 0 && (
+        <div className="flex gap-1 flex-wrap mb-4">
+          <Link
+            href={"/ejercicios" + (q ? `?q=${encodeURIComponent(q)}` : "")}
+            className={
+              "text-xs px-2.5 py-1 rounded-full border " +
+              (!grupo
+                ? "bg-brand-600 border-brand-600 text-white"
+                : "border-neutral-800 text-neutral-400 hover:text-white")
+            }
+          >
+            Todos
+          </Link>
+          {gruposDisponibles.map((g) => {
+            const sp = new URLSearchParams();
+            if (q) sp.set("q", q);
+            sp.set("grupo", g);
+            return (
+              <Link
+                key={g}
+                href={`/ejercicios?${sp.toString()}`}
+                className={
+                  "text-xs px-2.5 py-1 rounded-full border " +
+                  (grupo === g
+                    ? "bg-brand-600 border-brand-600 text-white"
+                    : "border-neutral-800 text-neutral-400 hover:text-white")
+                }
+              >
+                {g}
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {error && (
         <div className="text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-4 py-3 mb-4">
