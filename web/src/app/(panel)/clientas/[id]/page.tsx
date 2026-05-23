@@ -503,6 +503,12 @@ function SeccionResumen({
           >
             Comparador de fotos →
           </Link>
+          <Link
+            href={`/clientas/${clienta.id}/ejercicios`}
+            className="text-brand-500 hover:text-brand-400"
+          >
+            Histórico por ejercicio →
+          </Link>
           <BotonGenerarIA clientaId={clienta.id} />
           {asignacionActiva && (
             <BotonCompartirPrograma
