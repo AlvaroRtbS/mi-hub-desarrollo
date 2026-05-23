@@ -51,6 +51,9 @@ export default async function ClientasPage({
           </p>
         </div>
         <div className="flex gap-2">
+          <Boton variante="secundario" href="/clientas/comparativa">
+            📊 Comparativa
+          </Boton>
           <Boton variante="secundario" href="/clientas/grupos">
             Grupos
           </Boton>
