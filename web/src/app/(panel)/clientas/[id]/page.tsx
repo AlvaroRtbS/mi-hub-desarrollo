@@ -11,6 +11,7 @@ import {
 } from "@/lib/adherencia";
 import { AccionesEstado } from "./acciones-estado";
 import { BotonAsignar } from "./boton-asignar";
+import { BotonGenerarIA } from "./boton-generar-ia";
 import { GraficasMetricas } from "./graficas";
 
 type AsignacionResumen = {
@@ -282,6 +283,7 @@ export default async function ClientaPage({
             >
               Comparador de fotos →
             </Link>
+            <BotonGenerarIA clientaId={clienta.id} />
           </div>
         </div>
       </div>
