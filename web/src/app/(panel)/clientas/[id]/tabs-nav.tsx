@@ -4,15 +4,15 @@ export type TabClienta =
   | "resumen"
   | "adherencia"
   | "metricas"
-  | "objetivos"
-  | "notas";
+  | "proyecto"
+  | "actividad";
 
 const TABS: Array<{ valor: TabClienta; label: string }> = [
   { valor: "resumen", label: "Resumen" },
   { valor: "adherencia", label: "Adherencia" },
   { valor: "metricas", label: "Métricas" },
-  { valor: "objetivos", label: "Objetivos" },
-  { valor: "notas", label: "Notas" },
+  { valor: "proyecto", label: "Proyecto" },
+  { valor: "actividad", label: "Actividad" },
 ];
 
 export function TabsNav({

@@ -20,9 +20,13 @@ import { PanelLogros } from "./panel-logros";
 import { HeatmapAdherencia } from "./heatmap-adherencia";
 import { PanelObjetivos } from "./panel-objetivos";
 import { GruposClienta } from "./grupos-clienta";
-import { LOGROS, type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
+import { type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
 import { GraficasMetricas } from "./graficas";
 import { TabsNav, type TabClienta } from "./tabs-nav";
+import { FichasEstructuradas } from "./fichas-estructuradas";
+import { TodosClienta } from "./todos-clienta";
+import { PestanaActividad } from "./pestana-actividad";
+import type { TipoFicha } from "./acciones-fichas";
 
 type AsignacionResumen = {
   id: string;
@@ -46,8 +50,8 @@ const TABS_VALIDAS: TabClienta[] = [
   "resumen",
   "adherencia",
   "metricas",
-  "objetivos",
-  "notas",
+  "proyecto",
+  "actividad",
 ];
 
 export default async function ClientaPage({
@@ -106,30 +110,18 @@ export default async function ClientaPage({
     completada: boolean;
   }>;
   const sesionesCount = sesionesAll.length;
-  const ultimaSesionFecha = sesionesAll
-    .filter((s) => s.completada)
-    .map((s) => s.fecha)
-    .sort()
-    .pop() ?? null;
+  const ultimaSesionFecha =
+    sesionesAll
+      .filter((s) => s.completada)
+      .map((s) => s.fecha)
+      .sort()
+      .pop() ?? null;
 
   // Fotos
   const { count: fotosCount } = await supabase
     .from("fotos_progreso")
     .select("id", { count: "exact", head: true })
     .eq("clienta_id", id);
-
-  // Notas internas
-  const { data: notasData } = await supabase
-    .from("notas")
-    .select("id, contenido, creada_en")
-    .eq("clienta_id", id)
-    .order("creada_en", { ascending: false })
-    .limit(20);
-  const notas = (notasData ?? []) as Array<{
-    id: string;
-    contenido: string;
-    creada_en: string;
-  }>;
 
   // Grupos
   const [{ data: gruposAsignados }, { data: todosGrupos }] = await Promise.all([
@@ -146,39 +138,6 @@ export default async function ClientaPage({
     .map((r) => r.grupos)
     .filter(Boolean);
   const grupos = (todosGrupos ?? []) as GrupoFila[];
-
-  // Objetivos
-  const { data: objetivosData } = await supabase
-    .from("objetivos")
-    .select(
-      "id, titulo, descripcion, tipo, valor_inicial, valor_objetivo, unidad, fecha_limite, estado, conseguido_en, creado_en"
-    )
-    .eq("clienta_id", id)
-    .order("creado_en", { ascending: false });
-  const objetivos = (objetivosData ?? []) as Array<{
-    id: string;
-    titulo: string;
-    descripcion: string | null;
-    tipo: string;
-    valor_inicial: number | null;
-    valor_objetivo: number | null;
-    unidad: string | null;
-    fecha_limite: string | null;
-    estado: "activo" | "conseguido" | "archivado";
-    conseguido_en: string | null;
-    creado_en: string;
-  }>;
-
-  // Valor actual por tipo de métrica (último valor registrado)
-  const valorActualPorTipo: Record<string, number | null> = {};
-  metricas.forEach((m) => {
-    if (!(m.tipo in valorActualPorTipo)) {
-      valorActualPorTipo[m.tipo] = Number(m.valor);
-    }
-  });
-  valorActualPorTipo["sesiones_completadas"] = sesionesAll.filter(
-    (s) => s.completada
-  ).length;
 
   // Logros desbloqueados
   const { data: logrosData } = await supabase
@@ -220,9 +179,8 @@ export default async function ClientaPage({
     tokenShare = tk?.token ?? null;
   }
 
-  // Invitación activa (si la hay) y si la clienta ya tiene cuenta enlazada
-  const yaEnlazada = !!(clienta as unknown as { user_id?: string | null })
-    .user_id;
+  // Invitación activa
+  const yaEnlazada = !!(clienta as unknown as { user_id?: string | null }).user_id;
   const { data: invitacionData } = await supabase
     .from("invitaciones_clienta")
     .select("token")
@@ -241,8 +199,13 @@ export default async function ClientaPage({
       {/* Cabecera con identidad */}
       <div className="mt-4 flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center text-xl font-semibold text-neutral-300">
-            {inicialesNombre(clienta.nombre, clienta.apellidos)}
+          <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center text-xl font-semibold text-neutral-300 overflow-hidden">
+            {clienta.foto_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={clienta.foto_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              inicialesNombre(clienta.nombre, clienta.apellidos)
+            )}
           </div>
           <div>
             <h1 className="text-2xl font-semibold">
@@ -347,20 +310,18 @@ export default async function ClientaPage({
           <SeccionMetricas clientaId={clienta.id} metricas={metricas} />
         )}
 
-        {tab === "objetivos" && (
-          <SeccionObjetivos
+        {tab === "proyecto" && (
+          <SeccionProyecto
             clientaId={clienta.id}
-            objetivos={objetivos}
-            valorActualPorTipo={valorActualPorTipo}
+            sesionesAll={sesionesAll}
+            metricas={metricas}
             logrosDesbloqueados={logrosDesbloqueados}
             xpClienta={xpClienta}
             gamificacionActiva={gamificacionActiva}
           />
         )}
 
-        {tab === "notas" && (
-          <SeccionNotas clientaId={clienta.id} notas={notas} />
-        )}
+        {tab === "actividad" && <PestanaActividad clientaId={clienta.id} />}
       </div>
     </div>
   );
@@ -629,9 +590,7 @@ function SeccionMetricas({
       <div className="border border-neutral-800 rounded-2xl p-5">
         <h3 className="font-medium mb-3">Últimas métricas</h3>
         {metricas.length === 0 ? (
-          <div className="text-sm text-neutral-500">
-            Sin métricas registradas aún.
-          </div>
+          <div className="text-sm text-neutral-500">Sin métricas registradas aún.</div>
         ) : (
           <ul className="space-y-1.5 text-sm">
             {metricas.slice(0, 10).map((m) => (
@@ -660,55 +619,144 @@ function SeccionMetricas({
   );
 }
 
-function SeccionObjetivos({
+async function SeccionProyecto({
   clientaId,
-  objetivos,
-  valorActualPorTipo,
+  sesionesAll,
+  metricas,
   logrosDesbloqueados,
   xpClienta,
   gamificacionActiva,
 }: {
   clientaId: string;
-  objetivos: Parameters<typeof PanelObjetivos>[0]["objetivos"];
-  valorActualPorTipo: Record<string, number | null>;
+  sesionesAll: Array<{ id: string; fecha: string; completada: boolean }>;
+  metricas: MetricaReciente[];
   logrosDesbloqueados: Array<{ tipo: TipoLogro; conseguido_en: string }>;
   xpClienta: number;
   gamificacionActiva: boolean;
 }) {
+  const supabase = await createSupabaseServerClient();
+
+  // Notas internas
+  const { data: notasData } = await supabase
+    .from("notas")
+    .select("id, contenido, creada_en")
+    .eq("clienta_id", clientaId)
+    .order("creada_en", { ascending: false })
+    .limit(50);
+  const notas = (notasData ?? []) as Array<{
+    id: string;
+    contenido: string;
+    creada_en: string;
+  }>;
+
+  // Objetivos
+  const { data: objetivosData } = await supabase
+    .from("objetivos")
+    .select(
+      "id, titulo, descripcion, tipo, valor_inicial, valor_objetivo, unidad, fecha_limite, estado, conseguido_en, creado_en"
+    )
+    .eq("clienta_id", clientaId)
+    .order("creado_en", { ascending: false });
+  const objetivos = (objetivosData ?? []) as Array<{
+    id: string;
+    titulo: string;
+    descripcion: string | null;
+    tipo: string;
+    valor_inicial: number | null;
+    valor_objetivo: number | null;
+    unidad: string | null;
+    fecha_limite: string | null;
+    estado: "activo" | "conseguido" | "archivado";
+    conseguido_en: string | null;
+    creado_en: string;
+  }>;
+
+  // Fichas estructuradas
+  const { data: fichasData } = await supabase
+    .from("fichas_clienta")
+    .select("tipo, contenido, actualizada_en")
+    .eq("clienta_id", clientaId);
+  const fichas = (fichasData ?? []) as Array<{
+    tipo: TipoFicha;
+    contenido: string;
+    actualizada_en: string | null;
+  }>;
+
+  // To-dos
+  const { data: todosData } = await supabase
+    .from("todos_clienta")
+    .select("id, titulo, completado, fecha_limite, completado_en, creado_en")
+    .eq("clienta_id", clientaId)
+    .order("creado_en", { ascending: false });
+  const todos = (todosData ?? []) as Array<{
+    id: string;
+    titulo: string;
+    completado: boolean;
+    fecha_limite: string | null;
+    completado_en: string | null;
+    creado_en: string;
+  }>;
+
+  // Valor actual por tipo de métrica (para barra de progreso en objetivos)
+  const valorActualPorTipo: Record<string, number | null> = {};
+  metricas.forEach((m) => {
+    if (!(m.tipo in valorActualPorTipo)) {
+      valorActualPorTipo[m.tipo] = Number(m.valor);
+    }
+  });
+  valorActualPorTipo["sesiones_completadas"] = sesionesAll.filter(
+    (s) => s.completada
+  ).length;
+
   return (
     <div className="space-y-6">
+      {/* Objetivos */}
       <PanelObjetivos
         clientaId={clientaId}
         objetivos={objetivos}
         valorActualPorTipo={valorActualPorTipo}
       />
+
+      {/* Logros */}
       <PanelLogros
         clientaId={clientaId}
         desbloqueados={logrosDesbloqueados}
         xpTotal={xpClienta}
         gamificacionActiva={gamificacionActiva}
       />
-      <BotonResumenIA clientaId={clientaId} />
-    </div>
-  );
-}
 
-function SeccionNotas({
-  clientaId,
-  notas,
-}: {
-  clientaId: string;
-  notas: Array<{ id: string; contenido: string; creada_en: string }>;
-}) {
-  return (
-    <div className="border border-neutral-800 rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-medium">Notas internas</h3>
-        <span className="text-[10px] text-neutral-500 uppercase tracking-wide bg-neutral-900 px-2 py-1 rounded">
-          🔒 Solo tú
-        </span>
+      {/* Fichas estructuradas */}
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-medium">📋 Fichas de la clienta</h3>
+        </div>
+        <FichasEstructuradas clientaId={clientaId} fichas={fichas} />
       </div>
-      <NotasInternas clientaId={clientaId} notasIniciales={notas} />
+
+      {/* To-dos */}
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-medium">✅ Tareas pendientes</h3>
+          <span className="text-[10px] text-neutral-500 uppercase tracking-wide bg-neutral-900 px-2 py-1 rounded">
+            🔒 Solo tú
+          </span>
+        </div>
+        <TodosClienta clientaId={clientaId} todos={todos} />
+      </div>
+
+      {/* Notas internas (CRM) */}
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium">📝 Notas internas</h3>
+          <span className="text-[10px] text-neutral-500 uppercase tracking-wide bg-neutral-900 px-2 py-1 rounded">
+            🔒 Solo tú
+          </span>
+        </div>
+        <NotasInternas clientaId={clientaId} notasIniciales={notas} />
+      </div>
+
+      {/* Resumen IA */}
+      <BotonResumenIA clientaId={clientaId} />
     </div>
   );
 }
