@@ -22,6 +22,7 @@ import { PanelObjetivos } from "./panel-objetivos";
 import { GruposClienta } from "./grupos-clienta";
 import { LOGROS, type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
 import { GraficasMetricas } from "./graficas";
+import { TabsNav, type TabClienta } from "./tabs-nav";
 
 type AsignacionResumen = {
   id: string;
@@ -41,12 +42,27 @@ type MetricaReciente = {
   fecha: string;
 };
 
+const TABS_VALIDAS: TabClienta[] = [
+  "resumen",
+  "adherencia",
+  "metricas",
+  "objetivos",
+  "notas",
+];
+
 export default async function ClientaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab: tabParam } = await searchParams;
+  const tab: TabClienta = (TABS_VALIDAS as string[]).includes(tabParam ?? "")
+    ? (tabParam as TabClienta)
+    : "resumen";
+
   const supabase = await createSupabaseServerClient();
 
   const { data: clienta } = await supabase
@@ -79,7 +95,7 @@ export default async function ClientaPage({
     .limit(10);
   const metricas = (metricasData ?? []) as MetricaReciente[];
 
-  // Todas las sesiones (para racha / adherencia)
+  // Todas las sesiones (para racha / adherencia / última sesión)
   const { data: sesionesData } = await supabase
     .from("sesiones")
     .select("id, fecha, completada")
@@ -90,6 +106,11 @@ export default async function ClientaPage({
     completada: boolean;
   }>;
   const sesionesCount = sesionesAll.length;
+  const ultimaSesionFecha = sesionesAll
+    .filter((s) => s.completada)
+    .map((s) => s.fecha)
+    .sort()
+    .pop() ?? null;
 
   // Fotos
   const { count: fotosCount } = await supabase
@@ -217,6 +238,7 @@ export default async function ClientaPage({
         ← Volver
       </Link>
 
+      {/* Cabecera con identidad */}
       <div className="mt-4 flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center text-xl font-semibold text-neutral-300">
@@ -247,14 +269,199 @@ export default async function ClientaPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mt-8">
+      {/* KPIs clave siempre visibles */}
+      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Kpi
+          label="Programa activo"
+          valor={asignacionActiva?.programas?.nombre ?? "—"}
+          detalle={
+            asignacionActiva?.programas
+              ? `${asignacionActiva.programas.num_semanas} sem`
+              : "Sin asignar"
+          }
+        />
+        <Kpi
+          label="Racha"
+          valor={adherencia ? `${adherencia.rachaActual}` : "—"}
+          detalle={
+            adherencia
+              ? adherencia.rachaActual >= 7
+                ? "🔥 en fuego"
+                : adherencia.rachaActual >= 3
+                ? "💪 fuerte"
+                : `Mejor: ${adherencia.rachaMaxima}`
+              : "Sin programa"
+          }
+        />
+        <Kpi
+          label="Adherencia"
+          valor={adherencia ? `${adherencia.porcentajeAdherencia}%` : "—"}
+          detalle={
+            adherencia
+              ? `${adherencia.sesionesCompletadas}/${adherencia.sesionesProgramadas} sesiones`
+              : "—"
+          }
+        />
+        <Kpi
+          label="Último entreno"
+          valor={ultimaSesionFecha ? formatearFecha(ultimaSesionFecha) : "—"}
+          detalle={
+            ultimaSesionFecha
+              ? diasDesde(ultimaSesionFecha) === 0
+                ? "Hoy"
+                : `Hace ${diasDesde(ultimaSesionFecha)} días`
+              : "Sin sesiones"
+          }
+        />
+      </div>
+
+      {/* Navegación de pestañas */}
+      <div className="mt-8">
+        <TabsNav clientaId={clienta.id} tabActiva={tab} />
+      </div>
+
+      {/* Contenido por pestaña */}
+      <div className="mt-6">
+        {tab === "resumen" && (
+          <SeccionResumen
+            clienta={clienta}
+            asignacionActiva={asignacionActiva}
+            historico={historico}
+            sesionesCount={sesionesCount}
+            fotosCount={fotosCount ?? 0}
+            tokenShare={tokenShare}
+            tokenInvitacion={tokenInvitacion}
+            yaEnlazada={yaEnlazada}
+          />
+        )}
+
+        {tab === "adherencia" && (
+          <SeccionAdherencia
+            adherencia={adherencia}
+            clientaId={clienta.id}
+            hayAsignacion={!!asignacionActiva}
+          />
+        )}
+
+        {tab === "metricas" && (
+          <SeccionMetricas clientaId={clienta.id} metricas={metricas} />
+        )}
+
+        {tab === "objetivos" && (
+          <SeccionObjetivos
+            clientaId={clienta.id}
+            objetivos={objetivos}
+            valorActualPorTipo={valorActualPorTipo}
+            logrosDesbloqueados={logrosDesbloqueados}
+            xpClienta={xpClienta}
+            gamificacionActiva={gamificacionActiva}
+          />
+        )}
+
+        {tab === "notas" && (
+          <SeccionNotas clientaId={clienta.id} notas={notas} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function diasDesde(iso: string): number {
+  const hoy = new Date();
+  const f = new Date(iso);
+  return Math.max(0, Math.floor((hoy.getTime() - f.getTime()) / 86400000));
+}
+
+function Kpi({
+  label,
+  valor,
+  detalle,
+}: {
+  label: string;
+  valor: string;
+  detalle?: string;
+}) {
+  return (
+    <div className="border border-neutral-800 rounded-2xl p-4">
+      <div className="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">
+        {label}
+      </div>
+      <div className="text-lg font-semibold truncate" title={valor}>
+        {valor}
+      </div>
+      {detalle && (
+        <div className="text-xs text-neutral-500 mt-0.5 truncate">{detalle}</div>
+      )}
+    </div>
+  );
+}
+
+function Mini({
+  label,
+  valor,
+  sufijo,
+}: {
+  label: string;
+  valor: number | string;
+  sufijo?: string;
+}) {
+  return (
+    <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-neutral-500">
+        {label}
+      </div>
+      <div className="text-lg font-semibold">
+        {valor}
+        {sufijo && <span className="text-sm text-neutral-400 ml-1">{sufijo}</span>}
+      </div>
+    </div>
+  );
+}
+
+function Tarjeta({ titulo, valor }: { titulo: string; valor: string }) {
+  return (
+    <div className="border border-neutral-800 rounded-2xl p-4">
+      <div className="text-xs uppercase tracking-wide text-neutral-500 mb-1">
+        {titulo}
+      </div>
+      <div className="text-sm">{valor}</div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Pestañas
+// ============================================================================
+
+function SeccionResumen({
+  clienta,
+  asignacionActiva,
+  historico,
+  sesionesCount,
+  fotosCount,
+  tokenShare,
+  tokenInvitacion,
+  yaEnlazada,
+}: {
+  clienta: Clienta;
+  asignacionActiva: AsignacionResumen | undefined;
+  historico: AsignacionResumen[];
+  sesionesCount: number;
+  fotosCount: number;
+  tokenShare: string | null;
+  tokenInvitacion: string | null;
+  yaEnlazada: boolean;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-4">
         <Tarjeta titulo="Teléfono" valor={clienta.telefono ?? "—"} />
         <Tarjeta titulo="Fecha nacimiento" valor={formatearFecha(clienta.fecha_nacimiento)} />
         <Tarjeta titulo="Alta" valor={formatearFecha(clienta.creada_en)} />
       </div>
 
       {clienta.notas_publicas && (
-        <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
+        <div className="border border-neutral-800 rounded-2xl p-5">
           <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
             Notas visibles para la clienta
           </div>
@@ -263,7 +470,7 @@ export default async function ClientaPage({
       )}
 
       {/* Programa asignado */}
-      <div className="mt-8 border border-neutral-800 rounded-2xl p-5">
+      <div className="border border-neutral-800 rounded-2xl p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold">Programa asignado</h2>
           <BotonAsignar clientaId={clienta.id} tieneActiva={!!asignacionActiva} />
@@ -315,182 +522,193 @@ export default async function ClientaPage({
         )}
       </div>
 
-      {/* Adherencia */}
-      {adherencia && (
-        <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-medium">Adherencia</h3>
-          </div>
-          <div className="grid grid-cols-4 gap-3">
-            <Mini
-              label="Racha actual"
-              valor={adherencia.rachaActual}
-              sufijo={
-                adherencia.rachaActual >= 7
-                  ? "🔥"
-                  : adherencia.rachaActual >= 3
-                  ? "💪"
-                  : ""
-              }
-            />
-            <Mini label="Mejor racha" valor={adherencia.rachaMaxima} />
-            <Mini
-              label="% adherencia"
-              valor={adherencia.porcentajeAdherencia}
-              sufijo="%"
-            />
-            <Mini
-              label="Sesiones"
-              valor={adherencia.sesionesCompletadas}
-              sufijo={`/${adherencia.sesionesProgramadas}`}
-            />
-          </div>
-          <div className="mt-5 pt-5 border-t border-neutral-900">
-            <HeatmapAdherencia clientaId={clienta.id} />
-          </div>
+      {/* Atajos y actividad */}
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <h3 className="font-medium mb-3">Actividad y atajos</h3>
+        <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+          <Mini label="Sesiones" valor={sesionesCount} />
+          <Mini label="Fotos progreso" valor={fotosCount} />
         </div>
-      )}
-
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Últimas métricas */}
-        <div className="border border-neutral-800 rounded-2xl p-5">
-          <h3 className="font-medium mb-3">Últimas métricas</h3>
-          {metricas.length === 0 ? (
-            <div className="text-sm text-neutral-500">
-              Sin métricas registradas aún.
-            </div>
-          ) : (
-            <ul className="space-y-1.5 text-sm">
-              {metricas.slice(0, 6).map((m) => (
-                <li
-                  key={m.id}
-                  className="flex items-center justify-between text-neutral-300"
-                >
-                  <span className="capitalize">{m.tipo.replace(/_/g, " ")}</span>
-                  <span className="text-neutral-400">
-                    {m.valor} {m.unidad}{" "}
-                    <span className="text-neutral-600 text-xs">
-                      · {formatearFecha(m.fecha)}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Actividad y atajos */}
-        <div className="border border-neutral-800 rounded-2xl p-5">
-          <h3 className="font-medium mb-3">Actividad</h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <Mini label="Sesiones" valor={sesionesCount} />
-            <Mini label="Fotos progreso" valor={fotosCount ?? 0} />
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <Link
-              href={`/clientas/${clienta.id}/vista-clienta`}
-              className="text-brand-500 hover:text-brand-400"
-            >
-              Ver como la clienta →
-            </Link>
-            <Link
-              href={`/clientas/${clienta.id}/fotos`}
-              className="text-brand-500 hover:text-brand-400"
-            >
-              Comparador de fotos →
-            </Link>
-            <BotonGenerarIA clientaId={clienta.id} />
-            {asignacionActiva && (
-              <BotonCompartirPrograma
-                asignacionId={asignacionActiva.id}
-                clientaId={clienta.id}
-                clientaNombre={clienta.nombre}
-                tokenExistente={tokenShare}
-              />
-            )}
-            <BotonInvitar
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Link
+            href={`/clientas/${clienta.id}/vista-clienta`}
+            className="text-brand-500 hover:text-brand-400"
+          >
+            Ver como la clienta →
+          </Link>
+          <Link
+            href={`/clientas/${clienta.id}/fotos`}
+            className="text-brand-500 hover:text-brand-400"
+          >
+            Comparador de fotos →
+          </Link>
+          <BotonGenerarIA clientaId={clienta.id} />
+          {asignacionActiva && (
+            <BotonCompartirPrograma
+              asignacionId={asignacionActiva.id}
               clientaId={clienta.id}
               clientaNombre={clienta.nombre}
-              yaEnlazada={yaEnlazada}
-              tokenExistente={tokenInvitacion}
+              tokenExistente={tokenShare}
             />
-          </div>
+          )}
+          <BotonInvitar
+            clientaId={clienta.id}
+            clientaNombre={clienta.nombre}
+            yaEnlazada={yaEnlazada}
+            tokenExistente={tokenInvitacion}
+          />
         </div>
-      </div>
-
-      {/* Objetivos */}
-      <div className="mt-6">
-        <PanelObjetivos
-          clientaId={clienta.id}
-          objetivos={objetivos}
-          valorActualPorTipo={valorActualPorTipo}
-        />
-      </div>
-
-      {/* Logros y nivel */}
-      <div className="mt-6">
-        <PanelLogros
-          clientaId={clienta.id}
-          desbloqueados={logrosDesbloqueados}
-          xpTotal={xpClienta}
-          gamificacionActiva={gamificacionActiva}
-        />
-      </div>
-
-      {/* Resumen IA */}
-      <div className="mt-6">
-        <BotonResumenIA clientaId={clienta.id} />
-      </div>
-
-      {/* Gráficas de evolución */}
-      <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
-        <h3 className="font-medium mb-4">Evolución</h3>
-        <GraficasMetricas clientaId={clienta.id} />
-      </div>
-
-      {/* Notas internas (solo coach) */}
-      <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium">Notas internas</h3>
-          <span className="text-[10px] text-neutral-500 uppercase tracking-wide bg-neutral-900 px-2 py-1 rounded">
-            🔒 Solo tú
-          </span>
-        </div>
-        <NotasInternas clientaId={clienta.id} notasIniciales={notas} />
       </div>
     </div>
   );
 }
 
-function Tarjeta({ titulo, valor }: { titulo: string; valor: string }) {
-  return (
-    <div className="border border-neutral-800 rounded-2xl p-4">
-      <div className="text-xs uppercase tracking-wide text-neutral-500 mb-1">
-        {titulo}
-      </div>
-      <div className="text-sm">{valor}</div>
-    </div>
-  );
-}
-
-function Mini({
-  label,
-  valor,
-  sufijo,
+function SeccionAdherencia({
+  adherencia,
+  clientaId,
+  hayAsignacion,
 }: {
-  label: string;
-  valor: number | string;
-  sufijo?: string;
+  adherencia: ReturnType<typeof calcularAdherencia> | null;
+  clientaId: string;
+  hayAsignacion: boolean;
+}) {
+  if (!hayAsignacion || !adherencia) {
+    return (
+      <div className="border border-dashed border-neutral-800 rounded-2xl p-12 text-center">
+        <div className="text-neutral-400">Sin datos de adherencia.</div>
+        <div className="text-sm text-neutral-500 mt-2">
+          Asigna un programa para empezar a registrar adherencia.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-neutral-800 rounded-2xl p-5">
+      <h3 className="font-medium mb-4">Adherencia</h3>
+      <div className="grid grid-cols-4 gap-3">
+        <Mini
+          label="Racha actual"
+          valor={adherencia.rachaActual}
+          sufijo={
+            adherencia.rachaActual >= 7
+              ? "🔥"
+              : adherencia.rachaActual >= 3
+              ? "💪"
+              : ""
+          }
+        />
+        <Mini label="Mejor racha" valor={adherencia.rachaMaxima} />
+        <Mini
+          label="% adherencia"
+          valor={adherencia.porcentajeAdherencia}
+          sufijo="%"
+        />
+        <Mini
+          label="Sesiones"
+          valor={adherencia.sesionesCompletadas}
+          sufijo={`/${adherencia.sesionesProgramadas}`}
+        />
+      </div>
+      <div className="mt-5 pt-5 border-t border-neutral-900">
+        <HeatmapAdherencia clientaId={clientaId} />
+      </div>
+    </div>
+  );
+}
+
+function SeccionMetricas({
+  clientaId,
+  metricas,
+}: {
+  clientaId: string;
+  metricas: MetricaReciente[];
 }) {
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-neutral-500">
-        {label}
+    <div className="space-y-6">
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <h3 className="font-medium mb-3">Últimas métricas</h3>
+        {metricas.length === 0 ? (
+          <div className="text-sm text-neutral-500">
+            Sin métricas registradas aún.
+          </div>
+        ) : (
+          <ul className="space-y-1.5 text-sm">
+            {metricas.slice(0, 10).map((m) => (
+              <li
+                key={m.id}
+                className="flex items-center justify-between text-neutral-300"
+              >
+                <span className="capitalize">{m.tipo.replace(/_/g, " ")}</span>
+                <span className="text-neutral-400">
+                  {m.valor} {m.unidad}{" "}
+                  <span className="text-neutral-600 text-xs">
+                    · {formatearFecha(m.fecha)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      <div className="text-lg font-semibold">
-        {valor}
-        {sufijo && <span className="text-sm text-neutral-400 ml-1">{sufijo}</span>}
+
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <h3 className="font-medium mb-4">Evolución</h3>
+        <GraficasMetricas clientaId={clientaId} />
       </div>
+    </div>
+  );
+}
+
+function SeccionObjetivos({
+  clientaId,
+  objetivos,
+  valorActualPorTipo,
+  logrosDesbloqueados,
+  xpClienta,
+  gamificacionActiva,
+}: {
+  clientaId: string;
+  objetivos: Parameters<typeof PanelObjetivos>[0]["objetivos"];
+  valorActualPorTipo: Record<string, number | null>;
+  logrosDesbloqueados: Array<{ tipo: TipoLogro; conseguido_en: string }>;
+  xpClienta: number;
+  gamificacionActiva: boolean;
+}) {
+  return (
+    <div className="space-y-6">
+      <PanelObjetivos
+        clientaId={clientaId}
+        objetivos={objetivos}
+        valorActualPorTipo={valorActualPorTipo}
+      />
+      <PanelLogros
+        clientaId={clientaId}
+        desbloqueados={logrosDesbloqueados}
+        xpTotal={xpClienta}
+        gamificacionActiva={gamificacionActiva}
+      />
+      <BotonResumenIA clientaId={clientaId} />
+    </div>
+  );
+}
+
+function SeccionNotas({
+  clientaId,
+  notas,
+}: {
+  clientaId: string;
+  notas: Array<{ id: string; contenido: string; creada_en: string }>;
+}) {
+  return (
+    <div className="border border-neutral-800 rounded-2xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-medium">Notas internas</h3>
+        <span className="text-[10px] text-neutral-500 uppercase tracking-wide bg-neutral-900 px-2 py-1 rounded">
+          🔒 Solo tú
+        </span>
+      </div>
+      <NotasInternas clientaId={clientaId} notasIniciales={notas} />
     </div>
   );
 }
