@@ -18,6 +18,7 @@ import { BotonResumenIA } from "./boton-resumen-ia";
 import { PanelLogros } from "./panel-logros";
 import { HeatmapAdherencia } from "./heatmap-adherencia";
 import { PanelObjetivos } from "./panel-objetivos";
+import { GruposClienta } from "./grupos-clienta";
 import { LOGROS, type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
 import { GraficasMetricas } from "./graficas";
 
@@ -107,6 +108,22 @@ export default async function ClientaPage({
     contenido: string;
     creada_en: string;
   }>;
+
+  // Grupos
+  const [{ data: gruposAsignados }, { data: todosGrupos }] = await Promise.all([
+    supabase
+      .from("clienta_grupos")
+      .select("grupo_id, grupos(id, nombre, color)")
+      .eq("clienta_id", id),
+    supabase.from("grupos").select("id, nombre, color").order("nombre"),
+  ]);
+  type GrupoFila = { id: string; nombre: string; color: string | null };
+  const gruposClienta = ((gruposAsignados ?? []) as unknown as Array<{
+    grupos: GrupoFila;
+  }>)
+    .map((r) => r.grupos)
+    .filter(Boolean);
+  const grupos = (todosGrupos ?? []) as GrupoFila[];
 
   // Objetivos
   const { data: objetivosData } = await supabase
@@ -199,6 +216,13 @@ export default async function ClientaPage({
             <div className="flex items-center gap-2 mt-1">
               <EtiquetaEstado estado={clienta.estado} />
               <span className="text-sm text-neutral-500">{clienta.email}</span>
+            </div>
+            <div className="mt-2">
+              <GruposClienta
+                clientaId={clienta.id}
+                asignados={gruposClienta}
+                todos={grupos}
+              />
             </div>
           </div>
         </div>

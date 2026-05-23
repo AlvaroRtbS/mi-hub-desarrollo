@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { enviarMensaje, simularMensajeClienta } from "../acciones";
+import { PLANTILLAS, rellenarPlantilla, type PlantillaMensaje } from "@/lib/plantillas-mensajes";
 
 type Mensaje = {
   id: string;
@@ -24,9 +25,11 @@ function formateaHora(iso: string): string {
 
 export function Conversacion({
   clientaId,
+  clientaNombre,
   mensajesIniciales,
 }: {
   clientaId: string;
+  clientaNombre: string;
   mensajesIniciales: Mensaje[];
 }) {
   const router = useRouter();
@@ -34,7 +37,14 @@ export function Conversacion({
   const [error, setError] = useState<string | null>(null);
   const [enviando, startTransition] = useTransition();
   const [mostrandoDebug, setMostrandoDebug] = useState(false);
+  const [mostrandoPlantillas, setMostrandoPlantillas] = useState(false);
+  const [filtroPlantillas, setFiltroPlantillas] = useState<string>("todas");
   const contenedorRef = useRef<HTMLDivElement>(null);
+
+  function insertarPlantilla(p: PlantillaMensaje) {
+    setBorrador(rellenarPlantilla(p, clientaNombre));
+    setMostrandoPlantillas(false);
+  }
 
   useEffect(() => {
     if (contenedorRef.current) {
@@ -121,6 +131,48 @@ export function Conversacion({
         </div>
       )}
 
+      {mostrandoPlantillas && (
+        <div className="border-t border-neutral-800 pt-3 pb-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-neutral-400">Plantillas</div>
+            <div className="flex gap-1 flex-wrap">
+              {(["todas", "saludos", "seguimiento", "motivacion", "tecnica", "informativos"] as const).map(
+                (c) => (
+                  <button
+                    key={c}
+                    onClick={() => setFiltroPlantillas(c)}
+                    className={
+                      "text-[10px] px-2 py-0.5 rounded-full border " +
+                      (filtroPlantillas === c
+                        ? "bg-brand-600 border-brand-600 text-white"
+                        : "border-neutral-800 text-neutral-400 hover:text-white")
+                    }
+                  >
+                    {c === "todas" ? "Todas" : c}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+          <div className="max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1">
+            {PLANTILLAS.filter(
+              (p) => filtroPlantillas === "todas" || p.categoria === filtroPlantillas
+            ).map((p) => (
+              <button
+                key={p.id}
+                onClick={() => insertarPlantilla(p)}
+                className="text-left bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg px-2 py-1.5"
+              >
+                <div className="text-xs font-medium text-neutral-200 truncate">{p.titulo}</div>
+                <div className="text-[10px] text-neutral-500 truncate">
+                  {rellenarPlantilla(p, clientaNombre).slice(0, 80)}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <form
         onSubmit={enviar}
         className="border-t border-neutral-800 pt-3 flex items-end gap-2"
@@ -138,9 +190,19 @@ export function Conversacion({
           rows={2}
           className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none"
         />
-        <Boton type="submit" disabled={enviando || !borrador.trim()}>
-          {enviando ? "..." : "Enviar"}
-        </Boton>
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => setMostrandoPlantillas((v) => !v)}
+            className="text-xs text-neutral-500 hover:text-brand-500 px-2 py-1 rounded border border-neutral-800 hover:border-neutral-700"
+            title="Plantillas de mensajes"
+          >
+            {mostrandoPlantillas ? "✕" : "📝"}
+          </button>
+          <Boton type="submit" disabled={enviando || !borrador.trim()}>
+            {enviando ? "..." : "Enviar"}
+          </Boton>
+        </div>
       </form>
 
       <div className="mt-2 flex justify-end">

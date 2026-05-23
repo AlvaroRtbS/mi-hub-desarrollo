@@ -64,7 +64,11 @@ export default async function ConversacionPage({
         </div>
       </div>
 
-      <Conversacion clientaId={clienta.id} mensajesIniciales={mensajes} />
+      <Conversacion
+        clientaId={clienta.id}
+        clientaNombre={clienta.nombre}
+        mensajesIniciales={mensajes}
+      />
     </div>
   );
 }

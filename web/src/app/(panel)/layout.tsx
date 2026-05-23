@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import LogoutButton from "@/components/logout-button";
+import { BusquedaGlobal } from "@/components/busqueda-global";
 
 const enlaces = [
   { href: "/inicio", label: "Inicio" },
@@ -38,7 +39,10 @@ export default async function PanelLayout({
             {coach?.nombre ?? user.email}
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <div className="px-3 pt-4 pb-2">
+          <BusquedaGlobal />
+        </div>
+        <nav className="flex-1 px-3 py-2 space-y-0.5">
           {enlaces.map((e) => (
             <Link
               key={e.href}
