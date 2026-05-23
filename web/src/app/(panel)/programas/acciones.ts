@@ -232,7 +232,7 @@ export async function asignarPrograma(formData: FormData): Promise<ResultadoAcci
 // Helpers para mutaciones puntuales sobre la estructura (todas server-side)
 // ============================================================================
 
-export async function añadirBloque(
+export async function agregarBloque(
   programaId: string,
   semanaIdx: number,
   diaIdx: number,
@@ -257,7 +257,7 @@ export async function añadirBloque(
   return guardarEstructura(programaId, estructura);
 }
 
-export async function añadirSemana(programaId: string): Promise<ResultadoAccion> {
+export async function agregarSemana(programaId: string): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("programas")

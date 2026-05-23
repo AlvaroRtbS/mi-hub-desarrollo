@@ -19,7 +19,7 @@ async function obtenerCoachId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
-export async function añadirFoto(formData: FormData): Promise<ResultadoAccion> {
+export async function agregarFoto(formData: FormData): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
   const coachId = await obtenerCoachId();
   if (!coachId) return { ok: false, error: "No autenticada." };

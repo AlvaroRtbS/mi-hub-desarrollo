@@ -7,7 +7,7 @@ import { Campo, Select } from "@/components/ui/campo";
 import { SubirArchivo } from "@/components/ui/subir-archivo";
 import { formatearFecha } from "@/lib/utilidades";
 import {
-  añadirFoto,
+  agregarFoto,
   eliminarFoto,
   alternarComparador,
 } from "./acciones";
@@ -76,7 +76,7 @@ export function GestorFotos({
     fd.set("fecha", fechaNueva);
     fd.set("notas", notasNueva);
     startTransition(async () => {
-      const r = await añadirFoto(fd);
+      const r = await agregarFoto(fd);
       if (!r.ok) {
         setError(r.error);
         return;
