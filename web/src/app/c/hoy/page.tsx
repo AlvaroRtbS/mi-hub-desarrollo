@@ -122,16 +122,43 @@ export default async function HoyPage() {
 
   // URLs firmadas para PDFs y vídeos adjuntos del día actual
   const pathsAdjuntos: (string | null)[] = [];
+  // IDs de ejercicios usados hoy → para cargar sus imágenes
+  const ejercicioIdsHoy: string[] = [];
   for (const b of dia.bloques) {
     for (const el of b.elementos) {
       if ((el.tipo === "pdf" || el.tipo === "video") && el.url) {
         pathsAdjuntos.push(el.url);
       }
+      if (el.tipo === "ejercicio") {
+        ejercicioIdsHoy.push(el.ejercicio_id);
+      }
     }
   }
-  const urlsAdjuntos = await obtenerUrlsFirmadas(
-    "programa-adjuntos",
-    pathsAdjuntos,
+
+  const [urlsAdjuntos, ejerciciosMeta] = await Promise.all([
+    obtenerUrlsFirmadas("programa-adjuntos", pathsAdjuntos, 3600),
+    ejercicioIdsHoy.length > 0
+      ? supabase
+          .from("ejercicios")
+          .select("id, imagen_url, video_url")
+          .in("id", ejercicioIdsHoy)
+      : Promise.resolve({ data: [] as Array<{ id: string; imagen_url: string | null; video_url: string | null }> }),
+  ]);
+
+  const metaPorEjercicio = new Map(
+    (ejerciciosMeta.data ?? []).map((m) => [
+      (m as { id: string }).id,
+      m as { id: string; imagen_url: string | null; video_url: string | null },
+    ])
+  );
+
+  // URLs firmadas para imágenes de ejercicios del día
+  const pathsImagenes = Array.from(metaPorEjercicio.values()).map(
+    (m) => m.imagen_url
+  );
+  const urlsImagenesEjercicios = await obtenerUrlsFirmadas(
+    "ejercicios-imagenes",
+    pathsImagenes,
     3600
   );
 
@@ -193,6 +220,8 @@ export default async function HoyPage() {
                 key={b.id}
                 bloque={b}
                 urlsAdjuntos={urlsAdjuntos}
+                metaEjercicios={metaPorEjercicio}
+                urlsImagenes={urlsImagenesEjercicios}
               />
             ))}
 
@@ -301,9 +330,16 @@ function Stat({
 function BloqueClienta({
   bloque,
   urlsAdjuntos,
+  metaEjercicios,
+  urlsImagenes,
 }: {
   bloque: Bloque;
   urlsAdjuntos: Map<string, string>;
+  metaEjercicios: Map<
+    string,
+    { id: string; imagen_url: string | null; video_url: string | null }
+  >;
+  urlsImagenes: Map<string, string>;
 }) {
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-3">
@@ -311,21 +347,41 @@ function BloqueClienta({
       {bloque.indicaciones && (
         <div className="text-xs text-neutral-500 mt-0.5">{bloque.indicaciones}</div>
       )}
-      <ul className="mt-2 space-y-1.5">
+      <ul className="mt-2 space-y-2">
         {bloque.elementos.map((el: Elemento) => (
           <li key={el.id} className="flex items-start gap-2 text-sm">
             {el.tipo === "ejercicio" && (
               <>
-                <span className="text-neutral-500 mt-0.5">•</span>
+                {(() => {
+                  const meta = metaEjercicios.get(el.ejercicio_id);
+                  const imgUrl =
+                    meta?.imagen_url && urlsImagenes.get(meta.imagen_url);
+                  return imgUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={imgUrl}
+                      alt=""
+                      className="w-14 h-14 rounded-lg object-cover bg-neutral-800 border border-neutral-800 flex-shrink-0"
+                    />
+                  ) : (
+                    <span className="w-14 h-14 rounded-lg bg-neutral-800 border border-neutral-800 flex items-center justify-center text-neutral-600 flex-shrink-0">
+                      🏋️
+                    </span>
+                  );
+                })()}
                 <div className="flex-1 min-w-0">
-                  <div className="text-neutral-100">{el.ejercicio_nombre ?? "Ejercicio"}</div>
-                  <div className="text-xs text-neutral-500">
+                  <div className="text-neutral-100 font-medium">
+                    {el.ejercicio_nombre ?? "Ejercicio"}
+                  </div>
+                  <div className="text-xs text-neutral-500 mt-0.5">
                     {el.series.length} series ·{" "}
                     {el.series.map((s) => s.reps).join(" / ")}{" "}
                     {el.series[0]?.peso && `@ ${el.series[0]?.peso}`}
                   </div>
                   {el.notas && (
-                    <div className="text-xs text-neutral-500 mt-0.5 italic">{el.notas}</div>
+                    <div className="text-xs text-neutral-500 mt-0.5 italic">
+                      {el.notas}
+                    </div>
                   )}
                 </div>
               </>
