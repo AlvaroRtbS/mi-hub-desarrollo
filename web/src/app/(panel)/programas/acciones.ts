@@ -10,6 +10,10 @@ import {
   type Dia,
   type Bloque,
 } from "@/lib/supabase/tipos";
+import {
+  obtenerPlantilla,
+  construirEstructuraDesdePlantilla,
+} from "./plantillas";
 
 export type ResultadoAccion =
   | { ok: true; id?: string }
@@ -51,6 +55,39 @@ export async function crearPrograma(formData: FormData): Promise<ResultadoAccion
       descripcion,
       num_semanas: numSemanas,
       estructura,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/programas");
+  return { ok: true, id: data.id };
+}
+
+export async function crearDesdePlantilla(
+  plantillaId: string,
+  nombrePersonalizado?: string
+): Promise<ResultadoAccion> {
+  const supabase = await createSupabaseServerClient();
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+
+  const plantilla = obtenerPlantilla(plantillaId);
+  if (!plantilla) return { ok: false, error: "Plantilla no encontrada." };
+
+  const estructura = construirEstructuraDesdePlantilla(plantilla);
+
+  const { data, error } = await supabase
+    .from("programas")
+    .insert({
+      coach_id: coachId,
+      nombre: nombrePersonalizado?.trim() || plantilla.nombre,
+      descripcion: plantilla.resumen,
+      num_semanas: plantilla.numSemanas,
+      estructura,
+      origen: "plantilla",
+      etiquetas: plantilla.etiquetas,
     })
     .select("id")
     .single();

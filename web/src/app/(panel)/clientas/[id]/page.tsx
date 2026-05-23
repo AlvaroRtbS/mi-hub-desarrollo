@@ -4,9 +4,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Boton } from "@/components/ui/boton";
 import { EtiquetaEstado } from "@/components/ui/etiqueta-estado";
 import { formatearFecha, inicialesNombre } from "@/lib/utilidades";
-import type { Clienta } from "@/lib/supabase/tipos";
+import type { Clienta, EstructuraPrograma } from "@/lib/supabase/tipos";
+import {
+  calcularAdherencia,
+  diasProgramadosDeAsignacion,
+} from "@/lib/adherencia";
 import { AccionesEstado } from "./acciones-estado";
 import { BotonAsignar } from "./boton-asignar";
+import { GraficasMetricas } from "./graficas";
 
 type AsignacionResumen = {
   id: string;
@@ -64,17 +69,42 @@ export default async function ClientaPage({
     .limit(10);
   const metricas = (metricasData ?? []) as MetricaReciente[];
 
-  // Últimas sesiones
-  const { count: sesionesCount } = await supabase
+  // Todas las sesiones (para racha / adherencia)
+  const { data: sesionesData } = await supabase
     .from("sesiones")
-    .select("id", { count: "exact", head: true })
+    .select("id, fecha, completada")
     .eq("clienta_id", id);
+  const sesionesAll = (sesionesData ?? []) as Array<{
+    id: string;
+    fecha: string;
+    completada: boolean;
+  }>;
+  const sesionesCount = sesionesAll.length;
 
   // Fotos
   const { count: fotosCount } = await supabase
     .from("fotos_progreso")
     .select("id", { count: "exact", head: true })
     .eq("clienta_id", id);
+
+  // Adherencia: si tiene asignación activa, calcular racha y %.
+  const hoyIso = new Date().toISOString().slice(0, 10);
+  let adherencia: ReturnType<typeof calcularAdherencia> | null = null;
+  if (asignacionActiva) {
+    const { data: asignFull } = await supabase
+      .from("asignaciones")
+      .select("estructura_snapshot")
+      .eq("id", asignacionActiva.id)
+      .single();
+    if (asignFull) {
+      const programados = diasProgramadosDeAsignacion(
+        asignacionActiva.fecha_inicio,
+        asignFull.estructura_snapshot as EstructuraPrograma,
+        hoyIso
+      );
+      adherencia = calcularAdherencia(programados, sesionesAll);
+    }
+  }
 
   return (
     <div className="p-8 max-w-5xl">
@@ -173,7 +203,38 @@ export default async function ClientaPage({
         )}
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-4">
+      {/* Adherencia */}
+      {adherencia && (
+        <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
+          <h3 className="font-medium mb-3">Adherencia</h3>
+          <div className="grid grid-cols-4 gap-3">
+            <Mini
+              label="Racha actual"
+              valor={adherencia.rachaActual}
+              sufijo={
+                adherencia.rachaActual >= 7
+                  ? "🔥"
+                  : adherencia.rachaActual >= 3
+                  ? "💪"
+                  : ""
+              }
+            />
+            <Mini label="Mejor racha" valor={adherencia.rachaMaxima} />
+            <Mini
+              label="% adherencia"
+              valor={adherencia.porcentajeAdherencia}
+              sufijo="%"
+            />
+            <Mini
+              label="Sesiones"
+              valor={adherencia.sesionesCompletadas}
+              sufijo={`/${adherencia.sesionesProgramadas}`}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Últimas métricas */}
         <div className="border border-neutral-800 rounded-2xl p-5">
           <h3 className="font-medium mb-3">Últimas métricas</h3>
@@ -201,18 +262,34 @@ export default async function ClientaPage({
           )}
         </div>
 
-        {/* Resumen rápido */}
+        {/* Actividad y atajos */}
         <div className="border border-neutral-800 rounded-2xl p-5">
           <h3 className="font-medium mb-3">Actividad</h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <Mini label="Sesiones" valor={sesionesCount ?? 0} />
+            <Mini label="Sesiones" valor={sesionesCount} />
             <Mini label="Fotos progreso" valor={fotosCount ?? 0} />
           </div>
-          <div className="text-xs text-neutral-600 mt-3">
-            El detalle (calendario, comparador de fotos, gráficas) llega en próximos
-            sprints.
+          <div className="mt-4 flex flex-wrap gap-2 text-xs">
+            <Link
+              href={`/clientas/${clienta.id}/vista-clienta`}
+              className="text-brand-500 hover:text-brand-400"
+            >
+              Ver como la clienta →
+            </Link>
+            <Link
+              href={`/clientas/${clienta.id}/fotos`}
+              className="text-brand-500 hover:text-brand-400"
+            >
+              Comparador de fotos →
+            </Link>
           </div>
         </div>
+      </div>
+
+      {/* Gráficas de evolución */}
+      <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
+        <h3 className="font-medium mb-4">Evolución</h3>
+        <GraficasMetricas clientaId={clienta.id} />
       </div>
     </div>
   );
@@ -229,13 +306,24 @@ function Tarjeta({ titulo, valor }: { titulo: string; valor: string }) {
   );
 }
 
-function Mini({ label, valor }: { label: string; valor: number }) {
+function Mini({
+  label,
+  valor,
+  sufijo,
+}: {
+  label: string;
+  valor: number | string;
+  sufijo?: string;
+}) {
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2">
       <div className="text-[10px] uppercase tracking-wide text-neutral-500">
         {label}
       </div>
-      <div className="text-lg font-semibold">{valor}</div>
+      <div className="text-lg font-semibold">
+        {valor}
+        {sufijo && <span className="text-sm text-neutral-400 ml-1">{sufijo}</span>}
+      </div>
     </div>
   );
 }
