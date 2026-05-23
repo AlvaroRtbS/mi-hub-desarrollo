@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Input, Textarea } from "@/components/ui/campo";
@@ -95,6 +95,14 @@ export function EditorPrograma({
   const [guardando, startTransition] = useTransition();
   const [selectorAbierto, setSelectorAbierto] = useState<null | { bloqueId: string }>(null);
   const [asignarAbierto, setAsignarAbierto] = useState(false);
+  // Histórico para deshacer (Ctrl+Z). Máx 50 snapshots.
+  const [historico, setHistorico] = useState<EstructuraPrograma[]>([]);
+  // Portapapeles interno: copia de día o de bloque entre días/semanas.
+  const [clipboard, setClipboard] = useState<
+    | { tipo: "dia"; payload: Dia }
+    | { tipo: "bloque"; payload: Bloque }
+    | null
+  >(null);
 
   const semanaActual = estructura[semanaIdx];
   const diaActual = semanaActual?.dias[diaIdx];
@@ -106,6 +114,8 @@ export function EditorPrograma({
   const actualizarEstructura = useCallback(
     (mutador: (est: EstructuraPrograma) => void) => {
       setEstructura((prev) => {
+        // Guardar snapshot previo para deshacer (máx 50)
+        setHistorico((h) => [...h.slice(-49), prev]);
         const copia = clonar(prev);
         mutador(copia);
         return copia;
@@ -114,6 +124,33 @@ export function EditorPrograma({
     },
     []
   );
+
+  const deshacer = useCallback(() => {
+    setHistorico((h) => {
+      if (h.length === 0) return h;
+      const ultimo = h[h.length - 1]!;
+      setEstructura(ultimo);
+      setSucio(true);
+      return h.slice(0, -1);
+    });
+  }, []);
+
+  // Atajo de teclado Ctrl/Cmd+Z para deshacer
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      // No interceptar si el usuario está escribiendo en un input/textarea
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        deshacer();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [deshacer]);
 
   // --- Semanas ---
   const añadirSemana = () => {
@@ -170,6 +207,59 @@ export function EditorPrograma({
     });
   };
 
+  const duplicarDiaLocal = () => {
+    const dActual = estructura[semanaIdx]?.dias[diaIdx];
+    if (!dActual) return;
+    actualizarEstructura((est) => {
+      const sem = est[semanaIdx];
+      if (!sem) return;
+      const copia: Dia = clonar(dActual);
+      copia.bloques.forEach((b) => {
+        b.id = uuid();
+        b.elementos.forEach((e) => (e.id = uuid()));
+      });
+      copia.dia = sem.dias.length + 1;
+      copia.titulo = `${dActual.titulo} (copia)`;
+      sem.dias.push(copia);
+    });
+    // Saltar al día recién creado
+    setTimeout(() => setDiaIdx(estructura[semanaIdx]!.dias.length), 0);
+    setMensaje({ tipo: "ok", texto: "Día duplicado al final de la semana." });
+    setTimeout(() => setMensaje(null), 2000);
+  };
+
+  const copiarDia = () => {
+    const d = estructura[semanaIdx]?.dias[diaIdx];
+    if (!d) return;
+    setClipboard({ tipo: "dia", payload: clonar(d) });
+    setMensaje({ tipo: "ok", texto: `Día "${d.titulo}" copiado al portapapeles.` });
+    setTimeout(() => setMensaje(null), 2000);
+  };
+
+  const pegarDia = () => {
+    if (!clipboard || clipboard.tipo !== "dia") return;
+    if (
+      !confirm(
+        "Esto reemplazará todos los bloques del día actual con los del día copiado. ¿Continuar?"
+      )
+    )
+      return;
+    actualizarEstructura((est) => {
+      const d = est[semanaIdx]?.dias[diaIdx];
+      if (!d) return;
+      const copia: Dia = clonar(clipboard.payload);
+      // Mantener el "dia" numérico actual y el título actual
+      d.descanso = copia.descanso ?? false;
+      d.bloques = copia.bloques.map((b) => ({
+        ...b,
+        id: uuid(),
+        elementos: b.elementos.map((e) => ({ ...e, id: uuid() })),
+      }));
+    });
+    setMensaje({ tipo: "ok", texto: "Día pegado." });
+    setTimeout(() => setMensaje(null), 2000);
+  };
+
   // --- Bloques ---
   const añadirBloque = () => {
     actualizarEstructura((est) => {
@@ -205,6 +295,56 @@ export function EditorPrograma({
       const b = est[semanaIdx]?.dias[diaIdx]?.bloques[bIdx];
       if (!b) return;
       Object.assign(b, parche);
+    });
+  };
+
+  const duplicarBloqueLocal = (bIdx: number) => {
+    actualizarEstructura((est) => {
+      const bloques = est[semanaIdx]?.dias[diaIdx]?.bloques;
+      if (!bloques) return;
+      const orig = bloques[bIdx];
+      if (!orig) return;
+      const copia: Bloque = clonar(orig);
+      copia.id = uuid();
+      copia.titulo = `${orig.titulo} (copia)`;
+      copia.elementos.forEach((e) => (e.id = uuid()));
+      bloques.splice(bIdx + 1, 0, copia);
+    });
+  };
+
+  const copiarBloque = (bIdx: number) => {
+    const b = estructura[semanaIdx]?.dias[diaIdx]?.bloques[bIdx];
+    if (!b) return;
+    setClipboard({ tipo: "bloque", payload: clonar(b) });
+    setMensaje({ tipo: "ok", texto: `Bloque "${b.titulo}" copiado.` });
+    setTimeout(() => setMensaje(null), 2000);
+  };
+
+  const pegarBloque = () => {
+    if (!clipboard || clipboard.tipo !== "bloque") return;
+    actualizarEstructura((est) => {
+      const dia = est[semanaIdx]?.dias[diaIdx];
+      if (!dia) return;
+      const copia: Bloque = clonar(clipboard.payload);
+      copia.id = uuid();
+      copia.elementos.forEach((e) => (e.id = uuid()));
+      dia.bloques.push(copia);
+    });
+    setMensaje({ tipo: "ok", texto: "Bloque pegado." });
+    setTimeout(() => setMensaje(null), 2000);
+  };
+
+  const moverBloqueADia = (
+    bIdx: number,
+    destinoSem: number,
+    destinoDia: number
+  ) => {
+    actualizarEstructura((est) => {
+      const bloques = est[semanaIdx]?.dias[diaIdx]?.bloques;
+      const destino = est[destinoSem]?.dias[destinoDia];
+      if (!bloques || !destino) return;
+      const [bloque] = bloques.splice(bIdx, 1);
+      if (bloque) destino.bloques.push(bloque);
     });
   };
 
@@ -457,6 +597,14 @@ export function EditorPrograma({
             {sucio && (
               <span className="text-xs text-amber-400">Cambios sin guardar</span>
             )}
+            <button
+              onClick={deshacer}
+              disabled={historico.length === 0}
+              className="text-xs text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed px-2"
+              title="Deshacer (Ctrl+Z)"
+            >
+              ↶ Deshacer
+            </button>
             <Boton
               tamano="sm"
               variante={sucio ? "primario" : "secundario"}
@@ -583,22 +731,47 @@ export function EditorPrograma({
       {/* Detalle del día */}
       {diaActual && (
         <div className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h2 className="text-lg font-semibold">{diaActual.titulo}</h2>
               <p className="text-xs text-neutral-500 mt-0.5">
                 Día {diaActual.dia} · Semana {semanaActual?.semana}
               </p>
             </div>
-            <label className="flex items-center gap-2 text-sm text-neutral-400">
-              <input
-                type="checkbox"
-                checked={diaActual.descanso ?? false}
-                onChange={() => toggleDescanso(diaIdx)}
-                className="accent-brand-600"
-              />
-              Día de descanso
-            </label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={copiarDia}
+                className="text-xs text-neutral-500 hover:text-neutral-200"
+                title="Copiar este día (con todos sus bloques) al portapapeles"
+              >
+                ⧉ Copiar día
+              </button>
+              {clipboard?.tipo === "dia" && (
+                <button
+                  onClick={pegarDia}
+                  className="text-xs text-brand-500 hover:text-brand-400"
+                  title="Reemplazar este día con el del portapapeles"
+                >
+                  ↘ Pegar día
+                </button>
+              )}
+              <button
+                onClick={duplicarDiaLocal}
+                className="text-xs text-neutral-500 hover:text-neutral-200"
+                title="Duplicar este día al final de la semana"
+              >
+                + Duplicar día
+              </button>
+              <label className="flex items-center gap-2 text-sm text-neutral-400">
+                <input
+                  type="checkbox"
+                  checked={diaActual.descanso ?? false}
+                  onChange={() => toggleDescanso(diaIdx)}
+                  className="accent-brand-600"
+                />
+                Día de descanso
+              </label>
+            </div>
           </div>
 
           {diaActual.descanso && diaActual.bloques.length === 0 ? (
@@ -614,9 +787,15 @@ export function EditorPrograma({
                   coachId={coachId}
                   esPrimero={bIdx === 0}
                   esUltimo={bIdx === diaActual.bloques.length - 1}
+                  estructura={estructura}
+                  semanaActualIdx={semanaIdx}
+                  diaActualIdx={diaIdx}
                   onActualizar={(parche) => actualizarBloque(bIdx, parche)}
                   onEliminar={() => eliminarBloque(bIdx)}
                   onMover={(dir) => moverBloque(bIdx, dir)}
+                  onDuplicar={() => duplicarBloqueLocal(bIdx)}
+                  onCopiar={() => copiarBloque(bIdx)}
+                  onMoverADia={(s, d) => moverBloqueADia(bIdx, s, d)}
                   onAbrirSelectorEjercicio={() =>
                     setSelectorAbierto({ bloqueId: bloque.id })
                   }
@@ -634,12 +813,23 @@ export function EditorPrograma({
                 />
               ))}
 
-              <button
-                onClick={añadirBloque}
-                className="w-full border border-dashed border-neutral-800 rounded-2xl py-4 text-sm text-neutral-400 hover:text-white hover:border-neutral-700 hover:bg-neutral-900/50"
-              >
-                + Añadir bloque
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={añadirBloque}
+                  className="flex-1 border border-dashed border-neutral-800 rounded-2xl py-4 text-sm text-neutral-400 hover:text-white hover:border-neutral-700 hover:bg-neutral-900/50"
+                >
+                  + Añadir bloque
+                </button>
+                {clipboard?.tipo === "bloque" && (
+                  <button
+                    onClick={pegarBloque}
+                    className="border border-brand-700/40 bg-brand-950/30 rounded-2xl py-4 px-5 text-sm text-brand-400 hover:bg-brand-900/30 hover:border-brand-700"
+                    title={`Pegar bloque copiado: "${clipboard.payload.titulo}"`}
+                  >
+                    ↘ Pegar bloque
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -684,9 +874,15 @@ function VistaBloque({
   coachId,
   esPrimero,
   esUltimo,
+  estructura,
+  semanaActualIdx,
+  diaActualIdx,
   onActualizar,
   onEliminar,
   onMover,
+  onDuplicar,
+  onCopiar,
+  onMoverADia,
   onAbrirSelectorEjercicio,
   onAñadirElementoSimple,
   onActualizarElemento,
@@ -700,9 +896,15 @@ function VistaBloque({
   coachId: string;
   esPrimero: boolean;
   esUltimo: boolean;
+  estructura: EstructuraPrograma;
+  semanaActualIdx: number;
+  diaActualIdx: number;
   onActualizar: (parche: Partial<Bloque>) => void;
   onEliminar: () => void;
   onMover: (dir: -1 | 1) => void;
+  onDuplicar: () => void;
+  onCopiar: () => void;
+  onMoverADia: (semIdx: number, diaIdx: number) => void;
   onAbrirSelectorEjercicio: () => void;
   onAñadirElementoSimple: (tipo: Elemento["tipo"]) => void;
   onActualizarElemento: (eIdx: number, parche: Partial<Elemento>) => void;
@@ -717,6 +919,7 @@ function VistaBloque({
   ) => void;
 }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [moverMenuAbierto, setMoverMenuAbierto] = useState(false);
 
   return (
     <div className="border border-neutral-800 rounded-2xl bg-neutral-950">
@@ -744,6 +947,64 @@ function VistaBloque({
           >
             ↓
           </button>
+          <button
+            onClick={onDuplicar}
+            className="text-xs text-neutral-500 hover:text-white px-1.5"
+            title="Duplicar bloque (en el mismo día)"
+          >
+            ⧉
+          </button>
+          <button
+            onClick={onCopiar}
+            className="text-xs text-neutral-500 hover:text-white px-1.5"
+            title="Copiar bloque al portapapeles"
+          >
+            📋
+          </button>
+          <div className="relative">
+            <button
+              onClick={() => setMoverMenuAbierto((v) => !v)}
+              className="text-xs text-neutral-500 hover:text-white px-1.5"
+              title="Mover a otro día"
+            >
+              →
+            </button>
+            {moverMenuAbierto && (
+              <>
+                <button
+                  onClick={() => setMoverMenuAbierto(false)}
+                  className="fixed inset-0 z-10 cursor-default"
+                  aria-label="Cerrar menú"
+                />
+                <div className="absolute z-20 mt-1 right-0 bg-neutral-950 border border-neutral-800 rounded-lg shadow-xl py-1 min-w-[220px] max-h-80 overflow-auto">
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-neutral-500">
+                    Mover bloque a…
+                  </div>
+                  {estructura.map((sem, sIdx) =>
+                    sem.dias.map((dia, dIdx) => {
+                      const esActual = sIdx === semanaActualIdx && dIdx === diaActualIdx;
+                      if (esActual) return null;
+                      return (
+                        <button
+                          key={`${sIdx}-${dIdx}`}
+                          onClick={() => {
+                            onMoverADia(sIdx, dIdx);
+                            setMoverMenuAbierto(false);
+                          }}
+                          className="block w-full text-left text-xs px-3 py-1.5 hover:bg-neutral-900 text-neutral-300"
+                        >
+                          S{sem.semana} · {dia.titulo}
+                          {dia.descanso && (
+                            <span className="text-neutral-600 ml-1">(descanso)</span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={onEliminar}
             className="text-xs text-neutral-500 hover:text-red-400 px-1.5"
