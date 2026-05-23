@@ -15,6 +15,8 @@ import { BotonGenerarIA } from "./boton-generar-ia";
 import { BotonCompartirPrograma } from "./boton-compartir";
 import { NotasInternas } from "./notas-internas";
 import { BotonResumenIA } from "./boton-resumen-ia";
+import { PanelLogros } from "./panel-logros";
+import { LOGROS, type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
 import { GraficasMetricas } from "./graficas";
 
 type AsignacionResumen = {
@@ -103,6 +105,20 @@ export default async function ClientaPage({
     contenido: string;
     creada_en: string;
   }>;
+
+  // Logros desbloqueados
+  const { data: logrosData } = await supabase
+    .from("logros")
+    .select("tipo, conseguido_en")
+    .eq("clienta_id", id)
+    .order("conseguido_en", { ascending: false });
+  const logrosDesbloqueados = (logrosData ?? []) as Array<{
+    tipo: TipoLogro;
+    conseguido_en: string;
+  }>;
+  const xpClienta = calcularXpTotal(logrosDesbloqueados.map((l) => l.tipo));
+  const gamificacionActiva =
+    (clienta as unknown as { gamificacion_activa?: boolean }).gamificacion_activa ?? true;
 
   // Adherencia: si tiene asignación activa, calcular racha y %.
   const hoyIso = new Date().toISOString().slice(0, 10);
@@ -317,6 +333,16 @@ export default async function ClientaPage({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Logros y nivel */}
+      <div className="mt-6">
+        <PanelLogros
+          clientaId={clienta.id}
+          desbloqueados={logrosDesbloqueados}
+          xpTotal={xpClienta}
+          gamificacionActiva={gamificacionActiva}
+        />
       </div>
 
       {/* Resumen IA */}

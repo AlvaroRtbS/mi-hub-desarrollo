@@ -3,6 +3,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { EstructuraPrograma, Bloque, Dia } from "@/lib/supabase/tipos";
 import { formatearFecha } from "@/lib/utilidades";
 import { BotonImprimir } from "./boton-imprimir";
+import { LOGROS, calcularNivel, xpTotal as calcularXpTotal, type TipoLogro } from "@/lib/gamificacion";
 
 type DatosPrograma = {
   asignacion_id: string;
@@ -48,6 +49,15 @@ export default async function ProgramaPublicoPage({
   // Registrar visita (best-effort, no bloquea)
   await supabase.rpc("registrar_visita_token", { t: token });
 
+  // Logros (via función pública por token)
+  const { data: logrosData } = await supabase.rpc("logros_por_token", { t: token });
+  const logros = (logrosData ?? []) as Array<{
+    tipo: TipoLogro;
+    conseguido_en: string;
+  }>;
+  const xpClienta = calcularXpTotal(logros.map((l) => l.tipo));
+  const nivel = calcularNivel(xpClienta);
+
   const hoy = fechaISO(new Date());
   const offsetHoy = diasEntre(prog.fecha_inicio, hoy);
   const semanaIdxHoy = Math.floor(offsetHoy / 7);
@@ -77,6 +87,48 @@ export default async function ProgramaPublicoPage({
           {prog.estructura.length}{" "}
           {prog.estructura.length === 1 ? "semana" : "semanas"}
         </div>
+
+        {/* Logros + nivel */}
+        {logros.length > 0 && (
+          <div className="mt-6 bg-gradient-to-br from-brand-950/40 to-neutral-900 border border-brand-900/30 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-brand-400">
+                  Nivel {nivel.nivel}
+                </div>
+                <div className="text-lg font-semibold text-neutral-100">
+                  {nivel.nombre}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-brand-400">{xpClienta}</div>
+                <div className="text-[10px] text-neutral-500 uppercase">XP</div>
+              </div>
+            </div>
+            <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden mb-3">
+              <div
+                className="h-full bg-gradient-to-r from-brand-600 to-brand-400"
+                style={{ width: `${nivel.porcentaje}%` }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {logros.map((l) => {
+                const def = LOGROS[l.tipo];
+                if (!def) return null;
+                return (
+                  <div
+                    key={l.tipo}
+                    className="bg-neutral-900 border border-neutral-800 rounded-lg px-2 py-1 text-center"
+                    title={def.descripcion}
+                  >
+                    <span className="text-lg mr-1">{def.emoji}</span>
+                    <span className="text-[10px] text-neutral-300">{def.nombre}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {estaEnCurso ? (
           <div className="mt-6 bg-brand-950/30 border border-brand-900/50 rounded-2xl p-4">
