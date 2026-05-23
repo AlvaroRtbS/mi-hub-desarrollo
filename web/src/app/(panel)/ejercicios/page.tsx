@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import { Boton } from "@/components/ui/boton";
+import { BuscadorDebounced } from "@/components/ui/buscador-debounced";
+import { EmptyState } from "@/components/ui/empty-state";
 import { TarjetaEjercicio } from "./tarjeta-ejercicio";
 
 export default async function EjerciciosPage({
@@ -60,16 +62,9 @@ export default async function EjerciciosPage({
         <Boton href="/ejercicios/nuevo">+ Crear</Boton>
       </div>
 
-      <form className="mb-3 max-w-sm">
-        {grupo && <input type="hidden" name="grupo" value={grupo} />}
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Buscar ejercicio..."
-          className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
-        />
-      </form>
+      <div className="mb-3 max-w-sm">
+        <BuscadorDebounced placeholder="Buscar ejercicio..." />
+      </div>
 
       {gruposDisponibles.length > 0 && (
         <div className="flex gap-1 flex-wrap mb-5">
@@ -113,16 +108,20 @@ export default async function EjerciciosPage({
       )}
 
       {!ejercicios || ejercicios.length === 0 ? (
-        <div className="border border-dashed border-neutral-800 rounded-2xl p-12 text-center">
-          <div className="text-neutral-400">
-            {q || grupo ? "Ningún ejercicio coincide." : "Aún no tienes ejercicios en tu biblioteca."}
-          </div>
-          {!q && !grupo && (
-            <div className="text-sm text-neutral-500 mt-2">
-              Pulsa "Crear" para añadir tu primer ejercicio con vídeo.
-            </div>
-          )}
-        </div>
+        <EmptyState
+          icono="🏋️"
+          titulo={
+            q || grupo
+              ? "Ningún ejercicio coincide"
+              : "Aún no tienes ejercicios"
+          }
+          descripcion={
+            !q && !grupo
+              ? "Añade tu primer ejercicio con vídeo demostrativo o impórtalo desde TrainerStudio."
+              : "Prueba con otra búsqueda o quita los filtros."
+          }
+          accion={!q && !grupo ? <Boton href="/ejercicios/nuevo">+ Crear ejercicio</Boton> : null}
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {ejercicios.map((e) => {

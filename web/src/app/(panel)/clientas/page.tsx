@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Boton } from "@/components/ui/boton";
 import { EtiquetaEstado } from "@/components/ui/etiqueta-estado";
+import { BuscadorDebounced } from "@/components/ui/buscador-debounced";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatearFecha, inicialesNombre } from "@/lib/utilidades";
 import type { Clienta, EstadoClienta } from "@/lib/supabase/tipos";
 
@@ -86,16 +88,12 @@ export default async function ClientasPage({
           })}
         </div>
 
-        <form className="w-full max-w-xs">
-          {filtro !== "activa" && <input type="hidden" name="estado" value={filtro} />}
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Buscar..."
+        <div className="w-full max-w-xs">
+          <BuscadorDebounced
+            placeholder="Buscar por nombre o email..."
             className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand-500"
           />
-        </form>
+        </div>
       </div>
 
       {error && (
@@ -105,16 +103,22 @@ export default async function ClientasPage({
       )}
 
       {clientas.length === 0 ? (
-        <div className="border border-dashed border-neutral-800 rounded-2xl p-12 text-center">
-          <div className="text-neutral-400">
-            {q ? "Ninguna clienta coincide con la búsqueda." : "Aún no tienes clientas con este estado."}
-          </div>
-          {!q && (
-            <div className="text-sm text-neutral-500 mt-2">
-              Cuando migremos desde TrainerStudio o añadas la primera, aparecerá aquí.
-            </div>
-          )}
-        </div>
+        <EmptyState
+          icono="👥"
+          titulo={
+            q
+              ? "Ninguna clienta coincide con la búsqueda"
+              : "Aún no tienes clientas con este estado"
+          }
+          descripcion={
+            !q
+              ? "Cuando migremos desde TrainerStudio o añadas la primera, aparecerá aquí."
+              : undefined
+          }
+          accion={
+            !q ? <Boton href="/clientas/nueva">+ Añadir tu primera clienta</Boton> : null
+          }
+        />
       ) : (
         <div className="border border-neutral-800 rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
