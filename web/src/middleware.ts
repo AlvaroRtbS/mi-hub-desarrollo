@@ -36,6 +36,7 @@ export async function middleware(request: NextRequest) {
     path === "/" ||
     path.startsWith("/login") ||
     path.startsWith("/p/") || // programa compartido por link público
+    path.startsWith("/i/") || // invitación de clienta (acepta sin login)
     path.startsWith("/api/whatsapp/"); // webhook entrante
 
   if (!user && !esRutaPublica) {
@@ -44,10 +45,54 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && path.startsWith("/login")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/inicio";
-    return NextResponse.redirect(url);
+  // Si está logueado, decidir si es coach o clienta y redirigir a su zona
+  if (user) {
+    // Solo necesitamos comprobar cuando va a /login o a la raíz; el resto
+    // del panel ya está protegido por su layout.
+    if (path.startsWith("/login") || path === "/") {
+      const { data: coach } = await supabase
+        .from("coaches")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const url = request.nextUrl.clone();
+      url.pathname = coach ? "/inicio" : "/c/hoy";
+      return NextResponse.redirect(url);
+    }
+
+    // Bloquear acceso cruzado: una clienta no debería poder entrar al panel
+    // de coach (y viceversa). Si lo intenta, redirige a su zona.
+    const esRutaCoach =
+      path.startsWith("/clientas") ||
+      path.startsWith("/programas") ||
+      path.startsWith("/ejercicios") ||
+      path.startsWith("/calendario") ||
+      path.startsWith("/nutricion") ||
+      path.startsWith("/metricas") ||
+      path.startsWith("/mensajes") ||
+      path.startsWith("/inicio");
+
+    const esRutaClienta = path.startsWith("/c/");
+
+    if (esRutaCoach || esRutaClienta) {
+      const { data: coach } = await supabase
+        .from("coaches")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (esRutaCoach && !coach) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/c/hoy";
+        return NextResponse.redirect(url);
+      }
+      if (esRutaClienta && coach) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/inicio";
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   return response;

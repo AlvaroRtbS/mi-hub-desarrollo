@@ -13,6 +13,7 @@ import { AccionesEstado } from "./acciones-estado";
 import { BotonAsignar } from "./boton-asignar";
 import { BotonGenerarIA } from "./boton-generar-ia";
 import { BotonCompartirPrograma } from "./boton-compartir";
+import { BotonInvitar } from "./boton-invitar";
 import { NotasInternas } from "./notas-internas";
 import { BotonResumenIA } from "./boton-resumen-ia";
 import { PanelLogros } from "./panel-logros";
@@ -197,6 +198,18 @@ export default async function ClientaPage({
       .maybeSingle();
     tokenShare = tk?.token ?? null;
   }
+
+  // Invitación activa (si la hay) y si la clienta ya tiene cuenta enlazada
+  const yaEnlazada = !!(clienta as unknown as { user_id?: string | null })
+    .user_id;
+  const { data: invitacionData } = await supabase
+    .from("invitaciones_clienta")
+    .select("token")
+    .eq("clienta_id", clienta.id)
+    .is("usada_en", null)
+    .gt("expira_en", new Date().toISOString())
+    .maybeSingle();
+  const tokenInvitacion = invitacionData?.token ?? null;
 
   return (
     <div className="p-8 max-w-5xl">
@@ -395,6 +408,12 @@ export default async function ClientaPage({
                 tokenExistente={tokenShare}
               />
             )}
+            <BotonInvitar
+              clientaId={clienta.id}
+              clientaNombre={clienta.nombre}
+              yaEnlazada={yaEnlazada}
+              tokenExistente={tokenInvitacion}
+            />
           </div>
         </div>
       </div>
