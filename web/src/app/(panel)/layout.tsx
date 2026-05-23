@@ -3,16 +3,26 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import LogoutButton from "@/components/logout-button";
 import { BusquedaGlobal } from "@/components/busqueda-global";
+import {
+  Home,
+  Calendar,
+  Users,
+  ClipboardList,
+  Dumbbell,
+  Apple,
+  LineChart,
+  MessageSquare,
+} from "lucide-react";
 
 const enlaces = [
-  { href: "/inicio", label: "Inicio" },
-  { href: "/calendario", label: "Calendario" },
-  { href: "/clientas", label: "Clientas" },
-  { href: "/programas", label: "Programas" },
-  { href: "/ejercicios", label: "Ejercicios" },
-  { href: "/nutricion", label: "Nutrición" },
-  { href: "/metricas", label: "Métricas" },
-  { href: "/mensajes", label: "Mensajes" },
+  { href: "/inicio", label: "Inicio", Icon: Home },
+  { href: "/calendario", label: "Calendario", Icon: Calendar },
+  { href: "/clientas", label: "Clientas", Icon: Users },
+  { href: "/programas", label: "Programas", Icon: ClipboardList },
+  { href: "/ejercicios", label: "Ejercicios", Icon: Dumbbell },
+  { href: "/nutricion", label: "Nutrición", Icon: Apple },
+  { href: "/metricas", label: "Métricas", Icon: LineChart },
+  { href: "/mensajes", label: "Mensajes", Icon: MessageSquare },
 ];
 
 export default async function PanelLayout({
@@ -47,9 +57,10 @@ export default async function PanelLayout({
             <Link
               key={e.href}
               href={e.href}
-              className="block px-3 py-2 rounded-lg text-sm text-neutral-300 hover:bg-neutral-900 hover:text-white"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-neutral-300 hover:bg-neutral-900 hover:text-white"
             >
-              {e.label}
+              <e.Icon size={16} className="text-neutral-500" />
+              <span>{e.label}</span>
             </Link>
           ))}
         </nav>

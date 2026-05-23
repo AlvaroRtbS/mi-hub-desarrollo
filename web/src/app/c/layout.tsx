@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  Home,
+  ClipboardList,
+  Ruler,
+  Camera,
+  MessageCircle,
+} from "lucide-react";
 
 const TABS = [
-  { href: "/c/hoy", icono: "🏠", label: "Hoy" },
-  { href: "/c/programa", icono: "📋", label: "Programa" },
-  { href: "/c/metricas", icono: "📊", label: "Medidas" },
-  { href: "/c/fotos", icono: "📸", label: "Fotos" },
-  { href: "/c/mensajes", icono: "💬", label: "Chat" },
+  { href: "/c/hoy", Icon: Home, label: "Hoy" },
+  { href: "/c/programa", Icon: ClipboardList, label: "Programa" },
+  { href: "/c/metricas", Icon: Ruler, label: "Medidas" },
+  { href: "/c/fotos", Icon: Camera, label: "Fotos" },
+  { href: "/c/mensajes", Icon: MessageCircle, label: "Chat" },
 ];
 
 export default async function ClientaLayout({
@@ -63,16 +70,16 @@ export default async function ClientaLayout({
       </main>
 
       {/* Tab bar móvil pegada abajo */}
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-neutral-800 bg-neutral-950 z-10">
+      <nav className="fixed bottom-0 left-0 right-0 border-t border-neutral-800 bg-neutral-950 z-10 pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-md mx-auto grid grid-cols-5">
           {TABS.map((t) => (
             <Link
               key={t.href}
               href={t.href}
-              className="flex flex-col items-center py-2 text-[10px] text-neutral-400 hover:text-white"
+              className="flex flex-col items-center py-2 text-[10px] text-neutral-400 hover:text-white transition"
             >
-              <span className="text-xl">{t.icono}</span>
-              <span>{t.label}</span>
+              <t.Icon size={20} strokeWidth={1.75} />
+              <span className="mt-0.5">{t.label}</span>
             </Link>
           ))}
         </div>

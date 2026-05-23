@@ -143,8 +143,17 @@ export default async function ClientasPage({
                         href={`/clientas/${c.id}`}
                         className="flex items-center gap-3 hover:text-brand-500"
                       >
-                        <span className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-medium text-neutral-300">
-                          {inicialesNombre(c.nombre, c.apellidos)}
+                        <span className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-medium text-neutral-300 overflow-hidden flex-shrink-0">
+                          {c.foto_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={c.foto_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            inicialesNombre(c.nombre, c.apellidos)
+                          )}
                         </span>
                         <span className="min-w-0">
                           <span className="block truncate">
