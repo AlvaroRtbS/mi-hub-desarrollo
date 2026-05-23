@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { inicialesNombre } from "@/lib/utilidades";
-import { marcarConversacionLeida } from "../acciones";
 import { Conversacion } from "./conversacion";
 
 type Mensaje = {
@@ -37,8 +36,14 @@ export default async function ConversacionPage({
 
   const mensajes = (mensajesData ?? []) as Mensaje[];
 
-  // Marca como leídos los entrantes
-  await marcarConversacionLeida(clientaId);
+  // Marca como leídos los entrantes (inline, sin revalidatePath durante render).
+  // El badge de la lista se actualizará en la próxima navegación a /mensajes.
+  await supabase
+    .from("mensajes")
+    .update({ leido: true })
+    .eq("clienta_id", clientaId)
+    .eq("remitente", "clienta")
+    .eq("leido", false);
 
   return (
     <div className="p-6 md:p-8 max-w-3xl">
