@@ -1,0 +1,133 @@
+"use client";
+
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { enviarMiMensaje } from "./acciones";
+
+type Mensaje = {
+  id: string;
+  contenido: string;
+  remitente: "coach" | "clienta";
+  enviado_en: string;
+  leido: boolean;
+};
+
+function formateaHora(iso: string): string {
+  return new Date(iso).toLocaleString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+export function ChatClienta({
+  mensajesIniciales,
+}: {
+  mensajesIniciales: Mensaje[];
+}) {
+  const router = useRouter();
+  const [borrador, setBorrador] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [enviando, startTransition] = useTransition();
+  const contenedorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (contenedorRef.current) {
+      contenedorRef.current.scrollTop = contenedorRef.current.scrollHeight;
+    }
+  }, [mensajesIniciales.length]);
+
+  function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!borrador.trim()) return;
+    setError(null);
+    const texto = borrador;
+    setBorrador("");
+    startTransition(async () => {
+      const r = await enviarMiMensaje(texto);
+      if (!r.ok) {
+        setError(r.error);
+        setBorrador(texto);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-220px)] min-h-[400px] mt-4">
+      <div
+        ref={contenedorRef}
+        className="flex-1 overflow-y-auto py-2 space-y-3 pr-2"
+      >
+        {mensajesIniciales.length === 0 ? (
+          <div className="text-center text-sm text-neutral-500 py-12">
+            Aún no hay mensajes. ¡Escribe el primero!
+          </div>
+        ) : (
+          mensajesIniciales.map((m) => {
+            const esMia = m.remitente === "clienta";
+            return (
+              <div
+                key={m.id}
+                className={"flex " + (esMia ? "justify-end" : "justify-start")}
+              >
+                <div
+                  className={
+                    "max-w-[80%] rounded-2xl px-3 py-2 " +
+                    (esMia
+                      ? "bg-brand-600 text-white rounded-br-sm"
+                      : "bg-neutral-900 border border-neutral-800 text-neutral-100 rounded-bl-sm")
+                  }
+                >
+                  <div className="text-sm whitespace-pre-wrap">{m.contenido}</div>
+                  <div
+                    className={
+                      "text-[10px] mt-1 " +
+                      (esMia ? "text-white/60" : "text-neutral-500")
+                    }
+                  >
+                    {formateaHora(m.enviado_en)}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {error && (
+        <div className="text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-3 py-2 mb-2">
+          {error}
+        </div>
+      )}
+
+      <form
+        onSubmit={enviar}
+        className="border-t border-neutral-800 pt-3 flex items-end gap-2"
+      >
+        <textarea
+          value={borrador}
+          onChange={(e) => setBorrador(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              enviar(e);
+            }
+          }}
+          placeholder="Escribe a tu entrenadora..."
+          rows={2}
+          className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none"
+        />
+        <button
+          type="submit"
+          disabled={enviando || !borrador.trim()}
+          className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium"
+        >
+          {enviando ? "..." : "Enviar"}
+        </button>
+      </form>
+    </div>
+  );
+}

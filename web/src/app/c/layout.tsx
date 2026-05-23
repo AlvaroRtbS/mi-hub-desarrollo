@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import LogoutButton from "@/components/logout-button";
 
 const TABS = [
   { href: "/c/hoy", icono: "🏠", label: "Hoy" },
   { href: "/c/programa", icono: "📋", label: "Programa" },
-  { href: "/c/metricas", icono: "📊", label: "Métricas" },
-  { href: "/c/mensajes", icono: "💬", label: "Mensajes" },
-  { href: "/c/perfil", icono: "👤", label: "Perfil" },
+  { href: "/c/metricas", icono: "📊", label: "Medidas" },
+  { href: "/c/fotos", icono: "📸", label: "Fotos" },
+  { href: "/c/mensajes", icono: "💬", label: "Chat" },
 ];
 
 export default async function ClientaLayout({
@@ -29,7 +28,6 @@ export default async function ClientaLayout({
     .maybeSingle();
 
   if (!clienta) {
-    // Logueado pero NO es clienta (ni coach, lo habría capturado el middleware)
     redirect("/login");
   }
 
@@ -49,7 +47,13 @@ export default async function ClientaLayout({
             </div>
             <div className="text-sm font-medium">{clienta.nombre}</div>
           </div>
-          <LogoutButton />
+          <Link
+            href="/c/perfil"
+            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-sm"
+            aria-label="Perfil"
+          >
+            👤
+          </Link>
         </div>
       </header>
 
