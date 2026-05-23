@@ -76,3 +76,123 @@ export const MATERIAL = [
   "Esterilla",
   "Otro",
 ] as const;
+
+// ============================================================================
+// PROGRAMAS — estructura JSONB
+// ============================================================================
+// Forma jerárquica: programa → semanas → días → bloques → elementos.
+
+export type SerieEjercicio = {
+  reps: string;
+  peso: string;
+  rir?: string;
+  descanso?: string;
+  tempo?: string;
+  notas?: string;
+};
+
+export type ElementoEjercicio = {
+  id: string;
+  tipo: "ejercicio";
+  ejercicio_id: string;
+  /** Snapshot del nombre por si el ejercicio se borra después. */
+  ejercicio_nombre?: string;
+  series: SerieEjercicio[];
+  notas?: string;
+};
+
+export type ElementoContenido = {
+  id: string;
+  tipo: "contenido";
+  titulo: string;
+  markdown: string;
+};
+
+export type ElementoMetricaPrompt = {
+  id: string;
+  tipo: "metrica_prompt";
+  metrica_tipo: string;
+};
+
+export type ElementoFotoPrompt = {
+  id: string;
+  tipo: "foto_progreso_prompt";
+};
+
+export type ElementoPasosPrompt = {
+  id: string;
+  tipo: "pasos_prompt";
+};
+
+export type ElementoRecordatorio = {
+  id: string;
+  tipo: "recordatorio";
+  hora: string;
+  mensaje: string;
+};
+
+export type Elemento =
+  | ElementoEjercicio
+  | ElementoContenido
+  | ElementoMetricaPrompt
+  | ElementoFotoPrompt
+  | ElementoPasosPrompt
+  | ElementoRecordatorio;
+
+export type Bloque = {
+  id: string;
+  titulo: string;
+  indicaciones?: string;
+  elementos: Elemento[];
+};
+
+export type Dia = {
+  dia: number;
+  titulo: string;
+  /** Marca "día de descanso" (sin bloques esperados). */
+  descanso?: boolean;
+  bloques: Bloque[];
+};
+
+export type Semana = {
+  semana: number;
+  titulo?: string;
+  dias: Dia[];
+};
+
+export type EstructuraPrograma = Semana[];
+
+export type Programa = {
+  id: string;
+  coach_id: string;
+  nombre: string;
+  descripcion: string | null;
+  num_semanas: number;
+  estructura: EstructuraPrograma;
+  imagen_portada_url: string | null;
+  trainerstudio_id: string | null;
+  creado_en: string;
+  actualizado_en: string;
+};
+
+export const NOMBRES_DIAS = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
+] as const;
+
+export function crearEstructuraVacia(numSemanas: number): EstructuraPrograma {
+  return Array.from({ length: numSemanas }, (_, i) => ({
+    semana: i + 1,
+    dias: NOMBRES_DIAS.map((nombre, j) => ({
+      dia: j + 1,
+      titulo: nombre,
+      descanso: j >= 5,
+      bloques: [],
+    })),
+  }));
+}
