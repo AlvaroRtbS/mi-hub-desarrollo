@@ -4,10 +4,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import LogoutButton from "@/components/logout-button";
 
 const enlaces = [
+  { href: "/inicio", label: "Inicio" },
+  { href: "/calendario", label: "Calendario" },
   { href: "/clientas", label: "Clientas" },
   { href: "/programas", label: "Programas" },
   { href: "/ejercicios", label: "Ejercicios" },
-  { href: "/calendario", label: "Calendario" },
   { href: "/nutricion", label: "Nutrición" },
   { href: "/metricas", label: "Métricas" },
   { href: "/mensajes", label: "Mensajes" },
