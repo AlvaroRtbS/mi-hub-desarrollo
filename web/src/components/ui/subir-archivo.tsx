@@ -5,7 +5,12 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Boton } from "@/components/ui/boton";
 
 type Props = {
-  bucket: "ejercicios-videos" | "ejercicios-imagenes" | "fotos-progreso" | "nutricion-pdfs";
+  bucket:
+    | "ejercicios-videos"
+    | "ejercicios-imagenes"
+    | "fotos-progreso"
+    | "nutricion-pdfs"
+    | "programa-adjuntos";
   accept: string;
   coachId: string;
   /** Nombre del input hidden que llevará la ruta resultante en el form */
@@ -13,6 +18,8 @@ type Props = {
   valorInicial?: string | null;
   /** Texto descriptivo del tipo de archivo aceptado */
   descripcion: string;
+  /** Si se proporciona, se llama tras subir con la ruta resultante y el nombre original */
+  onSubido?: (ruta: string, nombreArchivo: string) => void;
 };
 
 export function SubirArchivo({
@@ -22,6 +29,7 @@ export function SubirArchivo({
   nombre,
   valorInicial,
   descripcion,
+  onSubido,
 }: Props) {
   const refInput = useRef<HTMLInputElement>(null);
   const [ruta, setRuta] = useState<string | null>(valorInicial ?? null);
@@ -55,6 +63,7 @@ export function SubirArchivo({
     }
 
     setRuta(ruta);
+    onSubido?.(ruta, archivo.name);
   }
 
   function quitar() {

@@ -12,6 +12,16 @@ export default async function ProgramaPage({
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: coach } = await supabase
+    .from("coaches")
+    .select("id")
+    .eq("user_id", user?.id ?? "")
+    .maybeSingle();
+  const coachId = (coach as { id?: string } | null)?.id ?? "";
+
   const { data: programa } = await supabase
     .from("programas")
     .select("id, nombre, descripcion, num_semanas, estructura")
@@ -55,6 +65,7 @@ export default async function ProgramaPage({
 
       <EditorPrograma
         programaId={programa.id}
+        coachId={coachId}
         nombreInicial={programa.nombre}
         descripcionInicial={programa.descripcion}
         estructuraInicial={(programa.estructura as EstructuraPrograma) ?? []}

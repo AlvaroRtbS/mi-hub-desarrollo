@@ -20,7 +20,8 @@ import type {
   SerieEjercicio,
   Ejercicio,
 } from "@/lib/supabase/tipos";
-import { NOMBRES_DIAS } from "@/lib/supabase/tipos";
+import { NOMBRES_DIAS, detectarProveedorVideo } from "@/lib/supabase/tipos";
+import { SubirArchivo } from "@/components/ui/subir-archivo";
 import { SelectorEjercicios } from "./selector-ejercicios";
 import { ModalAsignar } from "./modal-asignar";
 
@@ -38,6 +39,7 @@ type ClientaBasica = {
 
 type Props = {
   programaId: string;
+  coachId: string;
   nombreInicial: string;
   descripcionInicial: string | null;
   estructuraInicial: EstructuraPrograma;
@@ -72,6 +74,7 @@ function semanasVaciasSiHaceFalta(
 
 export function EditorPrograma({
   programaId,
+  coachId,
   nombreInicial,
   descripcionInicial,
   estructuraInicial,
@@ -246,6 +249,24 @@ export function EditorPrograma({
           break;
         case "recordatorio":
           nuevo = { id: uuid(), tipo: "recordatorio", hora: "20:00", mensaje: "" };
+          break;
+        case "pdf":
+          nuevo = { id: uuid(), tipo: "pdf", titulo: "Documento PDF", url: "" };
+          break;
+        case "video":
+          nuevo = { id: uuid(), tipo: "video", titulo: "Vídeo", url: "" };
+          break;
+        case "video_externo":
+          nuevo = {
+            id: uuid(),
+            tipo: "video_externo",
+            titulo: "Vídeo (YouTube / Vimeo)",
+            url: "",
+            proveedor: "otro",
+          };
+          break;
+        case "enlace":
+          nuevo = { id: uuid(), tipo: "enlace", titulo: "Enlace", url: "" };
           break;
         default:
           return;
@@ -590,6 +611,7 @@ export function EditorPrograma({
                 <VistaBloque
                   key={bloque.id}
                   bloque={bloque}
+                  coachId={coachId}
                   esPrimero={bIdx === 0}
                   esUltimo={bIdx === diaActual.bloques.length - 1}
                   onActualizar={(parche) => actualizarBloque(bIdx, parche)}
@@ -659,6 +681,7 @@ export function EditorPrograma({
 
 function VistaBloque({
   bloque,
+  coachId,
   esPrimero,
   esUltimo,
   onActualizar,
@@ -674,6 +697,7 @@ function VistaBloque({
   onActualizarSerie,
 }: {
   bloque: Bloque;
+  coachId: string;
   esPrimero: boolean;
   esUltimo: boolean;
   onActualizar: (parche: Partial<Bloque>) => void;
@@ -748,6 +772,7 @@ function VistaBloque({
               <VistaElemento
                 key={el.id}
                 elemento={el}
+                coachId={coachId}
                 esPrimero={eIdx === 0}
                 esUltimo={eIdx === bloque.elementos.length - 1}
                 onActualizar={(parche) => onActualizarElemento(eIdx, parche)}
@@ -785,10 +810,14 @@ function VistaBloque({
                   className="fixed inset-0 z-10 cursor-default"
                   aria-label="Cerrar menú"
                 />
-                <div className="absolute z-20 mt-1 left-0 bg-neutral-950 border border-neutral-800 rounded-lg shadow-xl py-1 min-w-[200px]">
+                <div className="absolute z-20 mt-1 left-0 bg-neutral-950 border border-neutral-800 rounded-lg shadow-xl py-1 min-w-[220px]">
                   {(
                     [
                       ["contenido", "📝 Nota / contenido"],
+                      ["pdf", "📄 PDF adjunto"],
+                      ["video", "🎥 Vídeo (subir)"],
+                      ["video_externo", "▶️ Vídeo (YouTube / Vimeo)"],
+                      ["enlace", "🔗 Enlace externo"],
                       ["metrica_prompt", "⚖️ Pedir métrica"],
                       ["foto_progreso_prompt", "📸 Pedir foto"],
                       ["pasos_prompt", "👣 Pedir pasos del día"],
@@ -822,6 +851,7 @@ function VistaBloque({
 
 function VistaElemento({
   elemento,
+  coachId,
   esPrimero,
   esUltimo,
   onActualizar,
@@ -832,6 +862,7 @@ function VistaElemento({
   onActualizarSerie,
 }: {
   elemento: Elemento;
+  coachId: string;
   esPrimero: boolean;
   esUltimo: boolean;
   onActualizar: (parche: Partial<Elemento>) => void;
@@ -991,6 +1022,143 @@ function VistaElemento({
                   className="flex-1 bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
                 />
               </div>
+            </div>
+          )}
+
+          {elemento.tipo === "pdf" && (
+            <div className="space-y-2">
+              <div className="text-xs text-neutral-500">📄 PDF adjunto</div>
+              <input
+                value={elemento.titulo}
+                onChange={(e) => onActualizar({ titulo: e.target.value })}
+                placeholder="Título del documento"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+              />
+              {elemento.url ? (
+                <div className="flex items-center justify-between bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5">
+                  <div className="text-xs text-neutral-300 truncate flex-1">
+                    <span className="text-neutral-500">📄</span>{" "}
+                    {elemento.nombre_archivo ?? elemento.url.split("/").pop()}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onActualizar({ url: "", nombre_archivo: undefined })
+                    }
+                    className="text-xs text-neutral-500 hover:text-red-400 ml-2"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              ) : (
+                <SubirArchivo
+                  bucket="programa-adjuntos"
+                  accept="application/pdf"
+                  coachId={coachId}
+                  nombre={`pdf-${elemento.id}`}
+                  descripcion="PDF · hasta 150 MB"
+                  onSubido={(ruta, nombreArchivo) =>
+                    onActualizar({ url: ruta, nombre_archivo: nombreArchivo })
+                  }
+                />
+              )}
+            </div>
+          )}
+
+          {elemento.tipo === "video" && (
+            <div className="space-y-2">
+              <div className="text-xs text-neutral-500">🎥 Vídeo (subido)</div>
+              <input
+                value={elemento.titulo}
+                onChange={(e) => onActualizar({ titulo: e.target.value })}
+                placeholder="Título del vídeo"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+              />
+              {elemento.url ? (
+                <div className="flex items-center justify-between bg-neutral-950 border border-neutral-800 rounded px-2 py-1.5">
+                  <div className="text-xs text-neutral-300 truncate flex-1">
+                    <span className="text-neutral-500">🎥</span>{" "}
+                    {elemento.nombre_archivo ?? elemento.url.split("/").pop()}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onActualizar({ url: "", nombre_archivo: undefined })
+                    }
+                    className="text-xs text-neutral-500 hover:text-red-400 ml-2"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              ) : (
+                <SubirArchivo
+                  bucket="programa-adjuntos"
+                  accept="video/mp4,video/quicktime,video/webm"
+                  coachId={coachId}
+                  nombre={`video-${elemento.id}`}
+                  descripcion="MP4 / MOV / WebM · hasta 150 MB"
+                  onSubido={(ruta, nombreArchivo) =>
+                    onActualizar({ url: ruta, nombre_archivo: nombreArchivo })
+                  }
+                />
+              )}
+            </div>
+          )}
+
+          {elemento.tipo === "video_externo" && (
+            <div className="space-y-2">
+              <div className="text-xs text-neutral-500">▶️ Vídeo externo</div>
+              <input
+                value={elemento.titulo}
+                onChange={(e) => onActualizar({ titulo: e.target.value })}
+                placeholder="Título"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+              />
+              <input
+                value={elemento.url}
+                onChange={(e) => {
+                  const url = e.target.value;
+                  onActualizar({
+                    url,
+                    proveedor: detectarProveedorVideo(url),
+                  });
+                }}
+                placeholder="Pega URL de YouTube o Vimeo"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+              />
+              {elemento.url && (
+                <div className="text-[10px] text-neutral-500">
+                  {elemento.proveedor === "youtube"
+                    ? "✓ YouTube detectado"
+                    : elemento.proveedor === "vimeo"
+                    ? "✓ Vimeo detectado"
+                    : "⚠ No se reconoce el proveedor — se mostrará como enlace"}
+                </div>
+              )}
+            </div>
+          )}
+
+          {elemento.tipo === "enlace" && (
+            <div className="space-y-2">
+              <div className="text-xs text-neutral-500">🔗 Enlace</div>
+              <input
+                value={elemento.titulo}
+                onChange={(e) => onActualizar({ titulo: e.target.value })}
+                placeholder="Título"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+              />
+              <input
+                value={elemento.url}
+                onChange={(e) => onActualizar({ url: e.target.value })}
+                placeholder="https://..."
+                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+              />
+              <input
+                value={elemento.descripcion ?? ""}
+                onChange={(e) => onActualizar({ descripcion: e.target.value })}
+                placeholder="Descripción (opcional)"
+                className="w-full bg-transparent text-xs text-neutral-400 placeholder:text-neutral-700 focus:outline-none"
+              />
             </div>
           )}
         </div>

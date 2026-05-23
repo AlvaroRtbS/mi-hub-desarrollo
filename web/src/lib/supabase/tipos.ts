@@ -131,13 +131,93 @@ export type ElementoRecordatorio = {
   mensaje: string;
 };
 
+/** PDF adjunto al bloque (path dentro del bucket programa-adjuntos). */
+export type ElementoPDF = {
+  id: string;
+  tipo: "pdf";
+  titulo: string;
+  url: string;
+  nombre_archivo?: string;
+};
+
+/** Vídeo subido al storage propio (path dentro del bucket programa-adjuntos). */
+export type ElementoVideo = {
+  id: string;
+  tipo: "video";
+  titulo: string;
+  url: string;
+  nombre_archivo?: string;
+};
+
+/** Vídeo externo (YouTube / Vimeo / etc.) por URL. */
+export type ElementoVideoExterno = {
+  id: string;
+  tipo: "video_externo";
+  titulo: string;
+  url: string;
+  proveedor: "youtube" | "vimeo" | "otro";
+};
+
+/** Enlace externo arbitrario (artículo, web, recurso). */
+export type ElementoEnlace = {
+  id: string;
+  tipo: "enlace";
+  titulo: string;
+  url: string;
+  descripcion?: string;
+};
+
 export type Elemento =
   | ElementoEjercicio
   | ElementoContenido
   | ElementoMetricaPrompt
   | ElementoFotoPrompt
   | ElementoPasosPrompt
-  | ElementoRecordatorio;
+  | ElementoRecordatorio
+  | ElementoPDF
+  | ElementoVideo
+  | ElementoVideoExterno
+  | ElementoEnlace;
+
+/**
+ * Detecta el proveedor de un vídeo externo a partir de su URL.
+ * Devuelve `null` si no se reconoce.
+ */
+export function detectarProveedorVideo(
+  url: string
+): "youtube" | "vimeo" | "otro" {
+  const u = url.toLowerCase();
+  if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
+  if (u.includes("vimeo.com")) return "vimeo";
+  return "otro";
+}
+
+/**
+ * Devuelve la URL embebida (iframe-ready) de un vídeo externo.
+ * Si la URL ya es embed o no se reconoce, se devuelve tal cual.
+ */
+export function urlEmbedVideo(url: string): string {
+  try {
+    const u = new URL(url);
+    // YouTube: https://www.youtube.com/watch?v=ID  ó  https://youtu.be/ID
+    if (u.hostname.includes("youtube.com")) {
+      const id = u.searchParams.get("v");
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (u.hostname === "youtu.be") {
+      const id = u.pathname.slice(1);
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    // Vimeo: https://vimeo.com/ID
+    if (u.hostname.includes("vimeo.com")) {
+      const id = u.pathname.split("/").filter(Boolean)[0];
+      if (id && /^\d+$/.test(id)) return `https://player.vimeo.com/video/${id}`;
+    }
+  } catch {
+    // url inválida, devolver original
+  }
+  return url;
+}
 
 export type Bloque = {
   id: string;

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import type { EstructuraPrograma, Bloque, Elemento } from "@/lib/supabase/tipos";
+import { urlEmbedVideo } from "@/lib/supabase/tipos";
 import { LOGROS, calcularNivel, xpTotal as calcularXpTotal, type TipoLogro } from "@/lib/gamificacion";
 import { calcularAdherencia, diasProgramadosDeAsignacion } from "@/lib/adherencia";
 import { BotonCompletarSesion } from "./boton-completar";
@@ -118,6 +120,21 @@ export default async function HoyPage() {
 
   const dia = semana.dias[diaIdx]!;
 
+  // URLs firmadas para PDFs y vídeos adjuntos del día actual
+  const pathsAdjuntos: (string | null)[] = [];
+  for (const b of dia.bloques) {
+    for (const el of b.elementos) {
+      if ((el.tipo === "pdf" || el.tipo === "video") && el.url) {
+        pathsAdjuntos.push(el.url);
+      }
+    }
+  }
+  const urlsAdjuntos = await obtenerUrlsFirmadas(
+    "programa-adjuntos",
+    pathsAdjuntos,
+    3600
+  );
+
   // Sesión de hoy (si ya existe)
   const { data: sesionHoy } = await supabase
     .from("sesiones")
@@ -172,7 +189,11 @@ export default async function HoyPage() {
         ) : (
           <div className="space-y-3">
             {dia.bloques.map((b) => (
-              <BloqueClienta key={b.id} bloque={b} />
+              <BloqueClienta
+                key={b.id}
+                bloque={b}
+                urlsAdjuntos={urlsAdjuntos}
+              />
             ))}
 
             <BotonCompletarSesion
@@ -277,7 +298,13 @@ function Stat({
   );
 }
 
-function BloqueClienta({ bloque }: { bloque: Bloque }) {
+function BloqueClienta({
+  bloque,
+  urlsAdjuntos,
+}: {
+  bloque: Bloque;
+  urlsAdjuntos: Map<string, string>;
+}) {
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-3">
       <div className="font-medium text-sm">{bloque.titulo}</div>
@@ -325,6 +352,112 @@ function BloqueClienta({ bloque }: { bloque: Bloque }) {
             {el.tipo === "recordatorio" && (
               <div className="flex-1 text-neutral-300">
                 🔔 {el.hora} · {el.mensaje}
+              </div>
+            )}
+            {el.tipo === "pdf" && (
+              <div className="flex-1">
+                <a
+                  href={urlsAdjuntos.get(el.url) ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 hover:border-brand-700/50 hover:bg-neutral-900/80 transition"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📄</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-neutral-100 truncate">
+                        {el.titulo || "Documento PDF"}
+                      </div>
+                      <div className="text-[10px] text-brand-400">Abrir PDF →</div>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            )}
+            {el.tipo === "video" && (
+              <div className="flex-1">
+                {urlsAdjuntos.get(el.url) ? (
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden">
+                    {el.titulo && (
+                      <div className="px-3 pt-2 pb-1 text-xs text-neutral-400">
+                        🎥 {el.titulo}
+                      </div>
+                    )}
+                    <video
+                      src={urlsAdjuntos.get(el.url)}
+                      controls
+                      preload="metadata"
+                      className="w-full max-h-80 bg-black"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-xs text-neutral-500 italic">
+                    Vídeo no disponible
+                  </div>
+                )}
+              </div>
+            )}
+            {el.tipo === "video_externo" && (
+              <div className="flex-1">
+                {el.url ? (
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden">
+                    {el.titulo && (
+                      <div className="px-3 pt-2 pb-1 text-xs text-neutral-400">
+                        ▶️ {el.titulo}
+                      </div>
+                    )}
+                    {el.proveedor === "youtube" || el.proveedor === "vimeo" ? (
+                      <div className="aspect-video">
+                        <iframe
+                          src={urlEmbedVideo(el.url)}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <a
+                        href={el.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block px-3 py-2 text-xs text-brand-400 hover:text-brand-300"
+                      >
+                        Abrir vídeo →
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-xs text-neutral-500 italic">
+                    Vídeo no configurado
+                  </div>
+                )}
+              </div>
+            )}
+            {el.tipo === "enlace" && (
+              <div className="flex-1">
+                <a
+                  href={el.url || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 hover:border-brand-700/50 hover:bg-neutral-900/80 transition"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🔗</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-neutral-100 truncate">
+                        {el.titulo || el.url}
+                      </div>
+                      {el.descripcion && (
+                        <div className="text-[10px] text-neutral-500 truncate">
+                          {el.descripcion}
+                        </div>
+                      )}
+                      <div className="text-[10px] text-brand-400 truncate">
+                        {el.url}
+                      </div>
+                    </div>
+                  </div>
+                </a>
               </div>
             )}
           </li>
