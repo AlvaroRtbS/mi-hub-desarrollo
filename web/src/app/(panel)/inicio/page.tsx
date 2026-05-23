@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { EstructuraPrograma, Dia } from "@/lib/supabase/tipos";
 import { inicialesNombre, formatearFecha } from "@/lib/utilidades";
+import { BotonCargarDemo } from "./boton-demo";
 
 type AsignacionConSnapshot = {
   id: string;
@@ -168,6 +169,13 @@ export default async function InicioPage() {
         </h1>
         <p className="text-sm text-neutral-400 mt-1 capitalize">{fechaLarga}</p>
       </div>
+
+      {(clientasActivas.count ?? 0) === 0 &&
+        (clientasInvitadas.count ?? 0) === 0 && (
+          <div className="mb-6">
+            <BotonCargarDemo />
+          </div>
+        )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         <Stat
