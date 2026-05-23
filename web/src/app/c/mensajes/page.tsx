@@ -45,7 +45,7 @@ export default async function MensajesClientaPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold mb-1">Chat con {coachNombre}</h1>
-      <ChatClienta mensajesIniciales={mensajes} />
+      <ChatClienta clientaId={clienta.id} mensajesIniciales={mensajes} />
     </div>
   );
 }

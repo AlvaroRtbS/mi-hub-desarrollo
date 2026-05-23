@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { enviarMensaje, simularMensajeClienta } from "../acciones";
 import { PLANTILLAS, rellenarPlantilla, type PlantillaMensaje } from "@/lib/plantillas-mensajes";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Mensaje = {
   id: string;
@@ -41,6 +42,42 @@ export function Conversacion({
   const [filtroPlantillas, setFiltroPlantillas] = useState<string>("todas");
   const contenedorRef = useRef<HTMLDivElement>(null);
 
+  // Estado local — arranca con lo del server y se actualiza vía Realtime
+  const [mensajes, setMensajes] = useState<Mensaje[]>(mensajesIniciales);
+
+  // Re-sync cuando el server pasa nuevos iniciales (ej. tras router.refresh tras enviar)
+  useEffect(() => {
+    setMensajes(mensajesIniciales);
+  }, [mensajesIniciales]);
+
+  // Suscripción a inserts en tabla mensajes filtrados por clienta_id
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    const canal = supabase
+      .channel(`mensajes-clienta-${clientaId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "mensajes",
+          filter: `clienta_id=eq.${clientaId}`,
+        },
+        (payload) => {
+          const nuevo = payload.new as Mensaje;
+          setMensajes((prev) => {
+            if (prev.some((m) => m.id === nuevo.id)) return prev;
+            return [...prev, nuevo];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [clientaId]);
+
   function insertarPlantilla(p: PlantillaMensaje) {
     setBorrador(rellenarPlantilla(p, clientaNombre));
     setMostrandoPlantillas(false);
@@ -50,7 +87,7 @@ export function Conversacion({
     if (contenedorRef.current) {
       contenedorRef.current.scrollTop = contenedorRef.current.scrollHeight;
     }
-  }, [mensajesIniciales.length]);
+  }, [mensajes.length]);
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -87,12 +124,12 @@ export function Conversacion({
         ref={contenedorRef}
         className="flex-1 overflow-y-auto py-4 space-y-3 pr-2"
       >
-        {mensajesIniciales.length === 0 ? (
+        {mensajes.length === 0 ? (
           <div className="text-center text-sm text-neutral-500 py-12">
             No hay mensajes aún. Escribe el primero.
           </div>
         ) : (
-          mensajesIniciales.map((m) => {
+          mensajes.map((m) => {
             const esCoach = m.remitente === "coach";
             return (
               <div
