@@ -16,6 +16,8 @@ import { BotonCompartirPrograma } from "./boton-compartir";
 import { NotasInternas } from "./notas-internas";
 import { BotonResumenIA } from "./boton-resumen-ia";
 import { PanelLogros } from "./panel-logros";
+import { HeatmapAdherencia } from "./heatmap-adherencia";
+import { PanelObjetivos } from "./panel-objetivos";
 import { LOGROS, type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
 import { GraficasMetricas } from "./graficas";
 
@@ -105,6 +107,39 @@ export default async function ClientaPage({
     contenido: string;
     creada_en: string;
   }>;
+
+  // Objetivos
+  const { data: objetivosData } = await supabase
+    .from("objetivos")
+    .select(
+      "id, titulo, descripcion, tipo, valor_inicial, valor_objetivo, unidad, fecha_limite, estado, conseguido_en, creado_en"
+    )
+    .eq("clienta_id", id)
+    .order("creado_en", { ascending: false });
+  const objetivos = (objetivosData ?? []) as Array<{
+    id: string;
+    titulo: string;
+    descripcion: string | null;
+    tipo: string;
+    valor_inicial: number | null;
+    valor_objetivo: number | null;
+    unidad: string | null;
+    fecha_limite: string | null;
+    estado: "activo" | "conseguido" | "archivado";
+    conseguido_en: string | null;
+    creado_en: string;
+  }>;
+
+  // Valor actual por tipo de métrica (último valor registrado)
+  const valorActualPorTipo: Record<string, number | null> = {};
+  metricas.forEach((m) => {
+    if (!(m.tipo in valorActualPorTipo)) {
+      valorActualPorTipo[m.tipo] = Number(m.valor);
+    }
+  });
+  valorActualPorTipo["sesiones_completadas"] = sesionesAll.filter(
+    (s) => s.completada
+  ).length;
 
   // Logros desbloqueados
   const { data: logrosData } = await supabase
@@ -246,7 +281,9 @@ export default async function ClientaPage({
       {/* Adherencia */}
       {adherencia && (
         <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
-          <h3 className="font-medium mb-3">Adherencia</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium">Adherencia</h3>
+          </div>
           <div className="grid grid-cols-4 gap-3">
             <Mini
               label="Racha actual"
@@ -270,6 +307,9 @@ export default async function ClientaPage({
               valor={adherencia.sesionesCompletadas}
               sufijo={`/${adherencia.sesionesProgramadas}`}
             />
+          </div>
+          <div className="mt-5 pt-5 border-t border-neutral-900">
+            <HeatmapAdherencia clientaId={clienta.id} />
           </div>
         </div>
       )}
@@ -333,6 +373,15 @@ export default async function ClientaPage({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Objetivos */}
+      <div className="mt-6">
+        <PanelObjetivos
+          clientaId={clienta.id}
+          objetivos={objetivos}
+          valorActualPorTipo={valorActualPorTipo}
+        />
       </div>
 
       {/* Logros y nivel */}
