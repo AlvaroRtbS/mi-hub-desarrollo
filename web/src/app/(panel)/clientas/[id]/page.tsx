@@ -14,6 +14,7 @@ import { BotonAsignar } from "./boton-asignar";
 import { BotonGenerarIA } from "./boton-generar-ia";
 import { BotonCompartirPrograma } from "./boton-compartir";
 import { NotasInternas } from "./notas-internas";
+import { BotonResumenIA } from "./boton-resumen-ia";
 import { GraficasMetricas } from "./graficas";
 
 type AsignacionResumen = {
@@ -316,6 +317,11 @@ export default async function ClientaPage({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Resumen IA */}
+      <div className="mt-6">
+        <BotonResumenIA clientaId={clienta.id} />
       </div>
 
       {/* Gráficas de evolución */}

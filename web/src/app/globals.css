@@ -10,3 +10,68 @@
     @apply bg-neutral-950 text-neutral-100 antialiased;
   }
 }
+
+/* CSS de impresión: para "Guardar como PDF" desde la página /p/[token] */
+@media print {
+  html {
+    color-scheme: light;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  /* Elementos que no se deben imprimir */
+  .no-print,
+  button {
+    display: none !important;
+  }
+  /* Despliega los <details> para que se vea TODO el programa */
+  details {
+    page-break-inside: avoid;
+  }
+  details > summary {
+    list-style: none;
+    cursor: default;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  details:not([open]) > *:not(summary) {
+    display: revert !important;
+  }
+  details:not([open]) {
+    /* Forzar abierto en impresión */
+  }
+  /* Marca todo abierto */
+  details {
+    page-break-inside: avoid;
+  }
+  /* Colores adaptados a papel */
+  .bg-neutral-950,
+  .bg-neutral-900,
+  .bg-neutral-900\/50,
+  .bg-neutral-900\/40,
+  [class*="bg-brand-950"] {
+    background: white !important;
+  }
+  .text-neutral-100,
+  .text-neutral-200,
+  .text-neutral-300,
+  .text-neutral-400 {
+    color: black !important;
+  }
+  .text-neutral-500,
+  .text-neutral-600,
+  .text-neutral-700 {
+    color: #555 !important;
+  }
+  .text-brand-400,
+  .text-brand-500 {
+    color: #16a34a !important;
+  }
+  .border-neutral-800,
+  .border-neutral-900,
+  [class*="border-brand-900"] {
+    border-color: #ccc !important;
+  }
+}

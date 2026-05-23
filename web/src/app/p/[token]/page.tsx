@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { EstructuraPrograma, Bloque, Dia } from "@/lib/supabase/tipos";
 import { formatearFecha } from "@/lib/utilidades";
+import { BotonImprimir } from "./boton-imprimir";
 
 type DatosPrograma = {
   asignacion_id: string;
@@ -57,7 +58,13 @@ export default async function ProgramaPublicoPage({
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
       <div className="max-w-md mx-auto px-4 py-6">
-        <div className="text-xs text-neutral-500 uppercase tracking-wide mb-1">
+        <div className="flex items-center justify-between gap-2 mb-2 no-print">
+          <div className="text-xs text-neutral-500 uppercase tracking-wide">
+            {prog.coach_marca_nombre ?? prog.coach_nombre}
+          </div>
+          <BotonImprimir />
+        </div>
+        <div className="text-xs text-neutral-500 uppercase tracking-wide mb-1 hidden print:block">
           {prog.coach_marca_nombre ?? prog.coach_nombre}
         </div>
         <h1 className="text-2xl font-semibold mb-1">{prog.programa_nombre}</h1>
