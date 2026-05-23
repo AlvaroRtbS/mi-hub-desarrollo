@@ -23,7 +23,7 @@ export function TabsNav({
   tabActiva: TabClienta;
 }) {
   return (
-    <nav className="border-b border-neutral-800 flex gap-1 overflow-x-auto">
+    <nav className="sticky top-0 z-10 -mx-8 px-8 bg-neutral-950/95 backdrop-blur-sm border-b border-neutral-800 flex gap-1 overflow-x-auto">
       {TABS.map((t) => {
         const activa = t.valor === tabActiva;
         const href =

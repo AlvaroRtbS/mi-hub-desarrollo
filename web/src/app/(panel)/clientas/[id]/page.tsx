@@ -27,6 +27,7 @@ import { FichasEstructuradas } from "./fichas-estructuradas";
 import { TodosClienta } from "./todos-clienta";
 import { PestanaActividad } from "./pestana-actividad";
 import type { TipoFicha } from "./acciones-fichas";
+import { Tooltip } from "@/components/ui/tooltip";
 
 type AsignacionResumen = {
   id: string;
@@ -242,6 +243,7 @@ export default async function ClientaPage({
               ? `${asignacionActiva.programas.num_semanas} sem`
               : "Sin asignar"
           }
+          tooltip="Programa en curso ahora mismo"
         />
         <Kpi
           label="Racha"
@@ -255,6 +257,7 @@ export default async function ClientaPage({
                 : `Mejor: ${adherencia.rachaMaxima}`
               : "Sin programa"
           }
+          tooltip="Días seguidos completando sesiones"
         />
         <Kpi
           label="Adherencia"
@@ -264,6 +267,7 @@ export default async function ClientaPage({
               ? `${adherencia.sesionesCompletadas}/${adherencia.sesionesProgramadas} sesiones`
               : "—"
           }
+          tooltip="% de sesiones completadas sobre las programadas hasta hoy"
         />
         <Kpi
           label="Último entreno"
@@ -275,6 +279,7 @@ export default async function ClientaPage({
                 : `Hace ${diasDesde(ultimaSesionFecha)} días`
               : "Sin sesiones"
           }
+          tooltip="Fecha de la última sesión que la clienta marcó como completada"
         />
       </div>
 
@@ -337,16 +342,29 @@ function Kpi({
   label,
   valor,
   detalle,
+  tooltip,
 }: {
   label: string;
   valor: string;
   detalle?: string;
+  tooltip?: string;
 }) {
+  const labelNode = (
+    <div className="text-[10px] uppercase tracking-wide text-neutral-500 mb-1 inline-flex items-center gap-1">
+      {label}
+      {tooltip && <span className="text-neutral-700">ⓘ</span>}
+    </div>
+  );
+
   return (
     <div className="border border-neutral-800 rounded-2xl p-4">
-      <div className="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">
-        {label}
-      </div>
+      {tooltip ? (
+        <Tooltip contenido={tooltip} posicion="bottom">
+          {labelNode}
+        </Tooltip>
+      ) : (
+        labelNode
+      )}
       <div className="text-lg font-semibold truncate" title={valor}>
         {valor}
       </div>
