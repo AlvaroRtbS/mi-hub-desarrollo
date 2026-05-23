@@ -12,6 +12,8 @@ import {
 import { AccionesEstado } from "./acciones-estado";
 import { BotonAsignar } from "./boton-asignar";
 import { BotonGenerarIA } from "./boton-generar-ia";
+import { BotonCompartirPrograma } from "./boton-compartir";
+import { NotasInternas } from "./notas-internas";
 import { GraficasMetricas } from "./graficas";
 
 type AsignacionResumen = {
@@ -88,9 +90,23 @@ export default async function ClientaPage({
     .select("id", { count: "exact", head: true })
     .eq("clienta_id", id);
 
+  // Notas internas
+  const { data: notasData } = await supabase
+    .from("notas")
+    .select("id, contenido, creada_en")
+    .eq("clienta_id", id)
+    .order("creada_en", { ascending: false })
+    .limit(20);
+  const notas = (notasData ?? []) as Array<{
+    id: string;
+    contenido: string;
+    creada_en: string;
+  }>;
+
   // Adherencia: si tiene asignación activa, calcular racha y %.
   const hoyIso = new Date().toISOString().slice(0, 10);
   let adherencia: ReturnType<typeof calcularAdherencia> | null = null;
+  let tokenShare: string | null = null;
   if (asignacionActiva) {
     const { data: asignFull } = await supabase
       .from("asignaciones")
@@ -105,6 +121,12 @@ export default async function ClientaPage({
       );
       adherencia = calcularAdherencia(programados, sesionesAll);
     }
+    const { data: tk } = await supabase
+      .from("asignacion_share_tokens")
+      .select("token")
+      .eq("asignacion_id", asignacionActiva.id)
+      .maybeSingle();
+    tokenShare = tk?.token ?? null;
   }
 
   return (
@@ -284,6 +306,14 @@ export default async function ClientaPage({
               Comparador de fotos →
             </Link>
             <BotonGenerarIA clientaId={clienta.id} />
+            {asignacionActiva && (
+              <BotonCompartirPrograma
+                asignacionId={asignacionActiva.id}
+                clientaId={clienta.id}
+                clientaNombre={clienta.nombre}
+                tokenExistente={tokenShare}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -292,6 +322,17 @@ export default async function ClientaPage({
       <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
         <h3 className="font-medium mb-4">Evolución</h3>
         <GraficasMetricas clientaId={clienta.id} />
+      </div>
+
+      {/* Notas internas (solo coach) */}
+      <div className="mt-6 border border-neutral-800 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium">Notas internas</h3>
+          <span className="text-[10px] text-neutral-500 uppercase tracking-wide bg-neutral-900 px-2 py-1 rounded">
+            🔒 Solo tú
+          </span>
+        </div>
+        <NotasInternas clientaId={clienta.id} notasIniciales={notas} />
       </div>
     </div>
   );

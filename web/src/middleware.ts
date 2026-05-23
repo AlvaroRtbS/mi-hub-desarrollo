@@ -32,7 +32,11 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const esRutaPublica = path === "/" || path.startsWith("/login");
+  const esRutaPublica =
+    path === "/" ||
+    path.startsWith("/login") ||
+    path.startsWith("/p/") || // programa compartido por link público
+    path.startsWith("/api/whatsapp/"); // webhook entrante
 
   if (!user && !esRutaPublica) {
     const url = request.nextUrl.clone();

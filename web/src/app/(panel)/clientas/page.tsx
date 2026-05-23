@@ -50,7 +50,12 @@ export default async function ClientasPage({
             Gestiona tu lista de clientas, ve su estado y accede a sus perfiles.
           </p>
         </div>
-        <Boton href="/clientas/nueva">+ Añadir clienta</Boton>
+        <div className="flex gap-2">
+          <Boton variante="secundario" href="/clientas/grupos">
+            Grupos
+          </Boton>
+          <Boton href="/clientas/nueva">+ Añadir clienta</Boton>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-4 mb-4">
