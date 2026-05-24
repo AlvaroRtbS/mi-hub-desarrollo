@@ -6,6 +6,18 @@ import { urlEmbedVideo } from "@/lib/supabase/tipos";
 import { LOGROS, calcularNivel, xpTotal as calcularXpTotal, type TipoLogro } from "@/lib/gamificacion";
 import { calcularAdherencia, diasProgramadosDeAsignacion } from "@/lib/adherencia";
 import { BotonCompletarSesion } from "./boton-completar";
+import { RegistroEjercicio } from "./registro-ejercicio";
+
+type SerieRealizada = {
+  peso: string;
+  reps: string;
+  completado: boolean;
+};
+
+type RegistrosSesion = Record<
+  string,
+  { series_realizadas?: SerieRealizada[] }
+>;
 
 function fechaISO(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -165,10 +177,17 @@ export default async function HoyPage() {
   // Sesión de hoy (si ya existe)
   const { data: sesionHoy } = await supabase
     .from("sesiones")
-    .select("id, completada, registros")
+    .select("id, completada, registros, porcentaje_completado")
     .eq("clienta_id", clienta.id)
     .eq("fecha", hoy)
-    .maybeSingle();
+    .maybeSingle<{
+      id: string;
+      completada: boolean;
+      registros: RegistrosSesion | null;
+      porcentaje_completado: number;
+    }>();
+
+  const registrosHoy: RegistrosSesion = sesionHoy?.registros ?? {};
 
   // Adherencia
   const { data: sesionesData } = await supabase
@@ -222,6 +241,11 @@ export default async function HoyPage() {
                 urlsAdjuntos={urlsAdjuntos}
                 metaEjercicios={metaPorEjercicio}
                 urlsImagenes={urlsImagenesEjercicios}
+                registros={registrosHoy}
+                clientaId={clienta.id}
+                fecha={hoy}
+                semana={semanaIdx + 1}
+                dia={diaIdx + 1}
               />
             ))}
 
@@ -332,6 +356,11 @@ function BloqueClienta({
   urlsAdjuntos,
   metaEjercicios,
   urlsImagenes,
+  registros,
+  clientaId,
+  fecha,
+  semana,
+  dia,
 }: {
   bloque: Bloque;
   urlsAdjuntos: Map<string, string>;
@@ -340,6 +369,11 @@ function BloqueClienta({
     { id: string; imagen_url: string | null; video_url: string | null }
   >;
   urlsImagenes: Map<string, string>;
+  registros: RegistrosSesion;
+  clientaId: string;
+  fecha: string;
+  semana: number;
+  dia: number;
 }) {
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-3">
@@ -349,42 +383,49 @@ function BloqueClienta({
       )}
       <ul className="mt-2 space-y-2">
         {bloque.elementos.map((el: Elemento) => (
-          <li key={el.id} className="flex items-start gap-2 text-sm">
+          <li key={el.id} className={el.tipo === "ejercicio" ? "" : "flex items-start gap-2 text-sm"}>
             {el.tipo === "ejercicio" && (
-              <>
-                {(() => {
-                  const meta = metaEjercicios.get(el.ejercicio_id);
-                  const imgUrl =
-                    meta?.imagen_url && urlsImagenes.get(meta.imagen_url);
-                  return imgUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={imgUrl}
-                      alt=""
-                      className="w-14 h-14 rounded-lg object-cover bg-neutral-800 border border-neutral-800 flex-shrink-0"
-                    />
-                  ) : (
-                    <span className="w-14 h-14 rounded-lg bg-neutral-800 border border-neutral-800 flex items-center justify-center text-neutral-600 flex-shrink-0">
-                      🏋️
-                    </span>
-                  );
-                })()}
-                <div className="flex-1 min-w-0">
-                  <div className="text-neutral-100 font-medium">
-                    {el.ejercicio_nombre ?? "Ejercicio"}
-                  </div>
-                  <div className="text-xs text-neutral-500 mt-0.5">
-                    {el.series.length} series ·{" "}
-                    {el.series.map((s) => s.reps).join(" / ")}{" "}
-                    {el.series[0]?.peso && `@ ${el.series[0]?.peso}`}
-                  </div>
-                  {el.notas && (
-                    <div className="text-xs text-neutral-500 mt-0.5 italic">
-                      {el.notas}
+              <div>
+                <div className="flex items-start gap-2 mb-2">
+                  {(() => {
+                    const meta = metaEjercicios.get(el.ejercicio_id);
+                    const imgUrl =
+                      meta?.imagen_url && urlsImagenes.get(meta.imagen_url);
+                    return imgUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={imgUrl}
+                        alt=""
+                        className="w-14 h-14 rounded-lg object-cover bg-neutral-800 border border-neutral-800 flex-shrink-0"
+                      />
+                    ) : (
+                      <span className="w-14 h-14 rounded-lg bg-neutral-800 border border-neutral-800 flex items-center justify-center text-neutral-600 flex-shrink-0">
+                        🏋️
+                      </span>
+                    );
+                  })()}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-neutral-100 font-medium">
+                      {el.ejercicio_nombre ?? "Ejercicio"}
                     </div>
-                  )}
+                    {el.notas && (
+                      <div className="text-xs text-neutral-500 mt-0.5 italic">
+                        {el.notas}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </>
+                <RegistroEjercicio
+                  clientaId={clientaId}
+                  fecha={fecha}
+                  semana={semana}
+                  dia={dia}
+                  elemento={el}
+                  registroExistente={
+                    registros[el.id]?.series_realizadas ?? null
+                  }
+                />
+              </div>
             )}
             {el.tipo === "contenido" && (
               <div className="flex-1 text-neutral-300">
