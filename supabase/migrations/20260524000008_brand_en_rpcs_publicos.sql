@@ -2,8 +2,14 @@
 -- (invitacion_info y programa_por_token), para que las páginas
 -- públicas (/i/[token] y /p/[token]) puedan pintarse con los
 -- colores del coach sin necesidad de hacer una segunda query.
+--
+-- Postgres no permite cambiar el tipo de retorno con CREATE OR REPLACE
+-- (las funciones devuelven TABLEs con columnas distintas), por eso
+-- hacemos DROP + CREATE.
 
-create or replace function public.invitacion_info(t text)
+drop function if exists public.invitacion_info(text);
+
+create function public.invitacion_info(t text)
   returns table (
     clienta_id uuid,
     clienta_nombre text,
@@ -52,7 +58,9 @@ $$;
 grant execute on function public.invitacion_info(text) to anon, authenticated;
 
 
-create or replace function public.programa_por_token(t text)
+drop function if exists public.programa_por_token(text);
+
+create function public.programa_por_token(t text)
   returns table (
     asignacion_id uuid,
     fecha_inicio date,
