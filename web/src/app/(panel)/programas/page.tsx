@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Boton } from "@/components/ui/boton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatearFecha } from "@/lib/utilidades";
 
 type ProgramaResumen = {
@@ -62,16 +63,20 @@ export default async function ProgramasPage({
       )}
 
       {filas.length === 0 ? (
-        <div className="border border-dashed border-neutral-800 rounded-2xl p-12 text-center">
-          <div className="text-neutral-400">
-            {q ? "Ningún programa coincide." : "Aún no tienes programas."}
-          </div>
-          {!q && (
-            <div className="text-sm text-neutral-500 mt-2">
-              Pulsa "Crear programa" para empezar tu primera plantilla.
-            </div>
-          )}
-        </div>
+        <EmptyState
+          icono="📋"
+          titulo={
+            q
+              ? "Ningún programa coincide con la búsqueda"
+              : "Aún no tienes ningún programa"
+          }
+          descripcion={
+            q
+              ? "Prueba con otras palabras o crea uno nuevo."
+              : "Los programas son plantillas reutilizables (ej. \"Pérdida de peso 12 semanas\"). Construyes la estructura semana→día→bloque→ejercicio una vez y la asignas a tantas clientas como quieras, ajustando por persona."
+          }
+          accion={<Boton href="/programas/nuevo">+ Crear mi primer programa</Boton>}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filas.map((p) => {

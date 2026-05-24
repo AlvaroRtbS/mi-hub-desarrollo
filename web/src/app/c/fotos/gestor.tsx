@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { SubirArchivo } from "@/components/ui/subir-archivo";
 import { formatearFecha } from "@/lib/utilidades";
 import { registrarMiFoto, eliminarMiFoto } from "./acciones";
+import { Confetti } from "@/components/confetti";
+import { useToast } from "@/components/ui/toast";
 
 type FotoCliente = {
   id: string;
@@ -33,8 +35,10 @@ export function GestorMisFotos({
   fotos: FotoCliente[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [agregando, setAgregando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [celebrar, setCelebrar] = useState(false);
   const [enviando, startTransition] = useTransition();
 
   function guardar(e: React.FormEvent<HTMLFormElement>) {
@@ -61,6 +65,9 @@ export function GestorMisFotos({
         return;
       }
       setAgregando(false);
+      setCelebrar(true);
+      setTimeout(() => setCelebrar(false), 3500);
+      toast.success("Foto subida ✓");
       router.refresh();
     });
   }
@@ -75,6 +82,7 @@ export function GestorMisFotos({
 
   return (
     <div>
+      <Confetti trigger={celebrar} cantidad={40} duracion={2000} />
       {agregando ? (
         <form
           onSubmit={guardar}

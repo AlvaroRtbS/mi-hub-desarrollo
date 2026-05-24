@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { registrarMiMetrica } from "./acciones";
+import { Confetti } from "@/components/confetti";
+import { useToast } from "@/components/ui/toast";
 
 const TIPOS = [
   { id: "peso", label: "Peso", unidad: "kg" },
@@ -15,12 +17,14 @@ const TIPOS = [
 
 export function FormularioMiMetrica() {
   const router = useRouter();
+  const toast = useToast();
   const [abierto, setAbierto] = useState(false);
   const [tipo, setTipo] = useState(TIPOS[0]!.id);
   const [valor, setValor] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
   const [enviando, startTransition] = useTransition();
+  const [celebrar, setCelebrar] = useState(false);
 
   const unidad = TIPOS.find((t) => t.id === tipo)?.unidad ?? "";
 
@@ -40,18 +44,24 @@ export function FormularioMiMetrica() {
       }
       setValor("");
       setAbierto(false);
+      setCelebrar(true);
+      setTimeout(() => setCelebrar(false), 3500);
+      toast.success("Medida registrada ✓");
       router.refresh();
     });
   }
 
   if (!abierto) {
     return (
-      <button
-        onClick={() => setAbierto(true)}
-        className="w-full border border-dashed border-brand-900/50 bg-brand-950/10 text-brand-400 rounded-xl py-3 text-sm font-medium hover:bg-brand-950/30"
-      >
-        + Registrar medida
-      </button>
+      <>
+        <Confetti trigger={celebrar} cantidad={40} duracion={2000} />
+        <button
+          onClick={() => setAbierto(true)}
+          className="w-full border border-dashed border-brand-900/50 bg-brand-950/10 text-brand-400 rounded-xl py-3 text-sm font-medium hover:bg-brand-950/30"
+        >
+          + Registrar medida
+        </button>
+      </>
     );
   }
 
