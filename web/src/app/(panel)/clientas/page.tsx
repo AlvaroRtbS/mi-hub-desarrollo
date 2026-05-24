@@ -43,6 +43,54 @@ export default async function ClientasPage({
     }
   >;
 
+  // Cargar últimas 30 sesiones por cada clienta para indicador rápido
+  // de actividad (racha si va bien, alerta si lleva días sin entrenar).
+  const ids = clientas.map((c) => c.id);
+  const hace30 = new Date();
+  hace30.setDate(hace30.getDate() - 30);
+  const { data: sesionesAll } = await supabase
+    .from("sesiones")
+    .select("clienta_id, fecha, completada")
+    .in("clienta_id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"])
+    .gte("fecha", hace30.toISOString().slice(0, 10))
+    .order("fecha", { ascending: false });
+
+  const sesionesPorClienta = new Map<
+    string,
+    Array<{ fecha: string; completada: boolean }>
+  >();
+  for (const s of (sesionesAll ?? []) as Array<{
+    clienta_id: string;
+    fecha: string;
+    completada: boolean;
+  }>) {
+    const arr = sesionesPorClienta.get(s.clienta_id) ?? [];
+    arr.push({ fecha: s.fecha, completada: s.completada });
+    sesionesPorClienta.set(s.clienta_id, arr);
+  }
+
+  const hoyIso = new Date().toISOString().slice(0, 10);
+  function indicadorActividad(clientaId: string): {
+    racha: number;
+    diasSinEntrenar: number | null;
+  } {
+    const ses = sesionesPorClienta.get(clientaId) ?? [];
+    let racha = 0;
+    for (const s of ses) {
+      if (s.completada) racha++;
+      else break;
+    }
+    const ultimaCompletada = ses.find((s) => s.completada);
+    let diasSin: number | null = null;
+    if (ultimaCompletada) {
+      const d = new Date(ultimaCompletada.fecha + "T00:00:00Z");
+      diasSin = Math.floor(
+        (new Date(hoyIso + "T00:00:00Z").getTime() - d.getTime()) / 86400000
+      );
+    }
+    return { racha, diasSinEntrenar: diasSin };
+  }
+
   return (
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
@@ -156,8 +204,44 @@ export default async function ClientasPage({
                           )}
                         </span>
                         <span className="min-w-0">
-                          <span className="block truncate">
-                            {c.nombre} {c.apellidos ?? ""}
+                          <span className="flex items-center gap-1.5 truncate">
+                            <span className="truncate">
+                              {c.nombre} {c.apellidos ?? ""}
+                            </span>
+                            {(() => {
+                              const a = indicadorActividad(c.id);
+                              if (a.racha >= 7)
+                                return (
+                                  <span
+                                    title={`${a.racha} días seguidos entrenando`}
+                                    className="text-xs"
+                                  >
+                                    🔥{a.racha}
+                                  </span>
+                                );
+                              if (a.racha >= 3)
+                                return (
+                                  <span
+                                    title={`${a.racha} días seguidos`}
+                                    className="text-xs"
+                                  >
+                                    💪{a.racha}
+                                  </span>
+                                );
+                              if (
+                                a.diasSinEntrenar != null &&
+                                a.diasSinEntrenar >= 7
+                              )
+                                return (
+                                  <span
+                                    title={`${a.diasSinEntrenar} días sin entrenar`}
+                                    className="text-xs text-red-400"
+                                  >
+                                    ⚠ {a.diasSinEntrenar}d
+                                  </span>
+                                );
+                              return null;
+                            })()}
                           </span>
                           <span className="block text-xs text-neutral-500 truncate">
                             {c.email}
