@@ -101,6 +101,8 @@ const TS_ENDPOINTS = {
   customerCompliance: (id: string) => `/coach/customers/${id}/compliance`,
   programs: (archived: boolean, pageNum: number, pageSize = 50) =>
     `/coach/programs?archived=${archived}&pageSize=${pageSize}&pageNum=${pageNum}`,
+  programWblocks: (id: string, startDay = 0, endDay = 365) =>
+    `/coach/programs/${id}/wblock?startDay=${startDay}&endDay=${endDay}`,
 };
 
 // ============================================================================
@@ -789,14 +791,400 @@ async function migrarClientas(coachId: string): Promise<Map<string, string>> {
 // MIGRACIÓN: PROGRAMAS (solo cabecera — TS no expone la estructura por API)
 // ============================================================================
 
-async function migrarProgramas(coachId: string): Promise<void> {
+// ============================================================================
+// TIPOS de la API de programas (wblock + witems)
+// ============================================================================
+
+type TSExerciseEnWitem = {
+  _id: string;
+  name: string;
+  defaultInstructions?: string | null;
+};
+
+type TSExerciseSet = {
+  reps?: string | number | null;
+  weight?: string | number | null;
+  weightUnit?: string | null;
+  rest?: string | number | null;
+  rir?: string | number | null;
+  tempo?: string | null;
+  notes?: string | null;
+};
+
+type TSWItem = {
+  type:
+    | "TASK"
+    | "FORM"
+    | "METRICS"
+    | "REMINDER"
+    | "EXERCISE"
+    | "CIRCUIT"
+    | "SUPERSET"
+    | string;
+  order?: number;
+  _id?: string;
+  isCompleted?: boolean;
+  // Si type === "EXERCISE":
+  exercise?: TSExerciseEnWitem;
+  exerciseInstructions?: string | null;
+  exerciseSets?: TSExerciseSet[];
+  // Si type === "TASK":
+  taskFields?: {
+    title?: string | null;
+    description?: string | null;
+    imageUrl?: string | null;
+    videoLink?: string | null;
+    media?: Array<{ type?: string; url?: string; key?: string }>;
+  };
+  // Si type === "FORM":
+  form?: {
+    name?: string;
+    questions?: Array<{ label?: string; type?: string; answer?: string | null }>;
+  };
+  // Si type === "METRICS":
+  metricsFields?: { metricSetId?: string };
+  // Si type === "REMINDER":
+  reminderFields?: {
+    message?: string;
+    scheduledTime?: string;
+    timezone?: string;
+    _id?: string;
+  };
+  // Si type === "CIRCUIT":
+  circuitName?: string;
+  circuitExercises?: Array<{
+    exercise?: TSExerciseEnWitem;
+    sets?: TSExerciseSet[];
+    exerciseSets?: TSExerciseSet[];
+    order?: number;
+  }>;
+  // Si type === "SUPERSET":
+  supersetExercises?: Array<{
+    exercise?: TSExerciseEnWitem;
+    sets?: TSExerciseSet[];
+    exerciseSets?: TSExerciseSet[];
+    order?: number;
+  }>;
+};
+
+type TSWblock = {
+  _id: string;
+  programId: string;
+  name?: string;
+  order?: number;
+  /** Día absoluto desde inicio del programa (1 = primer lunes). */
+  day: number;
+  isRest?: boolean;
+  items?: TSWItem[];
+};
+
+// Tipos parciales del modelo local (subconjunto de Elemento)
+type ElementoLocal = {
+  id: string;
+  tipo: string;
+  // Campos comunes; según tipo se rellena uno u otro
+  titulo?: string;
+  markdown?: string;
+  ejercicio_id?: string;
+  ejercicio_nombre?: string;
+  series?: Array<{
+    reps: string;
+    peso: string;
+    rir?: string;
+    descanso?: string;
+    tempo?: string;
+    notas?: string;
+  }>;
+  metrica_tipo?: string;
+  hora?: string;
+  mensaje?: string;
+  url?: string;
+  proveedor?: string;
+  notas?: string;
+};
+
+const NOMBRES_DIAS_LOCAL = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
+];
+
+function parseSerie(s: TSExerciseSet) {
+  const pesoNum = s.weight == null ? null : String(s.weight);
+  const unidad = (s.weightUnit ?? "kg").toString();
+  return {
+    reps: s.reps == null ? "" : String(s.reps),
+    peso: pesoNum ? `${pesoNum}${pesoNum.toLowerCase().includes("kg") ? "" : " " + unidad}` : "",
+    rir: s.rir == null ? undefined : String(s.rir),
+    descanso: s.rest == null ? undefined : String(s.rest),
+    tempo: s.tempo ?? undefined,
+    notas: s.notes ?? undefined,
+  };
+}
+
+function detectarProveedor(url: string): "youtube" | "vimeo" | "otro" {
+  if (/youtu\.?be/i.test(url)) return "youtube";
+  if (/vimeo/i.test(url)) return "vimeo";
+  return "otro";
+}
+
+function itemAElementos(
+  item: TSWItem,
+  ejerciciosMap: Map<string, string>
+): ElementoLocal[] {
+  const idBase = item._id ?? `${item.type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  switch (item.type) {
+    case "TASK": {
+      const t = item.taskFields ?? {};
+      // Si tiene videoLink (YouTube/Vimeo) → video_externo
+      if (t.videoLink) {
+        return [
+          {
+            id: idBase,
+            tipo: "video_externo",
+            titulo: t.title || "Vídeo",
+            url: t.videoLink,
+            proveedor: detectarProveedor(t.videoLink),
+          },
+        ];
+      }
+      // Si tiene media con vídeo → video_externo con URL
+      const media = t.media ?? [];
+      const video = media.find((m) => m.type === "video" && m.url);
+      if (video?.url) {
+        return [
+          {
+            id: idBase,
+            tipo: "video_externo",
+            titulo: t.title || "Vídeo",
+            url: video.url,
+            proveedor: "otro",
+          },
+        ];
+      }
+      // Default: contenido con markdown
+      return [
+        {
+          id: idBase,
+          tipo: "contenido",
+          titulo: t.title || "Contenido",
+          markdown: t.description || "",
+        },
+      ];
+    }
+    case "FORM": {
+      const f = item.form ?? { questions: [] };
+      const preguntas = (f.questions ?? [])
+        .map((q, i) => `**${i + 1}.** ${q.label ?? ""}`)
+        .join("\n\n");
+      return [
+        {
+          id: idBase,
+          tipo: "contenido",
+          titulo: `📝 ${f.name || "Cuestionario"}`,
+          markdown: preguntas,
+        },
+      ];
+    }
+    case "METRICS": {
+      return [
+        {
+          id: idBase,
+          tipo: "metrica_prompt",
+          metrica_tipo: "peso",
+        },
+      ];
+    }
+    case "REMINDER": {
+      const r = item.reminderFields ?? {};
+      return [
+        {
+          id: idBase,
+          tipo: "recordatorio",
+          hora: r.scheduledTime || "08:00",
+          mensaje: r.message || "",
+        },
+      ];
+    }
+    case "EXERCISE": {
+      const ex = item.exercise;
+      if (!ex) return [];
+      const myId = ejerciciosMap.get(ex._id);
+      const series = (item.exerciseSets ?? []).map(parseSerie);
+      if (!myId) {
+        // Ejercicio no migrado todavía → fallback contenido
+        return [
+          {
+            id: idBase,
+            tipo: "contenido",
+            titulo: ex.name || "Ejercicio",
+            markdown:
+              item.exerciseInstructions ||
+              ex.defaultInstructions ||
+              "(Ejercicio no migrado todavía — re-ejecuta `npm run migrate -- --only=ejercicios` primero)",
+          },
+        ];
+      }
+      return [
+        {
+          id: idBase,
+          tipo: "ejercicio",
+          ejercicio_id: myId,
+          ejercicio_nombre: ex.name,
+          series:
+            series.length > 0
+              ? series
+              : [{ reps: "10", peso: "" }],
+          notas: item.exerciseInstructions ?? undefined,
+        },
+      ];
+    }
+    case "CIRCUIT":
+    case "SUPERSET": {
+      // Aplanar: cada ejercicio del circuito → un Elemento ejercicio
+      // consecutivo, con prefijo en el nombre para no perder el contexto.
+      const ejs =
+        item.type === "CIRCUIT"
+          ? item.circuitExercises ?? []
+          : item.supersetExercises ?? [];
+      const prefijo =
+        item.type === "CIRCUIT"
+          ? `[${item.circuitName || "Circuito"}] `
+          : `[Superserie] `;
+      const elementos: ElementoLocal[] = [];
+      ejs.forEach((ce, idx) => {
+        const ex = ce.exercise;
+        if (!ex) return;
+        const myId = ejerciciosMap.get(ex._id);
+        const setsRaw = ce.sets ?? ce.exerciseSets ?? [];
+        const series = setsRaw.map(parseSerie);
+        if (!myId) {
+          elementos.push({
+            id: `${idBase}-${idx}`,
+            tipo: "contenido",
+            titulo: `${prefijo}${ex.name || "Ejercicio"}`,
+            markdown: ex.defaultInstructions || "(Ejercicio no migrado)",
+          });
+          return;
+        }
+        elementos.push({
+          id: `${idBase}-${idx}`,
+          tipo: "ejercicio",
+          ejercicio_id: myId,
+          ejercicio_nombre: `${prefijo}${ex.name}`,
+          series:
+            series.length > 0 ? series : [{ reps: "10", peso: "" }],
+        });
+      });
+      return elementos;
+    }
+    default:
+      return [];
+  }
+}
+
+function construirEstructuraDeWblocks(
+  wblocks: TSWblock[],
+  ejerciciosMap: Map<string, string>
+): {
+  estructura: Array<{
+    semana: number;
+    dias: Array<{
+      dia: number;
+      titulo: string;
+      descanso?: boolean;
+      bloques: Array<{
+        id: string;
+        titulo: string;
+        elementos: ElementoLocal[];
+      }>;
+    }>;
+  }>;
+  numSemanas: number;
+} {
+  const maxDay = wblocks.reduce(
+    (max, w) => Math.max(max, w.day || 0),
+    7
+  );
+  const numSemanas = Math.max(1, Math.ceil(maxDay / 7));
+
+  const estructura = Array.from({ length: numSemanas }, (_, i) => ({
+    semana: i + 1,
+    dias: NOMBRES_DIAS_LOCAL.map((titulo, j) => ({
+      dia: j + 1,
+      titulo,
+      descanso: false,
+      bloques: [] as Array<{
+        id: string;
+        titulo: string;
+        elementos: ElementoLocal[];
+      }>,
+    })),
+  }));
+
+  const ordenados = [...wblocks].sort(
+    (a, b) => (a.day || 0) - (b.day || 0) || (a.order || 0) - (b.order || 0)
+  );
+
+  for (const wb of ordenados) {
+    if (!wb.day || wb.day < 1) continue;
+    const semanaIdx = Math.floor((wb.day - 1) / 7);
+    const diaIdx = (wb.day - 1) % 7;
+    if (semanaIdx >= estructura.length) continue;
+    const dia = estructura[semanaIdx]!.dias[diaIdx]!;
+
+    if (wb.isRest) {
+      dia.descanso = true;
+      continue;
+    }
+
+    const elementos: ElementoLocal[] = [];
+    for (const item of wb.items ?? []) {
+      elementos.push(...itemAElementos(item, ejerciciosMap));
+    }
+
+    dia.bloques.push({
+      id: wb._id,
+      titulo: wb.name || "Bloque",
+      elementos,
+    });
+  }
+
+  return { estructura, numSemanas };
+}
+
+// ============================================================================
+// MIGRACIÓN: PROGRAMAS (con estructura completa de wblocks/witems)
+// ============================================================================
+
+async function migrarProgramas(
+  coachId: string,
+  ejerciciosMap: Map<string, string>
+): Promise<void> {
   console.log("");
   console.log(`${C.bold}${C.blue}== Programas ==${C.reset}`);
-  log(
-    "warn",
-    "TS no expone los wblocks/witems por API: se crean filas vacías con el nombre."
-  );
-  log("warn", "Recrear el contenido manualmente en el editor de mi-hub.");
+
+  // Si no se migraron ejercicios primero, cargar el mapa desde BD para
+  // que el parser pueda resolver ejercicio_id → uuid local.
+  if (ejerciciosMap.size === 0 && !CONFIG.DRY_RUN) {
+    const { data } = await sb()
+      .from("ejercicios")
+      .select("id, trainerstudio_id")
+      .eq("coach_id", coachId)
+      .not("trainerstudio_id", "is", null);
+    for (const r of (data ?? []) as Array<{
+      id: string;
+      trainerstudio_id: string;
+    }>) {
+      ejerciciosMap.set(r.trainerstudio_id, r.id);
+    }
+    log("dim", `Cargados ${ejerciciosMap.size} ejercicios existentes desde BD`);
+  }
 
   const progs = await tsPaginate<TSProgram>((p) =>
     TS_ENDPOINTS.programs(false, p)
@@ -805,22 +1193,53 @@ async function migrarProgramas(coachId: string): Promise<void> {
 
   for (const p of progs) {
     const nombre = (p.name ?? "").trim() || "(sin nombre)";
-    const numSemanas = Math.max(
-      1,
-      Math.ceil((p.numberOfDaysWithWorkouts ?? 7) / 7)
+
+    log("info", `  Descargando estructura de "${nombre}"…`);
+    let wblocks: TSWblock[] = [];
+    try {
+      wblocks = await tsGet<TSWblock[]>(TS_ENDPOINTS.programWblocks(p._id));
+    } catch (e) {
+      log(
+        "warn",
+        `  No se pudo descargar estructura de "${nombre}": ${e instanceof Error ? e.message.slice(0, 100) : e}. Se guarda solo cabecera.`
+      );
+    }
+
+    const { estructura, numSemanas } = construirEstructuraDeWblocks(
+      wblocks,
+      ejerciciosMap
     );
+
+    const totalBloques = estructura.reduce(
+      (s, sem) => s + sem.dias.reduce((d, dia) => d + dia.bloques.length, 0),
+      0
+    );
+    const totalElementos = estructura.reduce(
+      (s, sem) =>
+        s +
+        sem.dias.reduce(
+          (d, dia) =>
+            d + dia.bloques.reduce((b, bl) => b + bl.elementos.length, 0),
+          0
+        ),
+      0
+    );
+
     const row = {
       coach_id: coachId,
       trainerstudio_id: p._id,
       nombre,
-      descripcion: `Migrado desde Trainer Studio. ${p.numberOfDaysWithWorkouts ?? "?"} días con entreno. Recrear estructura manualmente.`,
+      descripcion: `Migrado desde Trainer Studio. ${wblocks.length} bloques, ${totalElementos} elementos.`,
       num_semanas: numSemanas,
-      estructura: [],
+      estructura,
       actualizado_en: new Date().toISOString(),
     };
 
     if (CONFIG.DRY_RUN) {
-      log("dim", `  DRY: ${nombre} (${numSemanas} sem)`);
+      log(
+        "dim",
+        `  DRY: ${nombre} → ${numSemanas} sem, ${totalBloques} bloques, ${totalElementos} elementos`
+      );
       continue;
     }
 
@@ -831,7 +1250,10 @@ async function migrarProgramas(coachId: string): Promise<void> {
       log("err", `  ${nombre}: ${error.message}`);
       continue;
     }
-    log("ok", `  ${nombre} (${numSemanas} sem)`);
+    log(
+      "ok",
+      `  ${nombre} → ${numSemanas} sem, ${totalBloques} bloques, ${totalElementos} elementos`
+    );
   }
 }
 
@@ -1177,7 +1599,7 @@ async function main() {
     }
   }
 
-  if (run("programas")) await migrarProgramas(coachId);
+  if (run("programas")) await migrarProgramas(coachId, ejerciciosMap);
   if (run("notas")) await migrarNotas(coachId, clientasMap);
   if (run("metricas")) await migrarMetricas(coachId, clientasMap);
   if (run("sesiones")) await migrarSesiones(coachId, clientasMap);
