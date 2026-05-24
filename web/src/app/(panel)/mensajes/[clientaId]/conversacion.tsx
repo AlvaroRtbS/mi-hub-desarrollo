@@ -4,7 +4,12 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { enviarMensaje, simularMensajeClienta } from "../acciones";
-import { PLANTILLAS, rellenarPlantilla, type PlantillaMensaje } from "@/lib/plantillas-mensajes";
+import {
+  PLANTILLAS,
+  rellenarPlantilla,
+  type PlantillaMensaje,
+  type DatosClientaParaPlantilla,
+} from "@/lib/plantillas-mensajes";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Mensaje = {
@@ -28,10 +33,12 @@ export function Conversacion({
   clientaId,
   clientaNombre,
   mensajesIniciales,
+  datosPlantilla,
 }: {
   clientaId: string;
   clientaNombre: string;
   mensajesIniciales: Mensaje[];
+  datosPlantilla?: Omit<DatosClientaParaPlantilla, "nombre">;
 }) {
   const router = useRouter();
   const [borrador, setBorrador] = useState("");
@@ -79,7 +86,12 @@ export function Conversacion({
   }, [clientaId]);
 
   function insertarPlantilla(p: PlantillaMensaje) {
-    setBorrador(rellenarPlantilla(p, clientaNombre));
+    setBorrador(
+      rellenarPlantilla(p, {
+        nombre: clientaNombre,
+        ...(datosPlantilla ?? {}),
+      })
+    );
     setMostrandoPlantillas(false);
   }
 
@@ -202,7 +214,10 @@ export function Conversacion({
               >
                 <div className="text-xs font-medium text-neutral-200 truncate">{p.titulo}</div>
                 <div className="text-[10px] text-neutral-500 truncate">
-                  {rellenarPlantilla(p, clientaNombre).slice(0, 80)}
+                  {rellenarPlantilla(p, {
+                    nombre: clientaNombre,
+                    ...(datosPlantilla ?? {}),
+                  }).slice(0, 80)}
                 </div>
               </button>
             ))}

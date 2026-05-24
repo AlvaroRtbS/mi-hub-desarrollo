@@ -1,6 +1,14 @@
 // Plantillas de mensajes predefinidas para el chat.
 // La coach las inserta con un click y luego puede editarlas antes de enviar.
-// El placeholder {nombre} se sustituye por el primer nombre de la clienta.
+//
+// Variables soportadas en el contenido:
+//   {nombre}            — primer nombre de la clienta
+//   {ultimo_peso}       — última métrica de tipo "peso" (ej "72.4 kg")
+//   {delta_peso}        — diferencia desde el primer peso registrado (ej "-2.3 kg")
+//   {racha}             — días seguidos completando entreno (ej "5")
+//   {adherencia_30d}    — % de adherencia en los últimos 30 días
+//   {dias_sin_entrenar} — días desde la última sesión completada
+//   {ejercicio}         — placeholder libre (no se rellena automáticamente)
 
 export type PlantillaMensaje = {
   id: string;
@@ -123,11 +131,84 @@ export const PLANTILLAS: PlantillaMensaje[] = [
     contenido:
       "{nombre}, esta semana cambio mis horarios de atención. Estaré disponible de X a Y. Para urgencias, escríbeme y respondo en cuanto pueda.",
   },
+
+  // Seguimiento con datos
+  {
+    id: "felicitar_evolucion_peso",
+    categoria: "motivacion",
+    titulo: "Felicitar evolución peso",
+    contenido:
+      "{nombre}, ¡{delta_peso} desde que empezamos! Estás siendo super constante. Sigue así 💪",
+  },
+  {
+    id: "recordar_inactividad",
+    categoria: "seguimiento",
+    titulo: "Llevas X días sin entrenar (con número)",
+    contenido:
+      "Hola {nombre}, llevas {dias_sin_entrenar} días sin completar entreno. ¿Va todo bien? Si necesitas reajustar el plan o pausar unos días, sin problema — solo dime.",
+  },
+  {
+    id: "resumen_semanal",
+    categoria: "informativos",
+    titulo: "Resumen semanal",
+    contenido:
+      "{nombre}, resumen rápido de la semana:\n• Adherencia: {adherencia_30d}\n• Último peso: {ultimo_peso} ({delta_peso})\n• Racha: {racha} días\n\n¡Vamos a por la siguiente!",
+  },
 ];
+
+export type DatosClientaParaPlantilla = {
+  nombre: string;
+  ultimoPesoKg?: number | null;
+  pesoInicialKg?: number | null;
+  racha?: number;
+  adherencia30d?: number | null;
+  diasSinEntrenar?: number | null;
+};
 
 export function rellenarPlantilla(
   plantilla: PlantillaMensaje,
-  nombre: string
+  datos: DatosClientaParaPlantilla | string
 ): string {
-  return plantilla.contenido.replace(/\{nombre\}/g, nombre.trim());
+  // Backward-compat: si se pasa un string, asumimos que es solo el nombre.
+  const d: DatosClientaParaPlantilla =
+    typeof datos === "string" ? { nombre: datos } : datos;
+
+  const nombre = (d.nombre ?? "").trim();
+  const peso =
+    d.ultimoPesoKg != null ? `${d.ultimoPesoKg} kg` : "[peso pendiente]";
+  const deltaPeso =
+    d.ultimoPesoKg != null && d.pesoInicialKg != null
+      ? (() => {
+          const diff = d.ultimoPesoKg - d.pesoInicialKg;
+          const signo = diff > 0 ? "+" : "";
+          return `${signo}${diff.toFixed(1)} kg`;
+        })()
+      : "[evolución pendiente]";
+  const racha = d.racha != null ? String(d.racha) : "0";
+  const adherencia =
+    d.adherencia30d != null ? `${d.adherencia30d}%` : "[adherencia pendiente]";
+  const diasSin =
+    d.diasSinEntrenar != null ? String(d.diasSinEntrenar) : "[sin datos]";
+
+  return plantilla.contenido
+    .replace(/\{nombre\}/g, nombre)
+    .replace(/\{ultimo_peso\}/g, peso)
+    .replace(/\{delta_peso\}/g, deltaPeso)
+    .replace(/\{racha\}/g, racha)
+    .replace(/\{adherencia_30d\}/g, adherencia)
+    .replace(/\{dias_sin_entrenar\}/g, diasSin);
 }
+
+/** Lista de variables disponibles para mostrar como ayuda en la UI. */
+export const VARIABLES_PLANTILLA = [
+  { token: "{nombre}", descripcion: "Primer nombre de la clienta" },
+  { token: "{ultimo_peso}", descripcion: "Última métrica de peso registrada" },
+  { token: "{delta_peso}", descripcion: "Diferencia vs primer peso" },
+  { token: "{racha}", descripcion: "Días seguidos entrenando" },
+  { token: "{adherencia_30d}", descripcion: "% adherencia últimos 30 días" },
+  {
+    token: "{dias_sin_entrenar}",
+    descripcion: "Días desde la última sesión completada",
+  },
+  { token: "{ejercicio}", descripcion: "Placeholder libre (lo escribes tú)" },
+];

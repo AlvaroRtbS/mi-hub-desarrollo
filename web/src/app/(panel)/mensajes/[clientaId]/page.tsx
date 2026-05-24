@@ -36,6 +36,9 @@ export default async function ConversacionPage({
 
   const mensajes = (mensajesData ?? []) as Mensaje[];
 
+  // Datos para rellenar variables de plantillas (peso actual, adherencia, racha…)
+  const datosPlantilla = await calcularDatosPlantilla(supabase, clientaId);
+
   // Marca como leídos los entrantes (inline, sin revalidatePath durante render).
   // El badge de la lista se actualizará en la próxima navegación a /mensajes.
   await supabase
@@ -73,7 +76,79 @@ export default async function ConversacionPage({
         clientaId={clienta.id}
         clientaNombre={clienta.nombre}
         mensajesIniciales={mensajes}
+        datosPlantilla={datosPlantilla}
       />
     </div>
   );
+}
+
+type Sb = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+async function calcularDatosPlantilla(
+  supabase: Sb,
+  clientaId: string
+): Promise<{
+  ultimoPesoKg: number | null;
+  pesoInicialKg: number | null;
+  racha: number;
+  adherencia30d: number | null;
+  diasSinEntrenar: number | null;
+}> {
+  const hoy = new Date();
+  const hace30 = new Date(hoy);
+  hace30.setDate(hace30.getDate() - 30);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+  const [pesoRes, sesionesRes] = await Promise.all([
+    supabase
+      .from("metricas")
+      .select("valor, fecha")
+      .eq("clienta_id", clientaId)
+      .eq("tipo", "peso")
+      .order("fecha", { ascending: true }),
+    supabase
+      .from("sesiones")
+      .select("fecha, completada")
+      .eq("clienta_id", clientaId)
+      .order("fecha", { ascending: false }),
+  ]);
+
+  const pesos = (pesoRes.data ?? []) as Array<{ valor: number; fecha: string }>;
+  const pesoInicialKg = pesos.length > 0 ? pesos[0]!.valor : null;
+  const ultimoPesoKg = pesos.length > 0 ? pesos[pesos.length - 1]!.valor : null;
+
+  const sesiones = (sesionesRes.data ?? []) as Array<{
+    fecha: string;
+    completada: boolean;
+  }>;
+
+  const sesiones30d = sesiones.filter((s) => s.fecha >= iso(hace30));
+  const completadas30d = sesiones30d.filter((s) => s.completada).length;
+  const adherencia30d =
+    sesiones30d.length > 0
+      ? Math.round((completadas30d / sesiones30d.length) * 100)
+      : null;
+
+  let racha = 0;
+  for (const s of sesiones) {
+    if (s.completada) racha++;
+    else break;
+  }
+
+  let diasSinEntrenar: number | null = null;
+  const ultimaCompletada = sesiones.find((s) => s.completada);
+  if (ultimaCompletada) {
+    const d = new Date(ultimaCompletada.fecha + "T00:00:00Z");
+    diasSinEntrenar = Math.floor(
+      (Date.now() - d.getTime()) / 86400000
+    );
+  }
+
+  return {
+    ultimoPesoKg,
+    pesoInicialKg,
+    racha,
+    adherencia30d,
+    diasSinEntrenar,
+  };
 }
