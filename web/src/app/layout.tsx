@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
+import { ScriptTema } from "@/components/theme-toggle";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,6 +39,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={inter.variable}>
+      <head>
+        <ScriptTema />
+      </head>
       <body className="font-sans">
         <ToastProvider>{children}</ToastProvider>
       </body>

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { actualizarMisDatos } from "./acciones";
 
 export function FormularioPerfilClienta({
@@ -192,6 +193,13 @@ export function FormularioPerfilClienta({
       </form>
 
       {/* Cerrar sesión */}
+      <div className="pt-4 border-t border-neutral-800">
+        <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
+          Apariencia
+        </div>
+        <ThemeToggle />
+      </div>
+
       <button
         onClick={cerrarSesion}
         className="w-full border border-neutral-800 hover:bg-neutral-900 rounded-lg py-2.5 text-sm text-neutral-300"

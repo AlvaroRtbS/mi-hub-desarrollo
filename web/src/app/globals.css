@@ -18,6 +18,84 @@
 }
 
 /* ============================================================================
+   Temas claro y crema.
+   La app está escrita con clases tailwind oscuras hardcoded
+   (bg-neutral-950, text-neutral-100, etc). Aplicar `data-theme="light"` o
+   `data-theme="cream"` al <html> remappea esas clases sin tocar cada
+   componente. Es la pragmática que evita refactorizar 100+ archivos.
+   ============================================================================ */
+html[data-theme="light"],
+html[data-theme="cream"] {
+  color-scheme: light;
+}
+
+/* === MODO CLARO === */
+html[data-theme="light"] body {
+  background-color: #fafafa !important;
+  color: #171717 !important;
+}
+html[data-theme="light"] .bg-neutral-950 { background-color: #fafafa !important; }
+html[data-theme="light"] .bg-neutral-900 { background-color: #ffffff !important; }
+html[data-theme="light"] .bg-neutral-800 { background-color: #f5f5f5 !important; }
+html[data-theme="light"] .bg-neutral-900\/50,
+html[data-theme="light"] .bg-neutral-900\/40,
+html[data-theme="light"] .bg-neutral-900\/30,
+html[data-theme="light"] .bg-neutral-900\/60,
+html[data-theme="light"] .bg-neutral-900\/90,
+html[data-theme="light"] .bg-neutral-900\/95 { background-color: #fafafa !important; }
+html[data-theme="light"] .bg-neutral-950\/80,
+html[data-theme="light"] .bg-neutral-950\/90 { background-color: rgba(250,250,250,0.95) !important; }
+
+html[data-theme="light"] .text-neutral-100 { color: #171717 !important; }
+html[data-theme="light"] .text-neutral-200 { color: #262626 !important; }
+html[data-theme="light"] .text-neutral-300 { color: #404040 !important; }
+html[data-theme="light"] .text-neutral-400 { color: #525252 !important; }
+html[data-theme="light"] .text-neutral-500 { color: #737373 !important; }
+html[data-theme="light"] .text-neutral-600 { color: #a3a3a3 !important; }
+html[data-theme="light"] .text-neutral-700 { color: #d4d4d4 !important; }
+
+html[data-theme="light"] .border-neutral-800 { border-color: #e5e5e5 !important; }
+html[data-theme="light"] .border-neutral-900 { border-color: #f5f5f5 !important; }
+html[data-theme="light"] .border-neutral-700 { border-color: #d4d4d4 !important; }
+html[data-theme="light"] .divide-neutral-800 > * + * { border-color: #e5e5e5 !important; }
+html[data-theme="light"] .divide-neutral-900 > * + * { border-color: #f5f5f5 !important; }
+
+html[data-theme="light"] kbd { background-color: #f5f5f5 !important; color: #171717 !important; }
+
+/* === MODO CREMA === */
+html[data-theme="cream"] body {
+  background-color: #f7f1e6 !important;
+  color: #2d2519 !important;
+}
+html[data-theme="cream"] .bg-neutral-950 { background-color: #f7f1e6 !important; }
+html[data-theme="cream"] .bg-neutral-900 { background-color: #fff9ed !important; }
+html[data-theme="cream"] .bg-neutral-800 { background-color: #ede4d0 !important; }
+html[data-theme="cream"] .bg-neutral-900\/50,
+html[data-theme="cream"] .bg-neutral-900\/40,
+html[data-theme="cream"] .bg-neutral-900\/30,
+html[data-theme="cream"] .bg-neutral-900\/60,
+html[data-theme="cream"] .bg-neutral-900\/90,
+html[data-theme="cream"] .bg-neutral-900\/95 { background-color: #f3ebd9 !important; }
+html[data-theme="cream"] .bg-neutral-950\/80,
+html[data-theme="cream"] .bg-neutral-950\/90 { background-color: rgba(247,241,230,0.95) !important; }
+
+html[data-theme="cream"] .text-neutral-100 { color: #2d2519 !important; }
+html[data-theme="cream"] .text-neutral-200 { color: #3d3424 !important; }
+html[data-theme="cream"] .text-neutral-300 { color: #5d4f37 !important; }
+html[data-theme="cream"] .text-neutral-400 { color: #786545 !important; }
+html[data-theme="cream"] .text-neutral-500 { color: #9b8459 !important; }
+html[data-theme="cream"] .text-neutral-600 { color: #b8a47b !important; }
+html[data-theme="cream"] .text-neutral-700 { color: #d5c5a3 !important; }
+
+html[data-theme="cream"] .border-neutral-800 { border-color: #e8dfc6 !important; }
+html[data-theme="cream"] .border-neutral-900 { border-color: #f0e8d2 !important; }
+html[data-theme="cream"] .border-neutral-700 { border-color: #d5c5a3 !important; }
+html[data-theme="cream"] .divide-neutral-800 > * + * { border-color: #e8dfc6 !important; }
+html[data-theme="cream"] .divide-neutral-900 > * + * { border-color: #f0e8d2 !important; }
+
+html[data-theme="cream"] kbd { background-color: #ede4d0 !important; color: #2d2519 !important; }
+
+/* ============================================================================
    Microanimaciones reutilizables.
    Tailwind no incluye `animate-in` por defecto (es del plugin tw-animate),
    así que defino las que ya se referencian en la app y unas extra. Todas se

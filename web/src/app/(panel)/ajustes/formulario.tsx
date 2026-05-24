@@ -6,6 +6,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Input, Textarea } from "@/components/ui/campo";
 import { useToast } from "@/components/ui/toast";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Check } from "lucide-react";
 
 type CoachData = {
@@ -251,6 +252,17 @@ export function FormularioAjustes({ coach }: { coach: CoachData }) {
             </div>
           </div>
         </Campo>
+      </section>
+
+      {/* APARIENCIA */}
+      <section className="bg-neutral-900/40 border border-neutral-800 rounded-lg p-5 space-y-4">
+        <div>
+          <h2 className="font-semibold">Apariencia</h2>
+          <p className="text-xs text-neutral-500 mt-1">
+            Cambia el tema de tu panel. Se guarda en este dispositivo.
+          </p>
+        </div>
+        <ThemeToggle />
       </section>
 
       <div className="flex items-center justify-end gap-2 sticky bottom-4 bg-neutral-950/80 backdrop-blur border border-neutral-800 rounded-lg p-3">
