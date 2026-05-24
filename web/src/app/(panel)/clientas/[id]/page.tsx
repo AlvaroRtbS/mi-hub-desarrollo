@@ -534,6 +534,15 @@ function SeccionResumen({
           >
             Histórico por ejercicio →
           </Link>
+          {asignacionActiva && (
+            <Link
+              href={`/clientas/${clienta.id}/programa`}
+              className="text-brand-500 hover:text-brand-400"
+              title="Personaliza el plan asignado a esta clienta (sin tocar el base)"
+            >
+              ✏️ Editar plan personalizado →
+            </Link>
+          )}
           <a
             href={`/imprimir/clienta/${clienta.id}`}
             target="_blank"
