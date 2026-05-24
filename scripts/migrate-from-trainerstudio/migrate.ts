@@ -45,6 +45,11 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import { Buffer } from "node:buffer";
+import { writeFile, readFile, unlink, mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawn } from "node:child_process";
+import ffmpegStaticPath from "ffmpeg-static";
 
 dotenv.config();
 
@@ -177,33 +182,97 @@ async function tsPaginate<T>(
   return all;
 }
 
-async function tsDownload(srcUrl: string): Promise<{
-  buffer: Buffer;
-  contentType: string;
-} | null> {
-  try {
-    const res = await fetch(srcUrl);
-    if (!res.ok) {
-      log(
-        "warn",
-        `  Fallo al descargar (HTTP ${res.status}):`,
-        srcUrl.slice(0, 80) + "…"
-      );
-      return null;
+// Descarga con reintentos: las URLs firmadas de DigitalOcean Spaces a veces
+// se cortan ("terminated"), especialmente en vídeos pesados con red inestable.
+async function tsDownload(
+  srcUrl: string,
+  reintentos = 3
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  for (let intento = 1; intento <= reintentos; intento++) {
+    try {
+      const res = await fetch(srcUrl);
+      if (!res.ok) {
+        log(
+          "warn",
+          `  Fallo al descargar (HTTP ${res.status}):`,
+          srcUrl.slice(0, 80) + "…"
+        );
+        return null;
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
+      const contentType =
+        res.headers.get("content-type") ?? "application/octet-stream";
+      return { buffer: buf, contentType };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (intento < reintentos) {
+        log("dim", `  Descarga falló (${msg}), reintento ${intento + 1}/${reintentos}…`);
+        await new Promise((r) => setTimeout(r, 1500 * intento));
+      } else {
+        log("warn", `  Error al descargar tras ${reintentos} intentos:`, msg);
+        return null;
+      }
     }
-    const buf = Buffer.from(await res.arrayBuffer());
-    const contentType =
-      res.headers.get("content-type") ?? "application/octet-stream";
-    return { buffer: buf, contentType };
-  } catch (e) {
-    log(
-      "warn",
-      "  Error al descargar:",
-      e instanceof Error ? e.message : String(e)
-    );
+  }
+  return null;
+}
+
+// Comprime un vídeo con ffmpeg-static para que quepa bajo el límite de
+// Supabase free tier (50 MB por subida). Mantiene 720p, h264, crf 28,
+// audio aac 96kbps. Reduce típicamente un 90MB → 15-25MB sin pérdida
+// notable de calidad para vídeo de demostración de ejercicio.
+async function comprimirVideo(
+  bufferEntrada: Buffer,
+  extEntrada: string
+): Promise<Buffer | null> {
+  if (!ffmpegStaticPath) {
+    log("warn", "  ffmpeg-static no disponible — no se puede comprimir");
     return null;
   }
+  const dir = await mkdtemp(join(tmpdir(), "mh-vid-"));
+  const entrada = join(dir, `in.${extEntrada}`);
+  const salida = join(dir, "out.mp4");
+  try {
+    await writeFile(entrada, bufferEntrada);
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(
+        ffmpegStaticPath as string,
+        [
+          "-i", entrada,
+          "-c:v", "libx264",
+          "-preset", "fast",
+          "-crf", "28",
+          "-vf", "scale='min(720,iw)':'-2'",
+          "-c:a", "aac",
+          "-b:a", "96k",
+          "-movflags", "+faststart",
+          "-y",
+          salida,
+        ],
+        { stdio: ["ignore", "ignore", "pipe"] }
+      );
+      let stderr = "";
+      proc.stderr.on("data", (d) => (stderr += d.toString()));
+      proc.on("error", reject);
+      proc.on("close", (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`ffmpeg exit ${code}: ${stderr.slice(-300)}`));
+      });
+    });
+    const comprimido = await readFile(salida);
+    return comprimido;
+  } catch (e) {
+    log("warn", `  ffmpeg falló: ${e instanceof Error ? e.message : e}`);
+    return null;
+  } finally {
+    // Limpieza best-effort
+    await unlink(entrada).catch(() => {});
+    await unlink(salida).catch(() => {});
+  }
 }
+
+// Límite de tamaño antes de comprimir un vídeo (Supabase free tier API: 50 MB)
+const LIMITE_VIDEO_BYTES = 48 * 1024 * 1024;
 
 // ============================================================================
 // Cliente Supabase service-role
@@ -246,6 +315,7 @@ async function copiarAStorage(opts: {
   coachId: string;
   prefijo: string;
   ext?: string;
+  esVideo?: boolean;
 }): Promise<string | null> {
   if (CONFIG.SKIP_STORAGE) return opts.origenUrl;
   if (CONFIG.DRY_RUN) return `${opts.coachId}/[dry-run-${opts.prefijo}]`;
@@ -253,24 +323,59 @@ async function copiarAStorage(opts: {
   const descarga = await tsDownload(opts.origenUrl);
   if (!descarga) return null;
 
-  const ext = opts.ext ?? extDeContentType(descarga.contentType) ?? "bin";
+  let bufferFinal = descarga.buffer;
+  let contentType = descarga.contentType;
+  let ext = opts.ext ?? extDeContentType(descarga.contentType) ?? "bin";
+  const sizeMbOriginal = descarga.buffer.length / 1024 / 1024;
+
+  // Si es vídeo y excede el límite, comprimir con ffmpeg antes de subir
+  if (opts.esVideo && descarga.buffer.length > LIMITE_VIDEO_BYTES) {
+    log(
+      "info",
+      `  Vídeo de ${sizeMbOriginal.toFixed(1)} MB > límite, comprimiendo con ffmpeg…`
+    );
+    const comprimido = await comprimirVideo(descarga.buffer, ext);
+    if (!comprimido) {
+      log(
+        "warn",
+        `  No se pudo comprimir, se omite el vídeo (ejercicio se guarda sin él).`
+      );
+      return null;
+    }
+    const sizeMbComprimido = comprimido.length / 1024 / 1024;
+    log(
+      "ok",
+      `  Comprimido: ${sizeMbOriginal.toFixed(1)} MB → ${sizeMbComprimido.toFixed(1)} MB`
+    );
+    if (comprimido.length > LIMITE_VIDEO_BYTES) {
+      log(
+        "warn",
+        `  Aún excede límite tras compresión (${sizeMbComprimido.toFixed(1)} MB > 48 MB). Se omite.`
+      );
+      return null;
+    }
+    bufferFinal = comprimido;
+    contentType = "video/mp4";
+    ext = "mp4";
+  }
+
   const nombre = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const path = `${opts.coachId}/${opts.prefijo}_${nombre}`;
 
   const { error } = await sb().storage.from(opts.bucket).upload(
     path,
-    descarga.buffer,
+    bufferFinal,
     {
-      contentType: descarga.contentType,
+      contentType,
       upsert: false,
     }
   );
   if (error) {
-    const sizeMb = (descarga.buffer.length / 1024 / 1024).toFixed(1);
+    const sizeMb = (bufferFinal.length / 1024 / 1024).toFixed(1);
     if (/exceeded the maximum/i.test(error.message)) {
       log(
         "warn",
-        `  Vídeo demasiado grande para Storage (${sizeMb} MB > límite). Se omite, ejercicio se guarda sin vídeo.`
+        `  Aún demasiado grande tras compresión (${sizeMb} MB > límite). Se omite.`
       );
     } else {
       log(
@@ -472,6 +577,7 @@ async function migrarEjercicios(coachId: string): Promise<Map<string, string>> {
         bucket: "ejercicios-videos",
         coachId,
         prefijo: "video",
+        esVideo: true,
       });
       videoUrl = path;
     } else if (ej.videoLink) {
