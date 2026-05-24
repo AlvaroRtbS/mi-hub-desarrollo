@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Sidebar } from "./sidebar";
+import { AtajosGlobales } from "@/components/atajos-globales";
 
 export default async function PanelLayout({
   children,
@@ -34,6 +35,7 @@ export default async function PanelLayout({
     >
       <Sidebar coachLabel={coachLabel} />
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
+      <AtajosGlobales />
     </div>
   );
 }
