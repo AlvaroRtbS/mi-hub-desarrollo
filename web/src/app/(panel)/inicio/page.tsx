@@ -4,6 +4,7 @@ import type { EstructuraPrograma, Dia } from "@/lib/supabase/tipos";
 import { inicialesNombre, formatearFecha } from "@/lib/utilidades";
 import { BotonCargarDemo } from "./boton-demo";
 import { SugerenciasHoy } from "./sugerencias-hoy";
+import { ResumenSemana } from "./resumen-semana";
 
 type AsignacionConSnapshot = {
   id: string;
@@ -192,6 +193,10 @@ export default async function InicioPage() {
         />
         <Stat label="Programas" valor={programas.count ?? 0} href="/programas" />
         <Stat label="Ejercicios" valor={ejercicios.count ?? 0} href="/ejercicios" />
+      </div>
+
+      <div className="mb-4">
+        <ResumenSemana />
       </div>
 
       <div className="mb-4">
