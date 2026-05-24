@@ -9,6 +9,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { TabBar } from "./tab-bar";
+import { TourBienvenida } from "./tour-bienvenida";
 
 const TABS = [
   { href: "/c/hoy", Icon: Home, label: "Hoy" },
@@ -114,6 +115,9 @@ export default async function ClientaLayout({
 
       {/* Tab bar móvil pegada abajo */}
       <TabBar tabs={tabs} colorMarca={colorMarca} />
+
+      {/* Tour de bienvenida (solo primera visita) */}
+      <TourBienvenida />
     </div>
   );
 }
