@@ -534,6 +534,15 @@ function SeccionResumen({
           >
             Histórico por ejercicio →
           </Link>
+          <a
+            href={`/imprimir/clienta/${clienta.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-500 hover:text-brand-400"
+            title="Abre la vista de impresión / PDF de un reporte de esta clienta"
+          >
+            Imprimir ficha / PDF →
+          </a>
           <BotonGenerarIA clientaId={clienta.id} />
           {asignacionActiva && (
             <BotonCompartirPrograma

@@ -3,8 +3,12 @@
 import { useEffect } from "react";
 import { Printer, X } from "lucide-react";
 
-export function BotonImprimir() {
-  // Si la URL trae ?auto=1, dispara el diálogo de impresión solo.
+/**
+ * Cabecera sticky para vistas de impresión (route group "print").
+ * Tiene botón para disparar window.print() y X para cerrar la pestaña.
+ * Si la URL trae ?auto=1, llama a window.print() automáticamente al cargar.
+ */
+export function BotonImprimirCabecera() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);

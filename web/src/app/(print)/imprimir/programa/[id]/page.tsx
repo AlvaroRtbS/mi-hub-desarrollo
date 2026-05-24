@@ -7,7 +7,7 @@ import type {
   Bloque,
   Elemento,
 } from "@/lib/supabase/tipos";
-import { BotonImprimir } from "./boton-imprimir";
+import { BotonImprimirCabecera as BotonImprimir } from "../../../boton-imprimir-cabecera";
 
 export const metadata = {
   title: "Imprimir programa",
