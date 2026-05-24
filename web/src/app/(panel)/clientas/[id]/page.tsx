@@ -19,6 +19,7 @@ import { BotonResumenIA } from "./boton-resumen-ia";
 import { PanelLogros } from "./panel-logros";
 import { HeatmapAdherencia } from "./heatmap-adherencia";
 import { HeatmapAnual } from "./heatmap-anual";
+import { InsightsMes } from "./insights-mes";
 import { PanelObjetivos } from "./panel-objetivos";
 import { GruposClienta } from "./grupos-clienta";
 import { type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
@@ -292,16 +293,21 @@ export default async function ClientaPage({
       {/* Contenido por pestaña */}
       <div className="mt-6">
         {tab === "resumen" && (
-          <SeccionResumen
-            clienta={clienta}
-            asignacionActiva={asignacionActiva}
-            historico={historico}
-            sesionesCount={sesionesCount}
-            fotosCount={fotosCount ?? 0}
-            tokenShare={tokenShare}
-            tokenInvitacion={tokenInvitacion}
-            yaEnlazada={yaEnlazada}
-          />
+          <>
+            <div className="mb-5">
+              <InsightsMes clientaId={clienta.id} />
+            </div>
+            <SeccionResumen
+              clienta={clienta}
+              asignacionActiva={asignacionActiva}
+              historico={historico}
+              sesionesCount={sesionesCount}
+              fotosCount={fotosCount ?? 0}
+              tokenShare={tokenShare}
+              tokenInvitacion={tokenInvitacion}
+              yaEnlazada={yaEnlazada}
+            />
+          </>
         )}
 
         {tab === "adherencia" && (
