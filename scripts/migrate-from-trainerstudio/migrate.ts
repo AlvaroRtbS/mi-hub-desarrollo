@@ -1,30 +1,45 @@
 /**
- * Migración TrainerStudio → tu Supabase.
+ * Migración TrainerStudio → tu Supabase (v2).
+ *
+ * Reescrito tras descubrir el API real de TS con `npm run discover`:
+ *   - Auth: cabecera `X-API-Key` (no `Authorization: Bearer`).
+ *   - Paginación obligatoria en listados (`pageSize`, `pageNum`).
+ *   - Estructura de respuesta `{ docs, totalDocs, totalPages, hasNextPage }`
+ *     (Mongoose paginate v2).
+ *   - Endpoints reales bajo `/coach/...` para clientas/programas, y
+ *     `/exercises` para la biblioteca.
  *
  * USO:
  *   npm install
- *   cp .env.example .env  (rellenar las claves)
- *   npm run probe                       # un primer ping para verificar credenciales y endpoints
- *   npm run migrate -- --dry-run        # ver qué pasaría sin escribir
- *   npm run migrate                     # migración real
- *   npm run migrate -- --only=ejercicios   # solo una entidad
- *   npm run migrate -- --skip-storage   # mantener URLs originales de TS (rápido, prueba)
+ *   cat > .env <<EOF
+ *   TS_API_KEY=ts_ak_...
+ *   TS_BASE=https://api.trainerstudio.io
+ *   NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+ *   SUPABASE_SERVICE_ROLE_KEY=eyJ...
+ *   EOF
+ *
+ *   npm run probe                        # verifica credenciales + endpoints
+ *   npm run discover                     # vuelca shape de cada respuesta
+ *   npm run migrate -- --dry-run         # qué pasaría sin escribir
+ *   npm run migrate                      # migración real
+ *   npm run migrate -- --only=ejercicios # solo una entidad
+ *
+ * QUÉ MIGRA:
+ *   - ejercicios (con vídeo + imagen descargados a Storage)
+ *   - clientas activas (no archivadas — usa --include-archived para todas)
+ *   - notas (HTML)
+ *   - métricas (valor inicial + valor actual por métrica)
+ *   - sesiones (a partir del compliance diario)
+ *
+ * QUÉ NO MIGRA:
+ *   - estructura de programas (TS no la expone vía API; recrear manualmente
+ *     en mi-hub con el editor drag-drop — solo son 3)
+ *   - fotos de progreso (todavía no encontrado el endpoint exacto)
  *
  * IDEMPOTENCIA:
- *   Cada fila migrada lleva su trainerstudio_id en una columna del mismo
- *   nombre. Reejecutar el script actualiza filas existentes en lugar de
- *   duplicarlas (upsert con on conflict).
- *
- * ENDPOINTS DE TRAINERSTUDIO:
- *   Los paths en TS_ENDPOINTS son la mejor hipótesis basada en la
- *   documentación interna y los nombres de las herramientas MCP. Si tu API
- *   real usa paths distintos, ajústalos en el bloque TS_ENDPOINTS al
- *   principio de este archivo, o ejecuta `--probe` para verificar.
- *
- * ⚠ Antes de ejecutar la migración real:
- *   1. Haz una copia de seguridad en Supabase (Backups).
- *   2. Ejecuta con --dry-run primero.
- *   3. Revisa el resumen final.
+ *   Cada fila lleva su `trainerstudio_id` en una columna del mismo nombre.
+ *   Re-ejecutar el script actualiza filas existentes en lugar de duplicarlas.
+ *   Requiere las migraciones SQL `20260524000006` y `20260524000007`.
  */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -49,94 +64,83 @@ const CONFIG = {
   DRY_RUN: process.argv.includes("--dry-run"),
   PROBE: process.argv.includes("--probe"),
   SKIP_STORAGE: process.argv.includes("--skip-storage"),
+  INCLUDE_ARCHIVED: process.argv.includes("--include-archived"),
   ONLY:
     process.argv.find((a) => a.startsWith("--only="))?.slice("--only=".length) ??
     null,
-};
-
-const TS_ENDPOINTS = {
-  exercises: "/exercises", // ?type=my para los propios del coach
-  customers: "/customers",
-  customer: (id: string) => `/customers/${id}`,
-  programs: "/programs",
-  program: (id: string) => `/programs/${id}`,
-  customerMetrics: (id: string) => `/customers/${id}/metrics`,
-  customerCompliance: (id: string) => `/customers/${id}/compliance`,
-  customerWorkouts: (id: string) => `/customers/${id}/workouts`,
-  customerPhotos: (id: string) => `/customers/${id}/photos`,
-  customerNotes: (id: string) => `/customers/${id}/notes`,
-  exerciseHistory: (customerId: string, exerciseId: string) =>
-    `/customers/${customerId}/exercises/${exerciseId}/history`,
 };
 
 const ENTIDADES = [
   "ejercicios",
   "clientas",
   "programas",
+  "notas",
   "metricas",
   "sesiones",
-  "fotos",
-  "notas",
 ] as const;
 type Entidad = (typeof ENTIDADES)[number];
 
+const TS_ENDPOINTS = {
+  exercises: (pageNum: number, pageSize = 100) =>
+    `/exercises?pageSize=${pageSize}&pageNum=${pageNum}`,
+  exerciseDetail: (id: string) => `/exercises/${id}`,
+  customers: (archived: boolean, pageNum: number, pageSize = 100) =>
+    `/coach/customers?archived=${archived}&pageSize=${pageSize}&pageNum=${pageNum}`,
+  customer: (id: string) => `/coach/customers/${id}`,
+  customerNotes: (id: string) => `/coach/customers/${id}/notes`,
+  customerMetricsSets: (id: string) => `/coach/customers/${id}/metrics-sets`,
+  customerCompliance: (id: string) => `/coach/customers/${id}/compliance`,
+  programs: (archived: boolean, pageNum: number, pageSize = 100) =>
+    `/coach/programs?archived=${archived}&pageSize=${pageSize}&pageNum=${pageNum}`,
+};
+
 // ============================================================================
-// Logging con color
+// Helpers de log
 // ============================================================================
 
 const C = {
   reset: "\x1b[0m",
   dim: "\x1b[2m",
+  bold: "\x1b[1m",
   red: "\x1b[31m",
   green: "\x1b[32m",
   yellow: "\x1b[33m",
   blue: "\x1b[34m",
   magenta: "\x1b[35m",
   cyan: "\x1b[36m",
-  bold: "\x1b[1m",
 };
 
-function log(level: "info" | "ok" | "warn" | "err" | "dim", ...args: unknown[]) {
-  const color =
-    level === "ok"
-      ? C.green
-      : level === "warn"
-      ? C.yellow
-      : level === "err"
-      ? C.red
-      : level === "dim"
-      ? C.dim
-      : C.cyan;
-  const tag =
-    level === "ok"
-      ? "✓"
-      : level === "warn"
-      ? "⚠"
-      : level === "err"
-      ? "✗"
-      : level === "dim"
-      ? " "
-      : "·";
-  console.log(`${color}${tag}${C.reset}`, ...args);
-}
-
-function seccion(titulo: string) {
-  console.log("");
-  console.log(`${C.bold}${C.blue}━━ ${titulo} ━━${C.reset}`);
-}
-
-// ============================================================================
-// HTTP cliente para TrainerStudio
-// ============================================================================
-
-async function tsGet(path: string, query?: Record<string, string>): Promise<unknown> {
-  const url = new URL(CONFIG.TS_BASE + path);
-  if (query) {
-    for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
+function log(
+  level: "info" | "ok" | "warn" | "err" | "dim",
+  ...args: unknown[]
+) {
+  const icons = {
+    info: `${C.cyan}·${C.reset}`,
+    ok: `${C.green}✓${C.reset}`,
+    warn: `${C.yellow}⚠${C.reset}`,
+    err: `${C.red}✗${C.reset}`,
+    dim: `${C.dim}·${C.reset}`,
+  };
+  const prefix = icons[level];
+  const text = args
+    .map((a) => (typeof a === "string" ? a : JSON.stringify(a)))
+    .join(" ");
+  if (level === "dim") {
+    console.log(`${prefix} ${C.dim}${text}${C.reset}`);
+  } else {
+    console.log(`${prefix} ${text}`);
   }
-  const res = await fetch(url.toString(), {
+}
+
+// ============================================================================
+// Cliente HTTP a Trainer Studio
+// ============================================================================
+
+async function tsGet<T = unknown>(path: string): Promise<T> {
+  const url = CONFIG.TS_BASE + path;
+  const res = await fetch(url, {
     headers: {
-      Authorization: `Bearer ${CONFIG.TS_API_KEY}`,
+      "X-API-Key": CONFIG.TS_API_KEY,
       Accept: "application/json",
     },
   });
@@ -146,7 +150,31 @@ async function tsGet(path: string, query?: Record<string, string>): Promise<unkn
       `TS ${path} → ${res.status} ${res.statusText}\n${body.slice(0, 400)}`
     );
   }
-  return res.json();
+  return res.json() as Promise<T>;
+}
+
+// Loop sobre paginación Mongoose: { docs, totalPages, hasNextPage, ... }
+type Paginated<T> = {
+  docs: T[];
+  totalDocs: number;
+  totalPages: number;
+  page: number;
+  hasNextPage: boolean;
+};
+
+async function tsPaginate<T>(
+  urlFor: (pageNum: number) => string
+): Promise<T[]> {
+  const all: T[] = [];
+  let page = 1;
+  while (true) {
+    const res = await tsGet<Paginated<T>>(urlFor(page));
+    const docs = Array.isArray(res?.docs) ? res.docs : [];
+    all.push(...docs);
+    if (!res.hasNextPage) break;
+    page += 1;
+  }
+  return all;
 }
 
 async function tsDownload(srcUrl: string): Promise<{
@@ -155,12 +183,24 @@ async function tsDownload(srcUrl: string): Promise<{
 } | null> {
   try {
     const res = await fetch(srcUrl);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      log(
+        "warn",
+        `  Fallo al descargar (HTTP ${res.status}):`,
+        srcUrl.slice(0, 80) + "…"
+      );
+      return null;
+    }
     const buf = Buffer.from(await res.arrayBuffer());
-    const contentType = res.headers.get("content-type") ?? "application/octet-stream";
+    const contentType =
+      res.headers.get("content-type") ?? "application/octet-stream";
     return { buffer: buf, contentType };
   } catch (e) {
-    log("warn", "  Fallo al descargar", srcUrl, e instanceof Error ? e.message : e);
+    log(
+      "warn",
+      "  Error al descargar:",
+      e instanceof Error ? e.message : String(e)
+    );
     return null;
   }
 }
@@ -179,8 +219,6 @@ function sb(): SupabaseClient {
 }
 
 async function obtenerCoachId(): Promise<string> {
-  // Asumimos que la BD tiene exactamente un coach: el dueño.
-  // Si hubiera varios, requeriríamos un flag --coach-id.
   const { data, error } = await sb()
     .from("coaches")
     .select("id, email, nombre")
@@ -188,30 +226,25 @@ async function obtenerCoachId(): Promise<string> {
   if (error) throw new Error("No se pudo leer coaches: " + error.message);
   if (!data || data.length === 0) {
     throw new Error(
-      "No hay ningún coach registrado en tu Supabase. Crea cuenta primero entrando en /login de tu web."
+      "No hay ningún coach registrado. Crea cuenta en /login primero."
     );
   }
   if (data.length > 1) {
-    throw new Error(
-      "Hay más de un coach en la BD. Este script asume un único coach por instalación."
-    );
+    throw new Error("Hay más de un coach. El script asume un único coach.");
   }
-  log(
-    "dim",
-    `Coach destino: ${data[0]!.nombre} <${data[0]!.email}> (${data[0]!.id})`
-  );
-  return data[0]!.id;
+  log("dim", `Coach destino: ${data[0]!.nombre} <${data[0]!.email}>`);
+  return data[0]!.id as string;
 }
 
 // ============================================================================
-// Helper: descargar de TS y subir a Supabase Storage
+// Storage: descargar de TS y subir a un bucket
 // ============================================================================
 
-async function copiarArchivoAStorage(opts: {
+async function copiarAStorage(opts: {
   origenUrl: string;
   bucket: string;
   coachId: string;
-  prefijo: string; // ej "exercise" o "photo"
+  prefijo: string;
   ext?: string;
 }): Promise<string | null> {
   if (CONFIG.SKIP_STORAGE) return opts.origenUrl;
@@ -224,14 +257,16 @@ async function copiarArchivoAStorage(opts: {
   const nombre = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const path = `${opts.coachId}/${opts.prefijo}_${nombre}`;
 
-  const { error } = await sb()
-    .storage.from(opts.bucket)
-    .upload(path, descarga.buffer, {
+  const { error } = await sb().storage.from(opts.bucket).upload(
+    path,
+    descarga.buffer,
+    {
       contentType: descarga.contentType,
       upsert: false,
-    });
+    }
+  );
   if (error) {
-    log("warn", `  Fallo al subir a ${opts.bucket}: ${error.message}`);
+    log("warn", `  Fallo subiendo a ${opts.bucket}: ${error.message}`);
     return null;
   }
   return path;
@@ -249,657 +284,579 @@ function extDeContentType(ct: string): string | null {
 }
 
 // ============================================================================
-// MAPPERS — del schema TS al schema local
+// Tipos de Trainer Studio (basados en las muestras reales)
 // ============================================================================
 
+type TSMedia = {
+  type: "video" | "image" | string;
+  key: string;
+  source: string;
+  url: string;
+};
+
 type TSExercise = {
-  id: string;
+  _id: string;
   name: string;
-  description?: string | null;
-  instructions?: string | null;
-  type?: "private" | "public" | string;
+  defaultInstructions?: string | null;
+  videoLink?: string | null;
+  tags?: string[];
+  muscleGroups?: unknown[];
+  media?: TSMedia[];
   image?: string | null;
-  imageUrl?: string | null;
-  videoUrl?: string | null;
-  video?: string | null;
-  muscleGroups?: string[];
-  equipment?: string[];
+  thumbnail?: string | null;
+  imageKey?: string | null;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type TSCustomer = {
-  id: string;
+  _id: string;
   name: string;
   surname?: string | null;
   email: string;
   phone?: string | null;
   birthday?: string | null;
+  timezone?: string | null;
+  role: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+  lastActivityDate?: string | null;
   profilePhotoUrl?: string | null;
-  isArchived?: boolean;
+  customerRoleData?: {
+    isArchived?: boolean;
+    groups?: string[];
+    customerType?: string;
+  };
+};
+
+type TSNote = {
+  _id: string;
+  customerId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type TSMetricItem = {
+  metric: {
+    _id: string;
+    name: string;
+    metricUnit?: { _id: string; name: string; shortName: string };
+  };
+  initialValue: number | null;
+  currentValue: number | null;
+};
+
+type TSMetricsSet = {
+  _id: string;
+  customerId: string;
+  metricsSet: {
+    _id: string;
+    name: string;
+  };
+  metrics: TSMetricItem[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+type TSCompliance = {
+  customerId: string;
+  totalWorkoutDays: number;
+  completedWorkoutDays: number;
+  workoutCompletionPercentage: number;
+  dailyCompliance: Array<{
+    date: string; // "YYYY-MM-DD"
+    isWorkoutDay: boolean;
+    isRestDay: boolean;
+    isCompleted: boolean;
+    totalItems: number;
+    completedItems: number;
+  }>;
 };
 
 type TSProgram = {
-  id: string;
+  _id: string;
   name: string;
-  description?: string | null;
+  isArchived: boolean;
   numberOfDaysWithWorkouts?: number;
-  workoutBlocks?: TSWorkoutBlock[];
-  isArchived?: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
-type TSWorkoutBlock = {
-  id: string;
-  day: number; // 1-based, absoluto (día 1 del programa = sem 1 día 1)
-  isRest?: boolean;
-  order?: number;
-  name?: string;
-  items?: TSWorkoutItem[];
-};
+// ============================================================================
+// Clasificación de tags → grupos_musculares vs material
+// ============================================================================
 
-type TSWorkoutItem = {
-  id: string;
-  type: "EXERCISE" | "TASK" | string;
-  exerciseId?: string | null;
-  exerciseName?: string | null;
-  sets?: Array<{
-    reps?: string | number;
-    weight?: string | number;
-    rir?: string | number;
-    rest?: string | number;
-    tempo?: string;
-    notes?: string;
-  }>;
-  supersetExercises?: TSWorkoutItem[];
-  taskFields?: {
-    title?: string;
-    description?: string;
-    media?: Array<{ type: string; url: string; source?: string }>;
-  };
-};
+const EQUIPMENT_KEYWORDS = [
+  "kettlebell",
+  "mancuerna",
+  "pesa",
+  "barra",
+  "banda",
+  "goma",
+  "trx",
+  "bosu",
+  "bicicleta",
+  "cinta",
+  "banco",
+  "fitball",
+  "pelota",
+  "polea",
+  "disco",
+  "cuerda",
+  "step",
+  "esterilla",
+  "rodillo",
+];
 
-function ejercicioATS(coachId: string) {
-  return (e: TSExercise) => {
-    return {
-      coach_id: coachId,
-      nombre: e.name?.trim() || "Ejercicio",
-      descripcion: e.description ?? null,
-      instrucciones: e.instructions ?? null,
-      grupos_musculares: e.muscleGroups ?? [],
-      material: e.equipment ?? [],
-      origen: "trainerstudio",
-      trainerstudio_id: e.id,
-      // imagen_url / video_url se rellenan después al subir a Storage
-    };
-  };
-}
-
-function clientaATS(coachId: string) {
-  return (c: TSCustomer) => {
-    return {
-      coach_id: coachId,
-      nombre: (c.name ?? "").trim() || "Sin nombre",
-      apellidos: c.surname ?? null,
-      email: c.email,
-      telefono: c.phone ?? null,
-      fecha_nacimiento: c.birthday ?? null,
-      foto_url: c.profilePhotoUrl ?? null,
-      estado: c.isArchived ? "archivada" : "activa",
-      trainerstudio_id: c.id,
-    };
-  };
-}
-
-// Mapeo del programa TS a nuestra estructura: workoutBlocks (con day absoluto)
-// se agrupan en semanas de 7 días.
-function programaATS(coachId: string, mapeoEjercicios: Map<string, string>) {
-  return (p: TSProgram) => {
-    const numDias =
-      p.numberOfDaysWithWorkouts ??
-      (p.workoutBlocks && p.workoutBlocks.length > 0
-        ? Math.max(...p.workoutBlocks.map((b) => b.day))
-        : 7);
-    const numSemanas = Math.max(1, Math.ceil(numDias / 7));
-
-    // Inicializar estructura vacía
-    type Bloque = {
-      id: string;
-      titulo: string;
-      indicaciones?: string;
-      elementos: Array<Record<string, unknown>>;
-    };
-    type Dia = {
-      dia: number;
-      titulo: string;
-      descanso: boolean;
-      bloques: Bloque[];
-    };
-    type Semana = { semana: number; dias: Dia[] };
-    const NOMBRES_DIAS = [
-      "Lunes",
-      "Martes",
-      "Miércoles",
-      "Jueves",
-      "Viernes",
-      "Sábado",
-      "Domingo",
-    ];
-    const estructura: Semana[] = Array.from({ length: numSemanas }, (_, i) => ({
-      semana: i + 1,
-      dias: NOMBRES_DIAS.map((titulo, j) => ({
-        dia: j + 1,
-        titulo,
-        descanso: j >= 5,
-        bloques: [],
-      })),
-    }));
-
-    // Ordenar wblocks por (day, order)
-    const wblocks = [...(p.workoutBlocks ?? [])].sort((a, b) => {
-      if (a.day !== b.day) return a.day - b.day;
-      return (a.order ?? 0) - (b.order ?? 0);
-    });
-
-    for (const wb of wblocks) {
-      const semIdx = Math.floor((wb.day - 1) / 7);
-      const diaIdx = (wb.day - 1) % 7;
-      if (semIdx < 0 || semIdx >= estructura.length) continue;
-      const dia = estructura[semIdx]!.dias[diaIdx]!;
-      if (wb.isRest) {
-        dia.descanso = true;
-        continue;
-      }
-      dia.descanso = false;
-      const bloque: Bloque = {
-        id: wb.id,
-        titulo: wb.name ?? "Bloque",
-        elementos: [],
-      };
-      for (const item of wb.items ?? []) {
-        const els = mapeoItemAElementos(item, mapeoEjercicios);
-        bloque.elementos.push(...els);
-      }
-      dia.bloques.push(bloque);
-    }
-
-    return {
-      coach_id: coachId,
-      nombre: p.name?.trim() || "Programa",
-      descripcion: p.description ?? null,
-      num_semanas: numSemanas,
-      estructura,
-      trainerstudio_id: p.id,
-    };
-  };
-}
-
-function mapeoItemAElementos(
-  item: TSWorkoutItem,
-  mapeoEjercicios: Map<string, string>
-): Array<Record<string, unknown>> {
-  if (item.type === "EXERCISE" && item.exerciseId) {
-    const ejercicioId = mapeoEjercicios.get(item.exerciseId);
-    if (!ejercicioId) {
-      log(
-        "warn",
-        `  Item EXERCISE con exerciseId=${item.exerciseId} no encontrado en mapeo (se omite).`
-      );
-      return [];
-    }
-    const elementos: Array<Record<string, unknown>> = [
-      {
-        id: item.id,
-        tipo: "ejercicio",
-        ejercicio_id: ejercicioId,
-        ejercicio_nombre: item.exerciseName ?? undefined,
-        series: (item.sets ?? []).map((s) => ({
-          reps: String(s.reps ?? "10"),
-          peso: String(s.weight ?? ""),
-          rir: s.rir != null ? String(s.rir) : undefined,
-          descanso: s.rest != null ? String(s.rest) : undefined,
-          tempo: s.tempo,
-          notas: s.notes,
-        })),
-      },
-    ];
-    // Supersets se aplanan como ejercicios consecutivos
-    for (const ss of item.supersetExercises ?? []) {
-      elementos.push(...mapeoItemAElementos(ss, mapeoEjercicios));
-    }
-    return elementos;
+function clasificarTags(tags: string[] | undefined): {
+  grupos_musculares: string[];
+  material: string[];
+} {
+  if (!tags || tags.length === 0) {
+    return { grupos_musculares: [], material: [] };
   }
-
-  if (item.type === "TASK") {
-    const tf = item.taskFields ?? {};
-    const pdf = tf.media?.find((m) => m.type === "pdf");
-    if (pdf) {
-      return [
-        {
-          id: item.id,
-          tipo: "pdf",
-          titulo: tf.title ?? "Documento",
-          url: pdf.url, // URL externa de TS; queda como link directo
-          nombre_archivo: tf.title ?? "documento.pdf",
-        },
-      ];
+  const gm: string[] = [];
+  const mat: string[] = [];
+  for (const tag of tags) {
+    const low = tag.toLowerCase();
+    if (EQUIPMENT_KEYWORDS.some((k) => low.includes(k))) {
+      mat.push(tag);
+    } else {
+      gm.push(tag);
     }
-    const video = tf.media?.find((m) =>
-      m.type.startsWith("video") || m.type === "mp4"
-    );
-    if (video) {
-      return [
-        {
-          id: item.id,
-          tipo: "video_externo",
-          titulo: tf.title ?? "Vídeo",
-          url: video.url,
-          proveedor: "otro",
-        },
-      ];
-    }
-    // Sin media: contenido markdown
-    return [
-      {
-        id: item.id,
-        tipo: "contenido",
-        titulo: tf.title ?? "Nota",
-        markdown: tf.description ?? "",
-      },
-    ];
   }
-
-  return [];
+  return { grupos_musculares: gm, material: mat };
 }
 
 // ============================================================================
-// MIGRADORES
+// MIGRACIÓN: EJERCICIOS
 // ============================================================================
 
 async function migrarEjercicios(coachId: string): Promise<Map<string, string>> {
-  seccion("Ejercicios");
-  const mapeo = new Map<string, string>(); // trainerstudio_id → local id
-  const data = (await tsGet(TS_ENDPOINTS.exercises, { type: "my" })) as
-    | TSExercise[]
-    | { exercises?: TSExercise[]; data?: TSExercise[] };
-  const ejercicios: TSExercise[] = Array.isArray(data)
-    ? data
-    : (data as { exercises?: TSExercise[] }).exercises ??
-      (data as { data?: TSExercise[] }).data ??
-      [];
+  console.log("");
+  console.log(`${C.bold}${C.blue}== Ejercicios ==${C.reset}`);
+  const idMap = new Map<string, string>(); // trainerstudio_id → uuid local
 
-  log("info", `${ejercicios.length} ejercicios encontrados en TS`);
+  log("info", "Descargando lista paginada de TS…");
+  const ejs = await tsPaginate<TSExercise>((p) => TS_ENDPOINTS.exercises(p));
+  log("ok", `${ejs.length} ejercicios encontrados en TS`);
 
-  let n = 0;
-  for (const e of ejercicios) {
-    n += 1;
-    const base = ejercicioATS(coachId)(e);
+  let creados = 0;
+  let actualizados = 0;
+  let i = 0;
+  for (const ej of ejs) {
+    i++;
+    const nombre = (ej.name ?? "").trim() || "(sin nombre)";
+    const { grupos_musculares, material } = clasificarTags(ej.tags);
 
-    // Subir imagen y vídeo si los hay
-    const srcImagen = e.image ?? e.imageUrl ?? null;
-    const srcVideo = e.videoUrl ?? e.video ?? null;
-
-    let imagen_url: string | null = null;
-    let video_url: string | null = null;
-
-    if (srcImagen) {
-      imagen_url = await copiarArchivoAStorage({
-        origenUrl: srcImagen,
-        bucket: "ejercicios-imagenes",
-        coachId,
-        prefijo: `ej_${e.id}`,
-      });
-    }
-    if (srcVideo) {
-      video_url = await copiarArchivoAStorage({
-        origenUrl: srcVideo,
+    // Procesar media: el primer media de tipo video → video_url; image (top-level) → imagen_url
+    let videoUrl: string | null = null;
+    const videoMedia = (ej.media ?? []).find((m) => m.type === "video");
+    if (videoMedia?.url) {
+      const path = await copiarAStorage({
+        origenUrl: videoMedia.url,
         bucket: "ejercicios-videos",
         coachId,
-        prefijo: `ej_${e.id}`,
+        prefijo: "video",
       });
+      videoUrl = path;
+    } else if (ej.videoLink) {
+      videoUrl = ej.videoLink; // enlace externo (YouTube/Vimeo), guardar como-es
     }
 
-    const fila = { ...base, imagen_url, video_url };
-
-    if (CONFIG.DRY_RUN) {
-      log("dim", `  [${n}/${ejercicios.length}] DRY: ${fila.nombre}`);
-      mapeo.set(e.id, `[dry-run-${e.id}]`);
-      continue;
+    let imagenUrl: string | null = null;
+    if (ej.image) {
+      const path = await copiarAStorage({
+        origenUrl: ej.image,
+        bucket: "ejercicios-imagenes",
+        coachId,
+        prefijo: "img",
+      });
+      imagenUrl = path;
     }
 
-    const { data: ins, error } = await sb()
-      .from("ejercicios")
-      .upsert(fila, { onConflict: "coach_id,trainerstudio_id" })
-      .select("id, trainerstudio_id")
-      .single();
-    if (error) {
-      log("err", `  Error al upsert ejercicio ${e.id}: ${error.message}`);
-      continue;
-    }
-    mapeo.set(e.id, (ins as { id: string }).id);
-    if (n % 20 === 0 || n === ejercicios.length) {
-      log("ok", `  ${n}/${ejercicios.length} ejercicios procesados`);
-    }
-  }
+    const row = {
+      coach_id: coachId,
+      trainerstudio_id: ej._id,
+      nombre,
+      instrucciones: ej.defaultInstructions ?? null,
+      video_url: videoUrl,
+      imagen_url: imagenUrl,
+      grupos_musculares,
+      material,
+      origen: "creado_por_ti",
+      actualizado_en: new Date().toISOString(),
+    };
 
-  return mapeo;
-}
-
-async function migrarClientas(coachId: string): Promise<Map<string, string>> {
-  seccion("Clientas");
-  const mapeo = new Map<string, string>();
-  const data = (await tsGet(TS_ENDPOINTS.customers)) as
-    | TSCustomer[]
-    | { customers?: TSCustomer[]; data?: TSCustomer[] };
-  const clientas: TSCustomer[] = Array.isArray(data)
-    ? data
-    : (data as { customers?: TSCustomer[] }).customers ??
-      (data as { data?: TSCustomer[] }).data ??
-      [];
-
-  log("info", `${clientas.length} clientas encontradas`);
-
-  for (const c of clientas) {
-    const fila = clientaATS(coachId)(c);
-    if (CONFIG.DRY_RUN) {
-      log("dim", `  DRY: ${fila.nombre} <${fila.email}>`);
-      mapeo.set(c.id, `[dry-run-${c.id}]`);
-      continue;
-    }
-    const { data: ins, error } = await sb()
-      .from("clientas")
-      .upsert(fila, { onConflict: "coach_id,trainerstudio_id" })
-      .select("id")
-      .single();
-    if (error) {
-      log("err", `  Error al upsert clienta ${c.email}: ${error.message}`);
-      continue;
-    }
-    mapeo.set(c.id, (ins as { id: string }).id);
-    log("ok", `  ${fila.nombre} ${fila.apellidos ?? ""}`);
-  }
-
-  return mapeo;
-}
-
-async function migrarProgramas(
-  coachId: string,
-  mapeoEjercicios: Map<string, string>
-): Promise<Map<string, string>> {
-  seccion("Programas");
-  const mapeo = new Map<string, string>();
-  const data = (await tsGet(TS_ENDPOINTS.programs)) as
-    | TSProgram[]
-    | { programs?: TSProgram[]; data?: TSProgram[] };
-  const programasResumen: TSProgram[] = Array.isArray(data)
-    ? data
-    : (data as { programs?: TSProgram[] }).programs ??
-      (data as { data?: TSProgram[] }).data ??
-      [];
-
-  log("info", `${programasResumen.length} programas encontrados`);
-
-  for (const resumen of programasResumen) {
-    // Resumen puede no incluir workoutBlocks; cargar el detalle completo
-    let detalle: TSProgram;
-    try {
-      detalle = (await tsGet(TS_ENDPOINTS.program(resumen.id))) as TSProgram;
-    } catch (e) {
-      log("err", `  No se pudo cargar detalle de ${resumen.name}: ${e}`);
-      continue;
-    }
-    const fila = programaATS(coachId, mapeoEjercicios)(detalle);
     if (CONFIG.DRY_RUN) {
       log(
         "dim",
-        `  DRY: ${fila.nombre} (${fila.num_semanas} sem, ${fila.estructura.reduce(
-          (a, s) =>
-            a +
-            s.dias.reduce((b, d) => b + d.bloques.length, 0),
-          0
-        )} bloques)`
+        `[${i}/${ejs.length}] DRY: ${nombre.slice(0, 50)} (video=${videoUrl ? "sí" : "no"}, img=${imagenUrl ? "sí" : "no"})`
       );
-      mapeo.set(detalle.id, `[dry-run-${detalle.id}]`);
       continue;
     }
-    const { data: ins, error } = await sb()
-      .from("programas")
-      .upsert(fila, { onConflict: "coach_id,trainerstudio_id" })
+
+    const { data, error } = await sb()
+      .from("ejercicios")
+      .upsert(row, { onConflict: "coach_id,trainerstudio_id" })
       .select("id")
       .single();
+
     if (error) {
-      log("err", `  Error al upsert programa ${detalle.name}: ${error.message}`);
+      log("err", `  [${i}] ${nombre.slice(0, 40)}: ${error.message}`);
       continue;
     }
-    mapeo.set(detalle.id, (ins as { id: string }).id);
-    log("ok", `  ${fila.nombre} (${fila.num_semanas} sem)`);
+    idMap.set(ej._id, data!.id as string);
+    if (i % 25 === 0) {
+      log("ok", `  ${i}/${ejs.length} ejercicios procesados…`);
+    }
+    creados++; // upsert no diferencia, contamos como creados/actualizados
   }
 
-  return mapeo;
-}
-
-async function migrarMetricas(
-  coachId: string,
-  mapeoClientas: Map<string, string>
-) {
-  seccion("Métricas");
-  let total = 0;
-  for (const [tsCustomerId, localId] of mapeoClientas) {
-    if (localId.startsWith("[dry-run-")) continue;
-    let metricas: Array<{
-      id?: string;
-      type?: string;
-      value?: number;
-      unit?: string;
-      date?: string;
-    }> = [];
-    try {
-      const data = (await tsGet(
-        TS_ENDPOINTS.customerMetrics(tsCustomerId)
-      )) as
-        | typeof metricas
-        | { metrics?: typeof metricas; data?: typeof metricas };
-      metricas = Array.isArray(data)
-        ? data
-        : (data as { metrics?: typeof metricas }).metrics ??
-          (data as { data?: typeof metricas }).data ??
-          [];
-    } catch (e) {
-      log("warn", `  No se pudieron leer métricas de ${tsCustomerId}: ${e}`);
-      continue;
-    }
-    for (const m of metricas) {
-      if (!m.type || m.value == null || !m.date) continue;
-      const fila = {
-        coach_id: coachId,
-        clienta_id: localId,
-        tipo: m.type,
-        valor: m.value,
-        unidad: m.unit ?? "",
-        fecha: m.date.slice(0, 10),
-      };
-      if (CONFIG.DRY_RUN) {
-        total += 1;
-        continue;
-      }
-      const { error } = await sb().from("metricas").insert(fila);
-      if (error && !error.message.includes("duplicate")) {
-        log("err", `  Métrica ${m.id}: ${error.message}`);
-        continue;
-      }
-      total += 1;
-    }
-  }
-  log("ok", `${total} métricas migradas`);
-}
-
-async function migrarFotos(
-  coachId: string,
-  mapeoClientas: Map<string, string>
-) {
-  seccion("Fotos de progreso");
-  let total = 0;
-  for (const [tsCustomerId, localId] of mapeoClientas) {
-    if (localId.startsWith("[dry-run-")) continue;
-    let fotos: Array<{
-      id?: string;
-      url?: string;
-      type?: string;
-      date?: string;
-      notes?: string;
-    }> = [];
-    try {
-      const data = (await tsGet(
-        TS_ENDPOINTS.customerPhotos(tsCustomerId)
-      )) as
-        | typeof fotos
-        | { photos?: typeof fotos; data?: typeof fotos };
-      fotos = Array.isArray(data)
-        ? data
-        : (data as { photos?: typeof fotos }).photos ??
-          (data as { data?: typeof fotos }).data ??
-          [];
-    } catch (e) {
-      log("warn", `  No se pudieron leer fotos de ${tsCustomerId}: ${e}`);
-      continue;
-    }
-    for (const f of fotos) {
-      if (!f.url || !f.date) continue;
-      const subida = await copiarArchivoAStorage({
-        origenUrl: f.url,
-        bucket: "fotos-progreso",
-        coachId,
-        prefijo: `c_${localId}`,
-      });
-      if (!subida) continue;
-      const fila = {
-        coach_id: coachId,
-        clienta_id: localId,
-        url: subida,
-        tipo: ["frontal", "lateral", "trasera"].includes(f.type ?? "")
-          ? f.type
-          : "otra",
-        fecha: f.date.slice(0, 10),
-        notas: f.notes ?? null,
-      };
-      if (CONFIG.DRY_RUN) {
-        total += 1;
-        continue;
-      }
-      const { error } = await sb().from("fotos_progreso").insert(fila);
-      if (error && !error.message.includes("duplicate")) {
-        log("err", `  Foto ${f.id}: ${error.message}`);
-        continue;
-      }
-      total += 1;
-    }
-  }
-  log("ok", `${total} fotos migradas`);
-}
-
-async function migrarNotas(
-  coachId: string,
-  mapeoClientas: Map<string, string>
-) {
-  seccion("Notas internas");
-  let total = 0;
-  for (const [tsCustomerId, localId] of mapeoClientas) {
-    if (localId.startsWith("[dry-run-")) continue;
-    let notas: Array<{ id?: string; content?: string; createdAt?: string }> = [];
-    try {
-      const data = (await tsGet(TS_ENDPOINTS.customerNotes(tsCustomerId))) as
-        | typeof notas
-        | { notes?: typeof notas; data?: typeof notas };
-      notas = Array.isArray(data)
-        ? data
-        : (data as { notes?: typeof notas }).notes ??
-          (data as { data?: typeof notas }).data ??
-          [];
-    } catch (e) {
-      log("warn", `  No se pudieron leer notas de ${tsCustomerId}: ${e}`);
-      continue;
-    }
-    for (const n of notas) {
-      if (!n.content) continue;
-      const fila = {
-        coach_id: coachId,
-        clienta_id: localId,
-        contenido: n.content,
-        creada_en: n.createdAt ?? new Date().toISOString(),
-      };
-      if (CONFIG.DRY_RUN) {
-        total += 1;
-        continue;
-      }
-      const { error } = await sb().from("notas").insert(fila);
-      if (error) {
-        log("err", `  Nota ${n.id}: ${error.message}`);
-        continue;
-      }
-      total += 1;
-    }
-  }
-  log("ok", `${total} notas migradas`);
-}
-
-async function migrarSesiones(
-  coachId: string,
-  mapeoClientas: Map<string, string>
-) {
-  type Compliance = {
-    dailyCompliance?: Array<{
-      date: string;
-      isWorkoutDay?: boolean;
-      isRestDay?: boolean;
-      isCompleted?: boolean;
-      totalItems?: number;
-      completedItems?: number;
-    }>;
-  };
-
-  seccion("Sesiones (histórico de adherencia)");
-  let total = 0;
-  for (const [tsCustomerId, localId] of mapeoClientas) {
-    if (localId.startsWith("[dry-run-")) continue;
-    let compliance: Compliance | null = null;
-    try {
-      compliance = (await tsGet(
-        TS_ENDPOINTS.customerCompliance(tsCustomerId)
-      )) as Compliance;
-    } catch (e) {
-      log("warn", `  Sin compliance para ${tsCustomerId}: ${e}`);
-      continue;
-    }
-    for (const d of compliance?.dailyCompliance ?? []) {
-      if (!d.isWorkoutDay) continue;
-      const totalItems = d.totalItems ?? 0;
-      const completedItems = d.completedItems ?? 0;
-      const porcentaje =
-        totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-      const fila = {
-        coach_id: coachId,
-        clienta_id: localId,
-        fecha: d.date,
-        completada: d.isCompleted ?? false,
-        porcentaje_completado: porcentaje,
-        registros: {},
-      };
-      if (CONFIG.DRY_RUN) {
-        total += 1;
-        continue;
-      }
-      const { error } = await sb()
-        .from("sesiones")
-        .upsert(fila, { onConflict: "clienta_id,fecha" });
-      if (error) {
-        log("err", `  Sesión ${d.date}: ${error.message}`);
-        continue;
-      }
-      total += 1;
-    }
-  }
-  log("ok", `${total} sesiones migradas`);
+  log("ok", `Ejercicios: ${creados} upserts (${ejs.length} totales)`);
+  return idMap;
 }
 
 // ============================================================================
-// PROBE — primera verificación rápida
+// MIGRACIÓN: CLIENTAS
+// ============================================================================
+
+async function migrarClientas(coachId: string): Promise<Map<string, string>> {
+  console.log("");
+  console.log(`${C.bold}${C.blue}== Clientas ==${C.reset}`);
+  const idMap = new Map<string, string>();
+
+  log(
+    "info",
+    `Descargando lista (${CONFIG.INCLUDE_ARCHIVED ? "incluye archivadas" : "solo activas"})…`
+  );
+  const activas = await tsPaginate<TSCustomer>((p) =>
+    TS_ENDPOINTS.customers(false, p)
+  );
+  const archivadas = CONFIG.INCLUDE_ARCHIVED
+    ? await tsPaginate<TSCustomer>((p) => TS_ENDPOINTS.customers(true, p))
+    : [];
+  const clientas = [...activas, ...archivadas];
+  log("ok", `${clientas.length} clientas encontradas (${activas.length} activas + ${archivadas.length} archivadas)`);
+
+  let i = 0;
+  for (const c of clientas) {
+    i++;
+    const email = (c.email ?? "").toLowerCase().trim();
+    if (!email) {
+      log("warn", `  [${i}] ${c.name ?? "?"} sin email — saltando`);
+      continue;
+    }
+    const nombre = (c.name ?? "").trim() || "(sin nombre)";
+    const apellidos = c.surname?.trim() || null;
+    const telefono = c.phone ? c.phone : null;
+    const fechaNac = c.birthday
+      ? new Date(c.birthday).toISOString().slice(0, 10)
+      : null;
+    const archivada = c.customerRoleData?.isArchived === true;
+
+    const row = {
+      coach_id: coachId,
+      trainerstudio_id: c._id,
+      nombre,
+      apellidos,
+      email,
+      telefono,
+      fecha_nacimiento: fechaNac,
+      foto_url: null, // las URLs de TS caducan; clienta puede re-subir
+      estado: archivada ? "archivada" : "activa",
+      invitada_en: c.createdAt,
+      creada_en: c.createdAt,
+    };
+
+    if (CONFIG.DRY_RUN) {
+      log(
+        "dim",
+        `[${i}/${clientas.length}] DRY: ${nombre} ${apellidos ?? ""} <${email}> ${archivada ? "[archivada]" : ""}`
+      );
+      continue;
+    }
+
+    const { data, error } = await sb()
+      .from("clientas")
+      .upsert(row, { onConflict: "coach_id,trainerstudio_id" })
+      .select("id")
+      .single();
+
+    if (error) {
+      log(
+        "err",
+        `  [${i}] ${nombre} <${email}>: ${error.message.slice(0, 120)}`
+      );
+      continue;
+    }
+    idMap.set(c._id, data!.id as string);
+    log("dim", `  ${nombre} ${apellidos ?? ""} → ${data!.id}`);
+  }
+
+  log("ok", `Clientas: ${idMap.size} upserts (${clientas.length} totales)`);
+  return idMap;
+}
+
+// ============================================================================
+// MIGRACIÓN: PROGRAMAS (solo cabecera — TS no expone la estructura por API)
+// ============================================================================
+
+async function migrarProgramas(coachId: string): Promise<void> {
+  console.log("");
+  console.log(`${C.bold}${C.blue}== Programas ==${C.reset}`);
+  log(
+    "warn",
+    "TS no expone los wblocks/witems por API: se crean filas vacías con el nombre."
+  );
+  log("warn", "Recrear el contenido manualmente en el editor de mi-hub.");
+
+  const progs = await tsPaginate<TSProgram>((p) =>
+    TS_ENDPOINTS.programs(false, p)
+  );
+  log("ok", `${progs.length} programas encontrados`);
+
+  for (const p of progs) {
+    const nombre = (p.name ?? "").trim() || "(sin nombre)";
+    const numSemanas = Math.max(
+      1,
+      Math.ceil((p.numberOfDaysWithWorkouts ?? 7) / 7)
+    );
+    const row = {
+      coach_id: coachId,
+      trainerstudio_id: p._id,
+      nombre,
+      descripcion: `Migrado desde Trainer Studio. ${p.numberOfDaysWithWorkouts ?? "?"} días con entreno. Recrear estructura manualmente.`,
+      num_semanas: numSemanas,
+      estructura: [],
+      actualizado_en: new Date().toISOString(),
+    };
+
+    if (CONFIG.DRY_RUN) {
+      log("dim", `  DRY: ${nombre} (${numSemanas} sem)`);
+      continue;
+    }
+
+    const { error } = await sb()
+      .from("programas")
+      .upsert(row, { onConflict: "coach_id,trainerstudio_id" });
+    if (error) {
+      log("err", `  ${nombre}: ${error.message}`);
+      continue;
+    }
+    log("ok", `  ${nombre} (${numSemanas} sem)`);
+  }
+}
+
+// ============================================================================
+// MIGRACIÓN: NOTAS
+// ============================================================================
+
+async function migrarNotas(
+  coachId: string,
+  clientasMap: Map<string, string>
+): Promise<void> {
+  console.log("");
+  console.log(`${C.bold}${C.blue}== Notas ==${C.reset}`);
+  let total = 0;
+  let inserts = 0;
+
+  for (const [tsCustomerId, clientaId] of clientasMap) {
+    let notas: TSNote[];
+    try {
+      notas = await tsGet<TSNote[]>(TS_ENDPOINTS.customerNotes(tsCustomerId));
+    } catch (e) {
+      log(
+        "warn",
+        `  Sin notas para ${tsCustomerId}: ${e instanceof Error ? e.message.slice(0, 80) : e}`
+      );
+      continue;
+    }
+    if (!Array.isArray(notas) || notas.length === 0) continue;
+    total += notas.length;
+
+    for (const n of notas) {
+      const row = {
+        coach_id: coachId,
+        clienta_id: clientaId,
+        trainerstudio_id: n._id,
+        contenido: n.content ?? "",
+        creada_en: n.createdAt,
+      };
+      if (CONFIG.DRY_RUN) {
+        log("dim", `  DRY: nota ${n._id.slice(0, 8)}… (${(n.content ?? "").length} chars)`);
+        continue;
+      }
+      const { error } = await sb()
+        .from("notas")
+        .upsert(row, { onConflict: "coach_id,trainerstudio_id" });
+      if (error) {
+        log("err", `  Nota ${n._id}: ${error.message}`);
+        continue;
+      }
+      inserts++;
+    }
+  }
+  log("ok", `Notas: ${inserts}/${total} guardadas`);
+}
+
+// ============================================================================
+// MIGRACIÓN: MÉTRICAS (initialValue + currentValue por métrica)
+// ============================================================================
+
+async function migrarMetricas(
+  coachId: string,
+  clientasMap: Map<string, string>
+): Promise<void> {
+  console.log("");
+  console.log(`${C.bold}${C.blue}== Métricas ==${C.reset}`);
+  let inserts = 0;
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  for (const [tsCustomerId, clientaId] of clientasMap) {
+    let sets: TSMetricsSet[];
+    try {
+      sets = await tsGet<TSMetricsSet[]>(
+        TS_ENDPOINTS.customerMetricsSets(tsCustomerId)
+      );
+    } catch (e) {
+      log(
+        "warn",
+        `  Sin métricas para ${tsCustomerId}: ${e instanceof Error ? e.message.slice(0, 80) : e}`
+      );
+      continue;
+    }
+    if (!Array.isArray(sets)) continue;
+
+    for (const set of sets) {
+      const fechaInicial = (set.createdAt ?? "").slice(0, 10) || hoy;
+
+      for (const item of set.metrics ?? []) {
+        const tipo = item.metric.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "");
+        const unidad = item.metric.metricUnit?.shortName ?? "";
+
+        // Valor inicial (fecha = creación del set)
+        if (item.initialValue != null) {
+          const trainerstudioId = `${set._id}_${item.metric._id}_initial`;
+          const row = {
+            coach_id: coachId,
+            clienta_id: clientaId,
+            trainerstudio_id: trainerstudioId,
+            tipo,
+            valor: item.initialValue,
+            unidad,
+            fecha: fechaInicial,
+            notas: "Valor inicial migrado desde Trainer Studio",
+          };
+          if (!CONFIG.DRY_RUN) {
+            const { error } = await sb()
+              .from("metricas")
+              .upsert(row, { onConflict: "coach_id,trainerstudio_id" });
+            if (error) {
+              log("err", `  ${tipo} inicial: ${error.message}`);
+              continue;
+            }
+          }
+          inserts++;
+        }
+
+        // Valor actual (fecha = hoy)
+        if (item.currentValue != null) {
+          const trainerstudioId = `${set._id}_${item.metric._id}_current`;
+          const row = {
+            coach_id: coachId,
+            clienta_id: clientaId,
+            trainerstudio_id: trainerstudioId,
+            tipo,
+            valor: item.currentValue,
+            unidad,
+            fecha: hoy,
+            notas: "Último valor conocido (importado de Trainer Studio)",
+          };
+          if (!CONFIG.DRY_RUN) {
+            const { error } = await sb()
+              .from("metricas")
+              .upsert(row, { onConflict: "coach_id,trainerstudio_id" });
+            if (error) {
+              log("err", `  ${tipo} actual: ${error.message}`);
+              continue;
+            }
+          }
+          inserts++;
+        }
+      }
+    }
+  }
+  log("ok", `Métricas: ${inserts} upserts`);
+}
+
+// ============================================================================
+// MIGRACIÓN: SESIONES (a partir de compliance diaria)
+// ============================================================================
+
+async function migrarSesiones(
+  coachId: string,
+  clientasMap: Map<string, string>
+): Promise<void> {
+  console.log("");
+  console.log(`${C.bold}${C.blue}== Sesiones (compliance) ==${C.reset}`);
+  let inserts = 0;
+
+  for (const [tsCustomerId, clientaId] of clientasMap) {
+    let compliance: TSCompliance;
+    try {
+      compliance = await tsGet<TSCompliance>(
+        TS_ENDPOINTS.customerCompliance(tsCustomerId)
+      );
+    } catch (e) {
+      log(
+        "warn",
+        `  Sin compliance para ${tsCustomerId}: ${e instanceof Error ? e.message.slice(0, 80) : e}`
+      );
+      continue;
+    }
+    const dias = compliance.dailyCompliance ?? [];
+
+    for (const dia of dias) {
+      if (!dia.isWorkoutDay) continue;
+      const total = dia.totalItems || 0;
+      const completed = dia.completedItems || 0;
+      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      const row = {
+        coach_id: coachId,
+        clienta_id: clientaId,
+        fecha: dia.date,
+        completada: dia.isCompleted === true,
+        porcentaje_completado: pct,
+      };
+
+      if (!CONFIG.DRY_RUN) {
+        const { error } = await sb()
+          .from("sesiones")
+          .upsert(row, { onConflict: "clienta_id,fecha" });
+        if (error) {
+          log("err", `  Sesión ${dia.date}: ${error.message}`);
+          continue;
+        }
+      }
+      inserts++;
+    }
+    log("dim", `  ${tsCustomerId.slice(0, 8)}…: ${dias.length} días de compliance`);
+  }
+  log("ok", `Sesiones: ${inserts} upserts`);
+}
+
+// ============================================================================
+// PROBE — verificación rápida
 // ============================================================================
 
 async function probe() {
@@ -933,7 +890,7 @@ async function probe() {
     process.exit(1);
   }
 
-  // 1) Verificar Supabase: ¿hay coach?
+  // 1) Supabase: coach
   try {
     const coachId = await obtenerCoachId();
     log("ok", `Coach destino encontrado: ${coachId.slice(0, 8)}…`);
@@ -942,27 +899,25 @@ async function probe() {
     process.exit(1);
   }
 
-  // 2) Verificar TS: list exercises
+  // 2) TS: listar primera página de cada entidad
   try {
-    log("info", `GET ${CONFIG.TS_BASE}${TS_ENDPOINTS.exercises}?type=my`);
-    const data = (await tsGet(TS_ENDPOINTS.exercises, { type: "my" })) as
-      | unknown[]
-      | { exercises?: unknown[]; data?: unknown[] };
-    const lista = Array.isArray(data)
-      ? data
-      : (data as { exercises?: unknown[] }).exercises ??
-        (data as { data?: unknown[] }).data ??
-        [];
-    log("ok", `${lista.length} ejercicios respondidos por TS`);
-    if (lista[0]) {
-      console.log(`${C.dim}Ejemplo:${C.reset}`, JSON.stringify(lista[0], null, 2));
-    }
+    log("info", `GET ${CONFIG.TS_BASE}${TS_ENDPOINTS.exercises(1, 1)}`);
+    const ex = await tsGet<Paginated<TSExercise>>(TS_ENDPOINTS.exercises(1, 1));
+    log("ok", `Ejercicios disponibles en TS: ${ex.totalDocs}`);
+
+    log("info", `GET /coach/customers (activas)`);
+    const c = await tsGet<Paginated<TSCustomer>>(
+      TS_ENDPOINTS.customers(false, 1, 1)
+    );
+    log("ok", `Clientas activas: ${c.totalDocs}`);
+
+    log("info", `GET /coach/programs`);
+    const pr = await tsGet<Paginated<TSProgram>>(
+      TS_ENDPOINTS.programs(false, 1, 1)
+    );
+    log("ok", `Programas: ${pr.totalDocs}`);
   } catch (e) {
     log("err", e instanceof Error ? e.message : String(e));
-    log(
-      "warn",
-      "Si el endpoint no es /exercises, edítalo en TS_ENDPOINTS al inicio de migrate.ts"
-    );
     process.exit(1);
   }
 
@@ -978,9 +933,9 @@ async function main() {
   console.log(
     `${C.bold}${C.magenta}Migración TrainerStudio → Supabase${C.reset}`
   );
-  if (CONFIG.DRY_RUN) log("warn", "MODO DRY-RUN: no se escribirá nada en BD");
-  if (CONFIG.SKIP_STORAGE)
-    log("warn", "--skip-storage: imágenes/vídeos no se copian, se guardan URLs originales de TS");
+  if (CONFIG.DRY_RUN) log("warn", "DRY-RUN — no se escribirá nada");
+  if (CONFIG.SKIP_STORAGE) log("warn", "SKIP-STORAGE — se mantienen URLs originales de TS (caducan en 2h)");
+  if (CONFIG.INCLUDE_ARCHIVED) log("info", "Incluyendo clientas archivadas");
   if (CONFIG.ONLY) log("info", `Solo entidad: ${CONFIG.ONLY}`);
 
   if (CONFIG.PROBE) {
@@ -990,79 +945,73 @@ async function main() {
 
   if (
     !CONFIG.TS_API_KEY ||
+    !CONFIG.TS_BASE ||
     !CONFIG.SUPABASE_URL ||
     !CONFIG.SUPABASE_SERVICE_ROLE_KEY
   ) {
-    log(
-      "err",
-      "Faltan variables de entorno. Ejecuta `npm run probe` para diagnóstico."
-    );
+    log("err", "Faltan variables de entorno. Ejecuta `npm run probe` para diagnóstico.");
+    process.exit(1);
+  }
+
+  if (CONFIG.ONLY && !ENTIDADES.includes(CONFIG.ONLY as Entidad)) {
+    log("err", `--only=${CONFIG.ONLY} no es válido. Opciones: ${ENTIDADES.join(", ")}`);
     process.exit(1);
   }
 
   const coachId = await obtenerCoachId();
+  const run = (e: Entidad) => !CONFIG.ONLY || CONFIG.ONLY === e;
 
-  const debeCorrer = (e: Entidad) => !CONFIG.ONLY || CONFIG.ONLY === e;
+  // Necesitamos siempre el mapa de clientas para notas/métricas/sesiones,
+  // así que si vamos a migrar alguna de ellas, primero migramos clientas
+  // (o las recargamos del Supabase si --only=notas etc).
+  let ejerciciosMap = new Map<string, string>();
+  let clientasMap = new Map<string, string>();
 
-  let mapeoEjercicios = new Map<string, string>();
-  let mapeoClientas = new Map<string, string>();
+  if (run("ejercicios")) {
+    ejerciciosMap = await migrarEjercicios(coachId);
+  }
 
-  if (debeCorrer("ejercicios")) {
-    mapeoEjercicios = await migrarEjercicios(coachId);
-  } else {
-    // Cargar mapeo existente de la BD para que la migración de programas funcione
-    const { data } = await sb()
-      .from("ejercicios")
-      .select("id, trainerstudio_id")
-      .not("trainerstudio_id", "is", null);
-    for (const ej of (data ?? []) as Array<{
-      id: string;
-      trainerstudio_id: string;
-    }>) {
-      mapeoEjercicios.set(ej.trainerstudio_id, ej.id);
+  if (
+    run("clientas") ||
+    run("notas") ||
+    run("metricas") ||
+    run("sesiones")
+  ) {
+    if (run("clientas")) {
+      clientasMap = await migrarClientas(coachId);
+    } else {
+      // Recargar el mapa desde Supabase para notas/métricas/sesiones
+      const { data } = await sb()
+        .from("clientas")
+        .select("id, trainerstudio_id")
+        .eq("coach_id", coachId)
+        .not("trainerstudio_id", "is", null);
+      for (const r of data ?? []) {
+        clientasMap.set(r.trainerstudio_id as string, r.id as string);
+      }
+      log("dim", `Cargadas ${clientasMap.size} clientas existentes`);
     }
   }
 
-  if (debeCorrer("clientas")) {
-    mapeoClientas = await migrarClientas(coachId);
-  } else {
-    const { data } = await sb()
-      .from("clientas")
-      .select("id, trainerstudio_id")
-      .not("trainerstudio_id", "is", null);
-    for (const c of (data ?? []) as Array<{
-      id: string;
-      trainerstudio_id: string;
-    }>) {
-      mapeoClientas.set(c.trainerstudio_id, c.id);
-    }
-  }
-
-  if (debeCorrer("programas")) {
-    await migrarProgramas(coachId, mapeoEjercicios);
-  }
-  if (debeCorrer("metricas")) {
-    await migrarMetricas(coachId, mapeoClientas);
-  }
-  if (debeCorrer("sesiones")) {
-    await migrarSesiones(coachId, mapeoClientas);
-  }
-  if (debeCorrer("fotos")) {
-    await migrarFotos(coachId, mapeoClientas);
-  }
-  if (debeCorrer("notas")) {
-    await migrarNotas(coachId, mapeoClientas);
-  }
+  if (run("programas")) await migrarProgramas(coachId);
+  if (run("notas")) await migrarNotas(coachId, clientasMap);
+  if (run("metricas")) await migrarMetricas(coachId, clientasMap);
+  if (run("sesiones")) await migrarSesiones(coachId, clientasMap);
 
   console.log("");
-  log("ok", "Migración completada.");
+  log("ok", "Migración terminada.");
   if (CONFIG.DRY_RUN) {
+    log("warn", "Era DRY-RUN. Quita --dry-run para escribir de verdad.");
+  } else {
     console.log("");
-    log("warn", "Ha sido un dry-run. Ejecuta sin --dry-run para escribir de verdad.");
+    log(
+      "info",
+      "Recordatorio: borra el .env o rota TS_API_KEY y SUPABASE_SERVICE_ROLE_KEY."
+    );
   }
 }
 
 main().catch((e) => {
-  console.error(`${C.red}Error fatal:${C.reset}`, e);
+  console.error(e);
   process.exit(1);
 });
