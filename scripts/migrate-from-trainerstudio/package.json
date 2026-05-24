@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "migrate": "tsx migrate.ts",
-    "probe": "tsx migrate.ts --probe"
+    "probe": "tsx migrate.ts --probe",
+    "discover": "tsx discover.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
