@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type {
   EstructuraPrograma,
@@ -8,14 +8,22 @@ import type {
   ElementoEjercicio,
 } from "@/lib/supabase/tipos";
 import { Boton } from "@/components/ui/boton";
+import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
-import { Lightbulb, Save, RotateCcw } from "lucide-react";
+import { Lightbulb, Save, RotateCcw, Trash2, Plus, X, Search } from "lucide-react";
 import { guardarSnapshotAsignacion } from "./acciones";
 import {
   sugerirProgresion,
   type HistorialEjercicio,
   type Sugerencia,
 } from "./historial";
+
+type EjercicioBiblioteca = {
+  id: string;
+  nombre: string;
+  grupos_musculares: string[];
+  material: string[];
+};
 
 type EjercicioInfo = { nombre: string; material: string[] };
 
@@ -33,11 +41,13 @@ export function EditorAsignacionCliente({
   estructuraInicial,
   ejerciciosInfo,
   historiales,
+  biblioteca,
 }: {
   asignacionId: string;
   estructuraInicial: EstructuraPrograma;
   ejerciciosInfo: Record<string, EjercicioInfo>;
   historiales: Record<string, HistorialEjercicio>;
+  biblioteca: EjercicioBiblioteca[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -47,6 +57,12 @@ export function EditorAsignacionCliente({
   const [semanaIdx, setSemanaIdx] = useState(0);
   const [sucio, setSucio] = useState(false);
   const [guardando, startTransition] = useTransition();
+  // Modal de "Añadir ejercicio": guarda dónde se insertaría
+  const [añadirA, setAñadirA] = useState<{
+    semIdx: number;
+    diaIdx: number;
+    bloqueIdx: number;
+  } | null>(null);
 
   function actualizar(mutator: (e: EstructuraPrograma) => void) {
     setEstructura((prev) => {
@@ -86,6 +102,46 @@ export function EditorAsignacionCliente({
       if (!el || el.tipo !== "ejercicio") return;
       el.series = el.series.map((s) => ({ ...s, ...parche }));
     });
+  }
+
+  function eliminarElemento(
+    semIdx: number,
+    diaIdx: number,
+    bloqueIdx: number,
+    elIdx: number
+  ) {
+    if (!confirm("¿Eliminar este ejercicio del plan de esta clienta?")) return;
+    actualizar((e) => {
+      const bloque = e[semIdx]?.dias[diaIdx]?.bloques[bloqueIdx];
+      if (!bloque) return;
+      bloque.elementos.splice(elIdx, 1);
+    });
+  }
+
+  function añadirEjercicio(ej: EjercicioBiblioteca) {
+    if (!añadirA) return;
+    const { semIdx, diaIdx, bloqueIdx } = añadirA;
+    actualizar((e) => {
+      const bloque = e[semIdx]?.dias[diaIdx]?.bloques[bloqueIdx];
+      if (!bloque) return;
+      // Crear elemento ejercicio nuevo con 3 series por defecto
+      const nuevoId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      bloque.elementos.push({
+        id: nuevoId,
+        tipo: "ejercicio",
+        ejercicio_id: ej.id,
+        ejercicio_nombre: ej.nombre,
+        series: [
+          { reps: "10", peso: "" },
+          { reps: "10", peso: "" },
+          { reps: "10", peso: "" },
+        ],
+      });
+    });
+    setAñadirA(null);
   }
 
   function descartar() {
@@ -233,6 +289,14 @@ export function EditorAsignacionCliente({
                                     parche
                                   )
                                 }
+                                onEliminar={() =>
+                                  eliminarElemento(
+                                    semanaIdx,
+                                    diaIdx,
+                                    bloqueIdx,
+                                    elIdx
+                                  )
+                                }
                               />
                             ) : (
                               <div
@@ -244,6 +308,19 @@ export function EditorAsignacionCliente({
                               </div>
                             )
                           )}
+                          <button
+                            onClick={() =>
+                              setAñadirA({
+                                semIdx: semanaIdx,
+                                diaIdx,
+                                bloqueIdx,
+                              })
+                            }
+                            className="w-full text-xs text-neutral-400 hover:text-white inline-flex items-center justify-center gap-1.5 py-2 border border-dashed border-neutral-800 hover:border-neutral-600 rounded-lg transition"
+                          >
+                            <Plus className="size-3.5" />
+                            Añadir ejercicio
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -254,6 +331,14 @@ export function EditorAsignacionCliente({
           })}
         </div>
       )}
+
+      {/* Modal selector de ejercicio */}
+      <ModalAñadirEjercicio
+        abierto={añadirA !== null}
+        onCerrar={() => setAñadirA(null)}
+        biblioteca={biblioteca}
+        onElegir={añadirEjercicio}
+      />
     </div>
   );
 }
@@ -264,12 +349,14 @@ function FilaEjercicio({
   historial,
   onEditarSerie,
   onAplicarATodas,
+  onEliminar,
 }: {
   elemento: ElementoEjercicio;
   info: EjercicioInfo | undefined;
   historial: HistorialEjercicio | undefined;
   onEditarSerie: (serieIdx: number, parche: Partial<SerieEjercicio>) => void;
   onAplicarATodas: (parche: Partial<SerieEjercicio>) => void;
+  onEliminar: () => void;
 }) {
   const nombre = info?.nombre ?? elemento.ejercicio_nombre ?? "(Ejercicio)";
   const sinPesoLibre = deduceSinPesoLibre(info?.material ?? []);
@@ -281,8 +368,16 @@ function FilaEjercicio({
   }
 
   return (
-    <div className="bg-neutral-900/30 rounded-lg p-3">
-      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
+    <div className="bg-neutral-900/30 rounded-lg p-3 group/ej relative">
+      <button
+        onClick={onEliminar}
+        title="Quitar este ejercicio del plan"
+        className="absolute top-2 right-2 opacity-30 hover:opacity-100 hover:text-red-400 transition p-1"
+        aria-label="Quitar ejercicio"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2 pr-6">
         <div className="font-medium text-sm">{nombre}</div>
         {historial && historial.vecesHechas > 0 && (
           <div className="text-[10px] text-neutral-500">
@@ -434,4 +529,133 @@ function tipoLegible(tipo: string): string {
     enlace: "🔗 Enlace",
   };
   return mapa[tipo] ?? tipo;
+}
+
+function ModalAñadirEjercicio({
+  abierto,
+  onCerrar,
+  biblioteca,
+  onElegir,
+}: {
+  abierto: boolean;
+  onCerrar: () => void;
+  biblioteca: EjercicioBiblioteca[];
+  onElegir: (ej: EjercicioBiblioteca) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [grupoFiltro, setGrupoFiltro] = useState<string>("");
+
+  // Reset al abrir/cerrar
+  useEffect(() => {
+    if (!abierto) {
+      setQuery("");
+      setGrupoFiltro("");
+    }
+  }, [abierto]);
+
+  const gruposDisponibles = useMemo(() => {
+    const s = new Set<string>();
+    for (const e of biblioteca) {
+      for (const g of e.grupos_musculares ?? []) s.add(g);
+    }
+    return Array.from(s).sort();
+  }, [biblioteca]);
+
+  const filtrados = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    return biblioteca.filter((e) => {
+      if (q && !e.nombre.toLowerCase().includes(q)) return false;
+      if (grupoFiltro && !e.grupos_musculares.includes(grupoFiltro)) return false;
+      return true;
+    });
+  }, [biblioteca, query, grupoFiltro]);
+
+  return (
+    <Modal
+      abierto={abierto}
+      onCerrar={onCerrar}
+      titulo="Añadir ejercicio al bloque"
+      tamano="lg"
+    >
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por nombre..."
+            autoFocus
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-brand-500"
+          />
+        </div>
+
+        {gruposDisponibles.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => setGrupoFiltro("")}
+              className={
+                "text-xs px-2.5 py-1 rounded-full border " +
+                (!grupoFiltro
+                  ? "text-white"
+                  : "border-neutral-800 text-neutral-400 hover:text-white")
+              }
+              style={!grupoFiltro ? { backgroundColor: "var(--brand)", borderColor: "var(--brand)" } : undefined}
+            >
+              Todos
+            </button>
+            {gruposDisponibles.slice(0, 12).map((g) => (
+              <button
+                key={g}
+                onClick={() => setGrupoFiltro(g)}
+                className={
+                  "text-xs px-2.5 py-1 rounded-full border " +
+                  (grupoFiltro === g
+                    ? "text-white"
+                    : "border-neutral-800 text-neutral-400 hover:text-white")
+                }
+                style={grupoFiltro === g ? { backgroundColor: "var(--brand)", borderColor: "var(--brand)" } : undefined}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="max-h-80 overflow-y-auto -mx-2 px-2">
+          {filtrados.length === 0 ? (
+            <div className="text-center py-8 text-sm text-neutral-500">
+              Sin resultados.
+            </div>
+          ) : (
+            <ul className="space-y-1">
+              {filtrados.slice(0, 60).map((e) => (
+                <li key={e.id}>
+                  <button
+                    onClick={() => onElegir(e)}
+                    className="w-full text-left px-3 py-2 rounded hover:bg-neutral-900 transition"
+                  >
+                    <div className="text-sm">{e.nombre}</div>
+                    {(e.grupos_musculares.length > 0 ||
+                      e.material.length > 0) && (
+                      <div className="text-[10px] text-neutral-500 mt-0.5">
+                        {[...e.grupos_musculares, ...e.material]
+                          .slice(0, 4)
+                          .join(" · ")}
+                      </div>
+                    )}
+                  </button>
+                </li>
+              ))}
+              {filtrados.length > 60 && (
+                <li className="text-xs text-neutral-600 px-3 py-2">
+                  ... y {filtrados.length - 60} más. Refina la búsqueda.
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
 }

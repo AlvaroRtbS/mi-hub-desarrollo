@@ -31,20 +31,20 @@ html[data-theme="cream"] {
 
 /* === MODO CLARO === */
 html[data-theme="light"] body {
-  background-color: #fafafa !important;
+  background-color: #e7e7ea !important;
   color: #171717 !important;
 }
-html[data-theme="light"] .bg-neutral-950 { background-color: #fafafa !important; }
+html[data-theme="light"] .bg-neutral-950 { background-color: #e7e7ea !important; }
 html[data-theme="light"] .bg-neutral-900 { background-color: #ffffff !important; }
-html[data-theme="light"] .bg-neutral-800 { background-color: #f5f5f5 !important; }
+html[data-theme="light"] .bg-neutral-800 { background-color: #f0f0f3 !important; }
 html[data-theme="light"] .bg-neutral-900\/50,
 html[data-theme="light"] .bg-neutral-900\/40,
-html[data-theme="light"] .bg-neutral-900\/30,
+html[data-theme="light"] .bg-neutral-900\/30 { background-color: #ffffff !important; }
 html[data-theme="light"] .bg-neutral-900\/60,
 html[data-theme="light"] .bg-neutral-900\/90,
-html[data-theme="light"] .bg-neutral-900\/95 { background-color: #fafafa !important; }
+html[data-theme="light"] .bg-neutral-900\/95 { background-color: #ffffff !important; }
 html[data-theme="light"] .bg-neutral-950\/80,
-html[data-theme="light"] .bg-neutral-950\/90 { background-color: rgba(250,250,250,0.95) !important; }
+html[data-theme="light"] .bg-neutral-950\/90 { background-color: rgba(231,231,234,0.95) !important; }
 
 html[data-theme="light"] .text-neutral-100 { color: #171717 !important; }
 html[data-theme="light"] .text-neutral-200 { color: #262626 !important; }
@@ -54,30 +54,36 @@ html[data-theme="light"] .text-neutral-500 { color: #737373 !important; }
 html[data-theme="light"] .text-neutral-600 { color: #a3a3a3 !important; }
 html[data-theme="light"] .text-neutral-700 { color: #d4d4d4 !important; }
 
-html[data-theme="light"] .border-neutral-800 { border-color: #e5e5e5 !important; }
-html[data-theme="light"] .border-neutral-900 { border-color: #f5f5f5 !important; }
-html[data-theme="light"] .border-neutral-700 { border-color: #d4d4d4 !important; }
-html[data-theme="light"] .divide-neutral-800 > * + * { border-color: #e5e5e5 !important; }
-html[data-theme="light"] .divide-neutral-900 > * + * { border-color: #f5f5f5 !important; }
+html[data-theme="light"] .border-neutral-800 { border-color: #d4d4d8 !important; }
+html[data-theme="light"] .border-neutral-900 { border-color: #e4e4e7 !important; }
+html[data-theme="light"] .border-neutral-700 { border-color: #a1a1aa !important; }
+html[data-theme="light"] .divide-neutral-800 > * + * { border-color: #d4d4d8 !important; }
+html[data-theme="light"] .divide-neutral-900 > * + * { border-color: #e4e4e7 !important; }
 
-html[data-theme="light"] kbd { background-color: #f5f5f5 !important; color: #171717 !important; }
+/* Sombras sutiles a "tarjetas" para darles aún más cuerpo en claro/crema */
+html[data-theme="light"] .border.border-neutral-800,
+html[data-theme="light"] .border.border-neutral-900 {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
+}
+
+html[data-theme="light"] kbd { background-color: #f4f4f5 !important; color: #18181b !important; }
 
 /* === MODO CREMA === */
 html[data-theme="cream"] body {
-  background-color: #f7f1e6 !important;
+  background-color: #e8dcc4 !important;
   color: #2d2519 !important;
 }
-html[data-theme="cream"] .bg-neutral-950 { background-color: #f7f1e6 !important; }
-html[data-theme="cream"] .bg-neutral-900 { background-color: #fff9ed !important; }
-html[data-theme="cream"] .bg-neutral-800 { background-color: #ede4d0 !important; }
+html[data-theme="cream"] .bg-neutral-950 { background-color: #e8dcc4 !important; }
+html[data-theme="cream"] .bg-neutral-900 { background-color: #fdf8eb !important; }
+html[data-theme="cream"] .bg-neutral-800 { background-color: #ddd0b3 !important; }
 html[data-theme="cream"] .bg-neutral-900\/50,
 html[data-theme="cream"] .bg-neutral-900\/40,
-html[data-theme="cream"] .bg-neutral-900\/30,
+html[data-theme="cream"] .bg-neutral-900\/30 { background-color: #fdf8eb !important; }
 html[data-theme="cream"] .bg-neutral-900\/60,
 html[data-theme="cream"] .bg-neutral-900\/90,
-html[data-theme="cream"] .bg-neutral-900\/95 { background-color: #f3ebd9 !important; }
+html[data-theme="cream"] .bg-neutral-900\/95 { background-color: #fdf8eb !important; }
 html[data-theme="cream"] .bg-neutral-950\/80,
-html[data-theme="cream"] .bg-neutral-950\/90 { background-color: rgba(247,241,230,0.95) !important; }
+html[data-theme="cream"] .bg-neutral-950\/90 { background-color: rgba(232,220,196,0.95) !important; }
 
 html[data-theme="cream"] .text-neutral-100 { color: #2d2519 !important; }
 html[data-theme="cream"] .text-neutral-200 { color: #3d3424 !important; }
@@ -87,13 +93,24 @@ html[data-theme="cream"] .text-neutral-500 { color: #9b8459 !important; }
 html[data-theme="cream"] .text-neutral-600 { color: #b8a47b !important; }
 html[data-theme="cream"] .text-neutral-700 { color: #d5c5a3 !important; }
 
-html[data-theme="cream"] .border-neutral-800 { border-color: #e8dfc6 !important; }
-html[data-theme="cream"] .border-neutral-900 { border-color: #f0e8d2 !important; }
-html[data-theme="cream"] .border-neutral-700 { border-color: #d5c5a3 !important; }
-html[data-theme="cream"] .divide-neutral-800 > * + * { border-color: #e8dfc6 !important; }
-html[data-theme="cream"] .divide-neutral-900 > * + * { border-color: #f0e8d2 !important; }
+html[data-theme="cream"] .border-neutral-800 { border-color: #d5c5a3 !important; }
+html[data-theme="cream"] .border-neutral-900 { border-color: #e3d6b6 !important; }
+html[data-theme="cream"] .border-neutral-700 { border-color: #b8a47b !important; }
+html[data-theme="cream"] .divide-neutral-800 > * + * { border-color: #d5c5a3 !important; }
+html[data-theme="cream"] .divide-neutral-900 > * + * { border-color: #e3d6b6 !important; }
 
-html[data-theme="cream"] kbd { background-color: #ede4d0 !important; color: #2d2519 !important; }
+html[data-theme="cream"] .border.border-neutral-800,
+html[data-theme="cream"] .border.border-neutral-900 {
+  box-shadow: 0 1px 2px rgba(80,60,30,0.06), 0 1px 3px rgba(80,60,30,0.03);
+}
+
+html[data-theme="cream"] kbd { background-color: #ddd0b3 !important; color: #2d2519 !important; }
+
+/* === DARK también ligero ajuste: separar surface del body === */
+html:not([data-theme]) .bg-neutral-900,
+html[data-theme="dark"] .bg-neutral-900 { background-color: #1a1a1a !important; }
+html:not([data-theme]) .bg-neutral-800,
+html[data-theme="dark"] .bg-neutral-800 { background-color: #262626 !important; }
 
 /* ============================================================================
    Microanimaciones reutilizables.

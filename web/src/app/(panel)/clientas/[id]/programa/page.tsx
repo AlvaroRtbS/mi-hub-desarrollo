@@ -87,7 +87,7 @@ export default async function ProgramaClientaPage({
     }
   }
 
-  // Buscar info de los ejercicios (para detectar si usan peso libre o no)
+  // Info de los ejercicios actualmente usados (para detectar si usan peso libre)
   const { data: ejerciciosData } = await supabase
     .from("ejercicios")
     .select("id, nombre, material")
@@ -107,6 +107,18 @@ export default async function ProgramaClientaPage({
       material: e.material ?? [],
     });
   }
+
+  // Biblioteca completa de ejercicios disponibles para añadir desde el editor
+  const { data: bibliotecaData } = await supabase
+    .from("ejercicios")
+    .select("id, nombre, grupos_musculares, material")
+    .order("nombre");
+  const biblioteca = (bibliotecaData ?? []) as Array<{
+    id: string;
+    nombre: string;
+    grupos_musculares: string[];
+    material: string[];
+  }>;
 
   // Pre-calcular historial por ejercicio (cacheado para el componente)
   const historiales = new Map<
@@ -145,6 +157,7 @@ export default async function ProgramaClientaPage({
         estructuraInicial={asign.estructura_snapshot ?? []}
         ejerciciosInfo={Object.fromEntries(ejerciciosInfo)}
         historiales={Object.fromEntries(historiales)}
+        biblioteca={biblioteca}
       />
     </div>
   );
