@@ -70,6 +70,10 @@ const CONFIG = {
   PROBE: process.argv.includes("--probe"),
   SKIP_STORAGE: process.argv.includes("--skip-storage"),
   INCLUDE_ARCHIVED: process.argv.includes("--include-archived"),
+  // Por defecto, si un ejercicio ya tiene vídeo/imagen subidos, NO los
+  // re-descarga. Con --force-media re-procesa la media de todos los
+  // ejercicios (útil si se sospecha que las URLs anteriores se corrompieron).
+  FORCE_MEDIA: process.argv.includes("--force-media"),
   ONLY:
     process.argv.find((a) => a.startsWith("--only="))?.slice("--only=".length) ??
     null,
@@ -554,64 +558,124 @@ function clasificarTags(tags: string[] | undefined): {
 async function migrarEjercicios(coachId: string): Promise<Map<string, string>> {
   console.log("");
   console.log(`${C.bold}${C.blue}== Ejercicios ==${C.reset}`);
-  const idMap = new Map<string, string>(); // trainerstudio_id → uuid local
+  const idMap = new Map<string, string>();
 
   log("info", "Descargando lista paginada de TS…");
   const ejs = await tsPaginate<TSExercise>((p) => TS_ENDPOINTS.exercises(p));
   log("ok", `${ejs.length} ejercicios encontrados en TS`);
 
-  let creados = 0;
-  let actualizados = 0;
+  // Pre-cargar el estado actual de los que ya están migrados.
+  // Si un ejercicio ya tiene video_url/imagen_url, NO se re-descarga (a no
+  // ser que --force-media). Hace el script realmente idempotente y rápido
+  // en re-ejecuciones (solo reintenta lo que faltó).
+  const yaExisten = new Map<
+    string,
+    { id: string; tieneVideo: boolean; tieneImg: boolean }
+  >();
+  if (!CONFIG.DRY_RUN) {
+    const { data: existentes } = await sb()
+      .from("ejercicios")
+      .select("id, trainerstudio_id, video_url, imagen_url")
+      .eq("coach_id", coachId)
+      .not("trainerstudio_id", "is", null);
+    for (const e of (existentes ?? []) as Array<{
+      id: string;
+      trainerstudio_id: string;
+      video_url: string | null;
+      imagen_url: string | null;
+    }>) {
+      yaExisten.set(e.trainerstudio_id, {
+        id: e.id,
+        tieneVideo: !!e.video_url,
+        tieneImg: !!e.imagen_url,
+      });
+      idMap.set(e.trainerstudio_id, e.id);
+    }
+    log(
+      "dim",
+      `${yaExisten.size} ejercicios ya en BD ${CONFIG.FORCE_MEDIA ? "(--force-media: se re-procesarán los medios)" : "(media ya subida se saltará)"}`
+    );
+  }
+
+  let saltados = 0;
   let i = 0;
   for (const ej of ejs) {
     i++;
     const nombre = (ej.name ?? "").trim() || "(sin nombre)";
     const { grupos_musculares, material } = clasificarTags(ej.tags);
+    const yaEsta = yaExisten.get(ej._id);
 
-    // Procesar media: el primer media de tipo video → video_url; image (top-level) → imagen_url
-    let videoUrl: string | null = null;
-    const videoMedia = (ej.media ?? []).find((m) => m.type === "video");
-    if (videoMedia?.url) {
-      const path = await copiarAStorage({
-        origenUrl: videoMedia.url,
-        bucket: "ejercicios-videos",
-        coachId,
-        prefijo: "video",
-        esVideo: true,
-      });
-      videoUrl = path;
-    } else if (ej.videoLink) {
-      videoUrl = ej.videoLink; // enlace externo (YouTube/Vimeo), guardar como-es
+    // ¿Esta fila ya está completa? (existe + tiene vídeo + tiene imagen)
+    // Si sí y no se fuerza --force-media, saltarla entera. Solo ahorra
+    // descargas: el row data ya fue insertado antes con el mismo nombre.
+    if (
+      yaEsta &&
+      yaEsta.tieneVideo &&
+      yaEsta.tieneImg &&
+      !CONFIG.FORCE_MEDIA
+    ) {
+      saltados++;
+      if (i % 25 === 0) {
+        log("dim", `  ${i}/${ejs.length} (${saltados} ya completos, saltados)`);
+      }
+      continue;
     }
 
-    let imagenUrl: string | null = null;
-    if (ej.image) {
-      const path = await copiarAStorage({
+    // Vídeo: solo descargar si NO tiene ya (o --force-media)
+    let videoUrl: string | null | undefined;
+    if (yaEsta?.tieneVideo && !CONFIG.FORCE_MEDIA) {
+      videoUrl = undefined; // no tocar, ya está
+    } else {
+      const videoMedia = (ej.media ?? []).find((m) => m.type === "video");
+      if (videoMedia?.url) {
+        videoUrl = await copiarAStorage({
+          origenUrl: videoMedia.url,
+          bucket: "ejercicios-videos",
+          coachId,
+          prefijo: "video",
+          esVideo: true,
+        });
+      } else if (ej.videoLink) {
+        videoUrl = ej.videoLink;
+      } else {
+        videoUrl = null;
+      }
+    }
+
+    // Imagen: solo descargar si NO tiene ya
+    let imagenUrl: string | null | undefined;
+    if (yaEsta?.tieneImg && !CONFIG.FORCE_MEDIA) {
+      imagenUrl = undefined;
+    } else if (ej.image) {
+      imagenUrl = await copiarAStorage({
         origenUrl: ej.image,
         bucket: "ejercicios-imagenes",
         coachId,
         prefijo: "img",
       });
-      imagenUrl = path;
+    } else {
+      imagenUrl = null;
     }
 
-    const row = {
+    // Construir el row dinámicamente: omitir columnas undefined para
+    // que el upsert no las sobrescriba con NULL.
+    const row: Record<string, unknown> = {
       coach_id: coachId,
       trainerstudio_id: ej._id,
       nombre,
       instrucciones: ej.defaultInstructions ?? null,
-      video_url: videoUrl,
-      imagen_url: imagenUrl,
       grupos_musculares,
       material,
       origen: "creado_por_ti",
       actualizado_en: new Date().toISOString(),
     };
+    if (videoUrl !== undefined) row.video_url = videoUrl;
+    if (imagenUrl !== undefined) row.imagen_url = imagenUrl;
 
     if (CONFIG.DRY_RUN) {
       log(
         "dim",
-        `[${i}/${ejs.length}] DRY: ${nombre.slice(0, 50)} (video=${videoUrl ? "sí" : "no"}, img=${imagenUrl ? "sí" : "no"})`
+        `[${i}/${ejs.length}] DRY: ${nombre.slice(0, 50)} (video=${videoUrl === undefined ? "mantener" : videoUrl ? "sí" : "no"}, img=${imagenUrl === undefined ? "mantener" : imagenUrl ? "sí" : "no"})`
       );
       continue;
     }
@@ -628,12 +692,15 @@ async function migrarEjercicios(coachId: string): Promise<Map<string, string>> {
     }
     idMap.set(ej._id, data!.id as string);
     if (i % 25 === 0) {
-      log("ok", `  ${i}/${ejs.length} ejercicios procesados…`);
+      log("ok", `  ${i}/${ejs.length} ejercicios procesados (${saltados} saltados)…`);
     }
-    creados++; // upsert no diferencia, contamos como creados/actualizados
   }
 
-  log("ok", `Ejercicios: ${creados} upserts (${ejs.length} totales)`);
+  const upserts = ejs.length - saltados;
+  log(
+    "ok",
+    `Ejercicios: ${upserts} upserts, ${saltados} ya completos (${ejs.length} totales)`
+  );
   return idMap;
 }
 
