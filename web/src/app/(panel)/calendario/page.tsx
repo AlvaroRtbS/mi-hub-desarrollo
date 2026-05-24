@@ -50,6 +50,31 @@ function inicioSemana(iso: string): string {
   return fechaISO(d);
 }
 
+function inicioMes(iso: string): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(1);
+  return fechaISO(d);
+}
+
+function finMes(iso: string): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCMonth(d.getUTCMonth() + 1, 0); // último día del mes
+  return fechaISO(d);
+}
+
+function sumarMeses(iso: string, n: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCMonth(d.getUTCMonth() + n);
+  return fechaISO(d);
+}
+
+function nombreMes(iso: string): string {
+  return new Date(iso + "T00:00:00Z").toLocaleDateString("es-ES", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
 type Tramo =
   | { estado: "no_empezado"; faltan: number }
   | { estado: "finalizado"; haceDias: number }
@@ -89,7 +114,8 @@ export default async function CalendarioPage({
   const params = await searchParams;
   const hoyIso = fechaISO(new Date());
   const fechaActual = params.fecha?.match(/^\d{4}-\d{2}-\d{2}$/) ? params.fecha : hoyIso;
-  const vista = params.vista === "dia" ? "dia" : "semana";
+  const vista =
+    params.vista === "dia" ? "dia" : params.vista === "mes" ? "mes" : "semana";
 
   const supabase = await createSupabaseServerClient();
 
@@ -102,8 +128,14 @@ export default async function CalendarioPage({
 
   const asignaciones = (asignacionesData ?? []) as unknown as AsignacionPunto[];
 
-  const fechaPrev = sumarDias(fechaActual, vista === "semana" ? -7 : -1);
-  const fechaSig = sumarDias(fechaActual, vista === "semana" ? 7 : 1);
+  const fechaPrev =
+    vista === "mes"
+      ? sumarMeses(fechaActual, -1)
+      : sumarDias(fechaActual, vista === "semana" ? -7 : -1);
+  const fechaSig =
+    vista === "mes"
+      ? sumarMeses(fechaActual, 1)
+      : sumarDias(fechaActual, vista === "semana" ? 7 : 1);
 
   return (
     <div className="p-8 max-w-7xl">
@@ -115,6 +147,19 @@ export default async function CalendarioPage({
           </p>
         </div>
         <div className="flex gap-1 border border-neutral-800 rounded-lg p-1">
+          <Link
+            href={`/calendario?vista=mes${
+              fechaActual !== hoyIso ? `&fecha=${fechaActual}` : ""
+            }`}
+            className={
+              "text-sm px-3 py-1 rounded " +
+              (vista === "mes"
+                ? "bg-neutral-800 text-white"
+                : "text-neutral-400 hover:text-white")
+            }
+          >
+            Mes
+          </Link>
           <Link
             href={`/calendario?vista=semana${
               fechaActual !== hoyIso ? `&fecha=${fechaActual}` : ""
@@ -152,7 +197,9 @@ export default async function CalendarioPage({
           ← Anterior
         </Link>
         <div className="text-base font-medium px-2 capitalize">
-          {vista === "semana"
+          {vista === "mes"
+            ? nombreMes(fechaActual)
+            : vista === "semana"
             ? `Semana del ${nombreDiaLargo(inicioSemana(fechaActual))}`
             : nombreDiaLargo(fechaActual)}
         </div>
@@ -188,6 +235,8 @@ export default async function CalendarioPage({
             programa.
           </div>
         </div>
+      ) : vista === "mes" ? (
+        <VistaMes asignaciones={asignaciones} fechaActual={fechaActual} hoyIso={hoyIso} />
       ) : vista === "semana" ? (
         <VistaSemana asignaciones={asignaciones} fechaInicio={inicioSemana(fechaActual)} hoyIso={hoyIso} />
       ) : (
@@ -309,6 +358,144 @@ function CeldaDia({ tramo }: { tramo: Tramo }) {
         {tramo.def.titulo}
       </div>
       <div className="text-[10px] text-neutral-500 mt-0.5">{elementos} elem.</div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Vista mensual: cuadrícula 7×N con clientas que entrenan cada día
+// ============================================================================
+function VistaMes({
+  asignaciones,
+  fechaActual,
+  hoyIso,
+}: {
+  asignaciones: AsignacionPunto[];
+  fechaActual: string;
+  hoyIso: string;
+}) {
+  const primerDiaMes = inicioMes(fechaActual);
+  const ultimoDiaMes = finMes(fechaActual);
+  const inicio = inicioSemana(primerDiaMes);
+  // Calcular cuántas semanas necesitamos: las que cubran hasta ultimoDiaMes
+  const inicioUltimaSem = inicioSemana(ultimoDiaMes);
+  const totalSemanas = Math.floor(diasEntre(inicio, inicioUltimaSem) / 7) + 1;
+  const totalDias = totalSemanas * 7;
+  const dias = Array.from({ length: totalDias }, (_, i) =>
+    sumarDias(inicio, i)
+  );
+  const mesActual = fechaActual.slice(0, 7); // YYYY-MM
+
+  // Pre-calcular para cada día qué asignaciones tienen entrenamiento (no descanso, no vacío)
+  type Entrada = { a: AsignacionPunto; titulo: string };
+  const porDia = new Map<string, Entrada[]>();
+  for (const d of dias) {
+    porDia.set(d, []);
+  }
+  for (const a of asignaciones) {
+    for (const d of dias) {
+      const tramo = calcularTramo(
+        a.fecha_inicio,
+        d,
+        a.estructura_snapshot,
+        a.fecha_fin
+      );
+      if (
+        tramo.estado === "activo" &&
+        !tramo.def.descanso &&
+        tramo.def.bloques.length > 0
+      ) {
+        porDia.get(d)!.push({ a, titulo: tramo.def.titulo });
+      }
+    }
+  }
+
+  return (
+    <div className="border border-neutral-800 rounded-2xl overflow-hidden bg-neutral-950">
+      <div className="grid grid-cols-7 bg-neutral-900 text-[11px] uppercase tracking-wide text-neutral-400">
+        {NOMBRES_DIAS_CORTOS.map((n) => (
+          <div key={n} className="px-2 py-2 text-center font-medium">
+            {n}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {dias.map((d) => {
+          const enEsteMes = d.slice(0, 7) === mesActual;
+          const esHoy = d === hoyIso;
+          const entradas = porDia.get(d) ?? [];
+          return (
+            <div
+              key={d}
+              className={
+                "border-t border-l border-neutral-900 min-h-[110px] p-1.5 flex flex-col gap-1 " +
+                (!enEsteMes ? "bg-neutral-950/40 " : "") +
+                (esHoy ? "bg-brand-950/20 " : "")
+              }
+            >
+              <div className="flex items-center justify-between">
+                <Link
+                  href={`/calendario?vista=dia&fecha=${d}`}
+                  className={
+                    "text-xs font-semibold tabular-nums px-1.5 py-0.5 rounded transition " +
+                    (esHoy
+                      ? "bg-brand-600 text-white hover:bg-brand-700"
+                      : enEsteMes
+                      ? "text-neutral-200 hover:bg-neutral-900"
+                      : "text-neutral-700 hover:bg-neutral-900")
+                  }
+                  title={`Ver día ${d}`}
+                >
+                  {parseInt(d.slice(8, 10), 10)}
+                </Link>
+                {entradas.length > 0 && enEsteMes && (
+                  <span className="text-[10px] text-neutral-500">
+                    {entradas.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-0.5 overflow-hidden">
+                {entradas.slice(0, 3).map(({ a, titulo }) => (
+                  <Link
+                    key={a.id}
+                    href={`/clientas/${a.clienta_id}`}
+                    title={`${a.clientas?.nombre ?? ""} · ${titulo}`}
+                    className={
+                      "flex items-center gap-1 rounded px-1 py-0.5 text-[10px] truncate hover:bg-neutral-900 " +
+                      (enEsteMes ? "text-neutral-300" : "text-neutral-600")
+                    }
+                  >
+                    <span
+                      className={
+                        "w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-semibold flex-shrink-0 " +
+                        (enEsteMes
+                          ? "bg-brand-900/60 text-brand-200"
+                          : "bg-neutral-900 text-neutral-600")
+                      }
+                    >
+                      {inicialesNombre(
+                        a.clientas?.nombre ?? "",
+                        a.clientas?.apellidos
+                      )}
+                    </span>
+                    <span className="truncate">
+                      {a.clientas?.nombre ?? ""}
+                    </span>
+                  </Link>
+                ))}
+                {entradas.length > 3 && (
+                  <Link
+                    href={`/calendario?vista=dia&fecha=${d}`}
+                    className="text-[10px] text-neutral-500 hover:text-neutral-300 px-1"
+                  >
+                    +{entradas.length - 3} más
+                  </Link>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
