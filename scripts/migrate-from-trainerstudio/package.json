@@ -7,6 +7,7 @@
     "migrate": "tsx migrate.ts",
     "probe": "tsx migrate.ts --probe",
     "discover": "tsx discover.ts",
+    "discover-programa": "tsx discover-programa.ts",
     "estado": "tsx estado.ts",
     "limpiar-huerfanos": "tsx limpiar-huerfanos.ts"
   },
