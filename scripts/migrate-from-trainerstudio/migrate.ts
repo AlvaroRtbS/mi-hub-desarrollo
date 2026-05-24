@@ -266,7 +266,18 @@ async function copiarAStorage(opts: {
     }
   );
   if (error) {
-    log("warn", `  Fallo subiendo a ${opts.bucket}: ${error.message}`);
+    const sizeMb = (descarga.buffer.length / 1024 / 1024).toFixed(1);
+    if (/exceeded the maximum/i.test(error.message)) {
+      log(
+        "warn",
+        `  Vídeo demasiado grande para Storage (${sizeMb} MB > límite). Se omite, ejercicio se guarda sin vídeo.`
+      );
+    } else {
+      log(
+        "warn",
+        `  Fallo subiendo a ${opts.bucket} (${sizeMb} MB): ${error.message}`
+      );
+    }
     return null;
   }
   return path;
