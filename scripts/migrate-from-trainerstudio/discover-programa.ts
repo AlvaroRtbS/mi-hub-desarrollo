@@ -106,7 +106,9 @@ async function main() {
 
   // 2) Probar variantes para extraer wblocks del programa-plantilla
   await probar(`/coach/programs/${programaId}/wblocks`);
-  await probar(`/coach/programs/${programaId}/wblock`);
+  // ¡Visto en DevTools de TS! /wblock con startDay/endDay devuelve la estructura
+  await probar(`/coach/programs/${programaId}/wblock?startDay=0&endDay=7`);
+  await probar(`/coach/programs/${programaId}/wblock?startDay=0&endDay=84`);
   // Otras variantes intuición:
   await probar(`/coach/programs/${programaId}/structure`);
   await probar(`/coach/programs/${programaId}/details`);
