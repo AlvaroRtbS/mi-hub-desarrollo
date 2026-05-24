@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { EstructuraPrograma, Dia } from "@/lib/supabase/tipos";
 import { inicialesNombre, formatearFecha } from "@/lib/utilidades";
 import { BotonCargarDemo } from "./boton-demo";
+import { SugerenciasHoy } from "./sugerencias-hoy";
 
 type AsignacionConSnapshot = {
   id: string;
@@ -191,6 +192,10 @@ export default async function InicioPage() {
         />
         <Stat label="Programas" valor={programas.count ?? 0} href="/programas" />
         <Stat label="Ejercicios" valor={ejercicios.count ?? 0} href="/ejercicios" />
+      </div>
+
+      <div className="mb-4">
+        <SugerenciasHoy />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
