@@ -144,7 +144,7 @@ export async function SugerenciasHoy() {
         iconoColor: "text-orange-400",
         titulo: `${c.nombre} lleva ${racha} días seguidos entrenando`,
         detalle: "Reconoce el esfuerzo con un mensaje rápido.",
-        href: `/mensajes/${c.id}`,
+        href: `/mensajes/${c.id}?plantilla=racha_animo`,
       });
     }
 
@@ -156,7 +156,7 @@ export async function SugerenciasHoy() {
         iconoColor: "text-amber-400",
         titulo: `${c.nombre} lleva ${diasSinEntrenar} días sin entrenar`,
         detalle: "Escríbele para saber si necesita ajustar el plan.",
-        href: `/mensajes/${c.id}`,
+        href: `/mensajes/${c.id}?plantilla=recordar_inactividad`,
       });
     }
 
@@ -178,7 +178,7 @@ export async function SugerenciasHoy() {
           }`,
           detalle:
             "Para comparar evolución visual, pídele una foto de progreso.",
-          href: `/mensajes/${c.id}`,
+          href: `/mensajes/${c.id}?plantilla=foto_progreso`,
         });
       }
     }
@@ -199,7 +199,10 @@ export async function SugerenciasHoy() {
             diff < 0
               ? "¡Buena evolución! Refuerza el mensaje."
               : "Habla con ella sobre la tendencia.",
-          href: `/mensajes/${c.id}`,
+          href:
+            diff < 0
+              ? `/mensajes/${c.id}?plantilla=felicitar_evolucion_peso`
+              : `/mensajes/${c.id}`,
         });
       }
     }
@@ -228,7 +231,7 @@ export async function SugerenciasHoy() {
         iconoColor: "text-purple-400",
         titulo: `${c.nombre}: 7+ días sin contacto`,
         detalle: "Haz un check-in rápido para mantener el vínculo.",
-        href: `/mensajes/${c.id}`,
+        href: `/mensajes/${c.id}?plantilla=check_in_dia`,
       });
     }
   }

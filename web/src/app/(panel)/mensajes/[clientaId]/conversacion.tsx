@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { enviarMensaje, simularMensajeClienta } from "../acciones";
 import {
@@ -41,6 +41,7 @@ export function Conversacion({
   datosPlantilla?: Omit<DatosClientaParaPlantilla, "nombre">;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [borrador, setBorrador] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, startTransition] = useTransition();
@@ -48,6 +49,30 @@ export function Conversacion({
   const [mostrandoPlantillas, setMostrandoPlantillas] = useState(false);
   const [filtroPlantillas, setFiltroPlantillas] = useState<string>("todas");
   const contenedorRef = useRef<HTMLDivElement>(null);
+
+  // Si la URL trae ?plantilla=<id>, precarga el borrador con esa plantilla
+  // ya rellenada con los datos de la clienta. Usado por SugerenciasHoy
+  // para que el coach abra el chat con el mensaje listo.
+  useEffect(() => {
+    const id = searchParams?.get("plantilla");
+    if (!id) return;
+    const p = PLANTILLAS.find((x) => x.id === id);
+    if (p) {
+      setBorrador(
+        rellenarPlantilla(p, {
+          nombre: clientaNombre,
+          ...(datosPlantilla ?? {}),
+        })
+      );
+    }
+    // limpia el query string sin recargar para no rellenar dos veces
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("plantilla");
+      window.history.replaceState({}, "", url.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Estado local — arranca con lo del server y se actualiza vía Realtime
   const [mensajes, setMensajes] = useState<Mensaje[]>(mensajesIniciales);
