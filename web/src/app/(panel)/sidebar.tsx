@@ -34,14 +34,21 @@ const ENLACE_AJUSTES = { href: "/ajustes", label: "Ajustes", Icon: Settings };
 
 export function Sidebar({
   coachLabel,
+  badgeMensajes = 0,
 }: {
   coachLabel: string;
+  badgeMensajes?: number;
 }) {
   const pathname = usePathname() ?? "";
   const [abierta, setAbierta] = useState(false);
 
   function esActiva(href: string) {
     return pathname === href || pathname.startsWith(href + "/");
+  }
+
+  function getBadge(href: string): number {
+    if (href === "/mensajes") return badgeMensajes;
+    return 0;
   }
 
   return (
@@ -93,6 +100,7 @@ export function Sidebar({
         <nav className="flex-1 px-3 py-2 space-y-0.5">
           {ENLACES.map((e) => {
             const activa = esActiva(e.href);
+            const badge = getBadge(e.href);
             return (
               <Link
                 key={e.href}
@@ -115,7 +123,16 @@ export function Sidebar({
                   className={activa ? "" : "text-neutral-500"}
                   style={activa ? { color: "var(--brand)" } : undefined}
                 />
-                <span>{e.label}</span>
+                <span className="flex-1">{e.label}</span>
+                {badge > 0 && (
+                  <span
+                    className="text-[10px] text-white px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center font-medium"
+                    style={{ backgroundColor: "var(--brand)" }}
+                    aria-label={`${badge} sin leer`}
+                  >
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
               </Link>
             );
           })}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { marcarSesionCompletada } from "./acciones";
+import { Confetti } from "@/components/confetti";
 
 export function BotonCompletarSesion({
   clientaId,
@@ -21,6 +22,7 @@ export function BotonCompletarSesion({
 }) {
   const router = useRouter();
   const [completada, setCompletada] = useState(yaCompletada);
+  const [celebrar, setCelebrar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviando, startTransition] = useTransition();
 
@@ -40,6 +42,9 @@ export function BotonCompletarSesion({
         return;
       }
       setCompletada(true);
+      setCelebrar(true);
+      // Quita el confeti tras la animación para no acumular nodos en re-renders
+      setTimeout(() => setCelebrar(false), 3500);
       // Recalcular logros tras completar
       try {
         await fetch("/api/gamificacion/recalcular", {
@@ -50,15 +55,19 @@ export function BotonCompletarSesion({
       } catch {
         // best-effort
       }
-      router.refresh();
+      // Demora el refresh para que se vea la celebración antes
+      setTimeout(() => router.refresh(), 800);
     });
   }
 
   if (completada) {
     return (
-      <div className="w-full text-center py-3 text-sm text-green-400 bg-green-950/30 border border-green-900/40 rounded-lg">
-        ✓ Entreno completado
-      </div>
+      <>
+        <Confetti trigger={celebrar} />
+        <div className="w-full text-center py-3 text-sm text-green-400 bg-green-950/30 border border-green-900/40 rounded-lg animate-in zoom-in-95">
+          ✓ Entreno completado
+        </div>
+      </>
     );
   }
 

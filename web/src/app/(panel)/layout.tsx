@@ -25,6 +25,13 @@ export default async function PanelLayout({
   const colorHover = oscurecerHex(colorMarca, 12);
   const coachLabel = (coach?.nombre as string | null) ?? user.email ?? "";
 
+  // Contar mensajes entrantes no leídos para el badge del sidebar
+  const { count: mensajesNoLeidos } = await supabase
+    .from("mensajes")
+    .select("id", { count: "exact", head: true })
+    .eq("leido", false)
+    .eq("remitente", "clienta");
+
   return (
     <div
       className="min-h-screen flex"
@@ -33,7 +40,7 @@ export default async function PanelLayout({
         ["--brand-hover" as string]: colorHover,
       }}
     >
-      <Sidebar coachLabel={coachLabel} />
+      <Sidebar coachLabel={coachLabel} badgeMensajes={mensajesNoLeidos ?? 0} />
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
       <AtajosGlobales />
     </div>
