@@ -81,16 +81,16 @@ const ENTIDADES = [
 type Entidad = (typeof ENTIDADES)[number];
 
 const TS_ENDPOINTS = {
-  exercises: (pageNum: number, pageSize = 100) =>
+  exercises: (pageNum: number, pageSize = 50) =>
     `/exercises?pageSize=${pageSize}&pageNum=${pageNum}`,
   exerciseDetail: (id: string) => `/exercises/${id}`,
-  customers: (archived: boolean, pageNum: number, pageSize = 100) =>
+  customers: (archived: boolean, pageNum: number, pageSize = 50) =>
     `/coach/customers?archived=${archived}&pageSize=${pageSize}&pageNum=${pageNum}`,
   customer: (id: string) => `/coach/customers/${id}`,
   customerNotes: (id: string) => `/coach/customers/${id}/notes`,
   customerMetricsSets: (id: string) => `/coach/customers/${id}/metrics-sets`,
   customerCompliance: (id: string) => `/coach/customers/${id}/compliance`,
-  programs: (archived: boolean, pageNum: number, pageSize = 100) =>
+  programs: (archived: boolean, pageNum: number, pageSize = 50) =>
     `/coach/programs?archived=${archived}&pageSize=${pageSize}&pageNum=${pageNum}`,
 };
 
