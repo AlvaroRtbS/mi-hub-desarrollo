@@ -4,7 +4,7 @@ import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import { Boton } from "@/components/ui/boton";
 import { BuscadorDebounced } from "@/components/ui/buscador-debounced";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TarjetaEjercicio } from "./tarjeta-ejercicio";
+import { Biblioteca } from "./biblioteca";
 
 export default async function EjerciciosPage({
   searchParams,
@@ -123,22 +123,21 @@ export default async function EjerciciosPage({
           accion={!q && !grupo ? <Boton href="/ejercicios/nuevo">+ Crear ejercicio</Boton> : null}
         />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {ejercicios.map((e) => {
-            const imagenUrl = e.imagen_url ? imagenes.get(e.imagen_url) ?? null : null;
-            const videoUrl = e.video_url ? videos.get(e.video_url) ?? null : null;
-            return (
-              <TarjetaEjercicio
-                key={e.id}
-                href={`/ejercicios/${e.id}/editar`}
-                nombre={e.nombre}
-                imagenUrl={imagenUrl}
-                videoUrl={videoUrl}
-                grupos={(e.grupos_musculares as string[] | null) ?? []}
-              />
-            );
-          })}
-        </div>
+        <Biblioteca
+          ejercicios={ejercicios.map((e) => ({
+            id: e.id as string,
+            nombre: e.nombre as string,
+            grupos_musculares: ((e.grupos_musculares as string[] | null) ?? []),
+            imagen_url: (e.imagen_url as string | null) ?? null,
+            video_url: (e.video_url as string | null) ?? null,
+            imagenFirmada: e.imagen_url
+              ? imagenes.get(e.imagen_url) ?? null
+              : null,
+            videoFirmado: e.video_url
+              ? videos.get(e.video_url) ?? null
+              : null,
+          }))}
+        />
       )}
     </div>
   );
