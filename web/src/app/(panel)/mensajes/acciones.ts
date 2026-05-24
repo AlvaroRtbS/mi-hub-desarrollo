@@ -43,6 +43,69 @@ export async function enviarMensaje(
   return { ok: true };
 }
 
+export async function enviarMensajeABroadcast(
+  clientaIds: string[],
+  contenido: string
+): Promise<{
+  ok: boolean;
+  enviados: number;
+  fallidos: number;
+  error?: string;
+}> {
+  const supabase = await createSupabaseServerClient();
+  const coachId = await obtenerCoachId();
+  if (!coachId) {
+    return { ok: false, enviados: 0, fallidos: 0, error: "No autenticada." };
+  }
+
+  const texto = contenido.trim();
+  if (!texto) {
+    return { ok: false, enviados: 0, fallidos: 0, error: "El mensaje está vacío." };
+  }
+  if (clientaIds.length === 0) {
+    return { ok: false, enviados: 0, fallidos: 0, error: "Selecciona al menos una clienta." };
+  }
+
+  // Verificar que todas las clientas pertenecen a este coach (defensivo, además del RLS)
+  const { data: misClientas } = await supabase
+    .from("clientas")
+    .select("id")
+    .eq("coach_id", coachId)
+    .in("id", clientaIds);
+  const idsValidos = new Set(((misClientas ?? []) as Array<{ id: string }>).map((c) => c.id));
+  const idsFinales = clientaIds.filter((id) => idsValidos.has(id));
+  if (idsFinales.length === 0) {
+    return { ok: false, enviados: 0, fallidos: clientaIds.length, error: "Ninguna clienta válida." };
+  }
+
+  const filas = idsFinales.map((cid) => ({
+    coach_id: coachId,
+    clienta_id: cid,
+    remitente: "coach" as const,
+    contenido: texto,
+  }));
+
+  const { error, count } = await supabase
+    .from("mensajes")
+    .insert(filas, { count: "exact" });
+
+  if (error) {
+    return {
+      ok: false,
+      enviados: 0,
+      fallidos: idsFinales.length,
+      error: error.message,
+    };
+  }
+
+  revalidatePath("/mensajes");
+  return {
+    ok: true,
+    enviados: count ?? idsFinales.length,
+    fallidos: clientaIds.length - idsFinales.length,
+  };
+}
+
 export async function marcarConversacionLeida(clientaId: string): Promise<void> {
   const supabase = await createSupabaseServerClient();
   await supabase

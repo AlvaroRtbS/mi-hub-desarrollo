@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { inicialesNombre } from "@/lib/utilidades";
+import { BotonBroadcast } from "./boton-broadcast";
 
 type ConversacionFila = {
   clienta_id: string;
@@ -110,10 +111,21 @@ export default async function MensajesPage() {
 
   return (
     <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-semibold mb-1">Mensajes</h1>
-      <p className="text-sm text-neutral-400 mb-6">
-        Chat con tus clientas. Selecciona una conversación.
-      </p>
+      <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold mb-1">Mensajes</h1>
+          <p className="text-sm text-neutral-400">
+            Chat con tus clientas. Selecciona una conversación.
+          </p>
+        </div>
+        <BotonBroadcast
+          clientas={clientas.map((c) => ({
+            id: c.id as string,
+            nombre: c.nombre as string,
+            apellidos: (c.apellidos as string | null) ?? null,
+          }))}
+        />
+      </div>
 
       <div className="border border-neutral-800 rounded-2xl divide-y divide-neutral-800 bg-neutral-950">
         {filas.map((f) => {
