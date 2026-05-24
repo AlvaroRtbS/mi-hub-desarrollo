@@ -2,6 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Boton } from "@/components/ui/boton";
 import { Input, Textarea } from "@/components/ui/campo";
 import {
@@ -22,6 +38,7 @@ import type {
 } from "@/lib/supabase/tipos";
 import { NOMBRES_DIAS, detectarProveedorVideo } from "@/lib/supabase/tipos";
 import { SubirArchivo } from "@/components/ui/subir-archivo";
+import { SortableWrapper } from "./sortable-wrapper";
 import { SelectorEjercicios } from "./selector-ejercicios";
 import { ModalAsignar } from "./modal-asignar";
 
@@ -523,6 +540,31 @@ export function EditorPrograma({
     });
   };
 
+  // --- Drag-and-drop ---
+  const sensores = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const onDragEndBloques = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    actualizarEstructura((est) => {
+      const bloques = est[semanaIdx]?.dias[diaIdx]?.bloques;
+      if (!bloques) return;
+      const oldIdx = bloques.findIndex((b) => b.id === active.id);
+      const newIdx = bloques.findIndex((b) => b.id === over.id);
+      if (oldIdx < 0 || newIdx < 0) return;
+      const reordenado = arrayMove(bloques, oldIdx, newIdx);
+      est[semanaIdx]!.dias[diaIdx]!.bloques = reordenado;
+    });
+  };
+
   // ============================================================================
   // Render
   // ============================================================================
@@ -780,38 +822,77 @@ export function EditorPrograma({
             </div>
           ) : (
             <>
-              {diaActual.bloques.map((bloque, bIdx) => (
-                <VistaBloque
-                  key={bloque.id}
-                  bloque={bloque}
-                  coachId={coachId}
-                  esPrimero={bIdx === 0}
-                  esUltimo={bIdx === diaActual.bloques.length - 1}
-                  estructura={estructura}
-                  semanaActualIdx={semanaIdx}
-                  diaActualIdx={diaIdx}
-                  onActualizar={(parche) => actualizarBloque(bIdx, parche)}
-                  onEliminar={() => eliminarBloque(bIdx)}
-                  onMover={(dir) => moverBloque(bIdx, dir)}
-                  onDuplicar={() => duplicarBloqueLocal(bIdx)}
-                  onCopiar={() => copiarBloque(bIdx)}
-                  onMoverADia={(s, d) => moverBloqueADia(bIdx, s, d)}
-                  onAbrirSelectorEjercicio={() =>
-                    setSelectorAbierto({ bloqueId: bloque.id })
-                  }
-                  onAñadirElementoSimple={(tipo) => añadirElementoSimple(bIdx, tipo)}
-                  onActualizarElemento={(eIdx, parche) =>
-                    actualizarElemento(bIdx, eIdx, parche)
-                  }
-                  onEliminarElemento={(eIdx) => eliminarElemento(bIdx, eIdx)}
-                  onMoverElemento={(eIdx, dir) => moverElemento(bIdx, eIdx, dir)}
-                  onAñadirSerie={(eIdx) => añadirSerie(bIdx, eIdx)}
-                  onEliminarSerie={(eIdx, sIdx) => eliminarSerie(bIdx, eIdx, sIdx)}
-                  onActualizarSerie={(eIdx, sIdx, parche) =>
-                    actualizarSerie(bIdx, eIdx, sIdx, parche)
-                  }
-                />
-              ))}
+              <DndContext
+                sensors={sensores}
+                collisionDetection={closestCenter}
+                onDragEnd={onDragEndBloques}
+              >
+                <SortableContext
+                  items={diaActual.bloques.map((b) => b.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-4">
+                    {diaActual.bloques.map((bloque, bIdx) => (
+                      <SortableWrapper key={bloque.id} id={bloque.id}>
+                        {(handle) => (
+                          <VistaBloque
+                            bloque={bloque}
+                            coachId={coachId}
+                            esPrimero={bIdx === 0}
+                            esUltimo={bIdx === diaActual.bloques.length - 1}
+                            estructura={estructura}
+                            semanaActualIdx={semanaIdx}
+                            diaActualIdx={diaIdx}
+                            dragHandle={handle}
+                            sensores={sensores}
+                            onActualizar={(parche) =>
+                              actualizarBloque(bIdx, parche)
+                            }
+                            onEliminar={() => eliminarBloque(bIdx)}
+                            onMover={(dir) => moverBloque(bIdx, dir)}
+                            onDuplicar={() => duplicarBloqueLocal(bIdx)}
+                            onCopiar={() => copiarBloque(bIdx)}
+                            onMoverADia={(s, d) => moverBloqueADia(bIdx, s, d)}
+                            onAbrirSelectorEjercicio={() =>
+                              setSelectorAbierto({ bloqueId: bloque.id })
+                            }
+                            onAñadirElementoSimple={(tipo) =>
+                              añadirElementoSimple(bIdx, tipo)
+                            }
+                            onActualizarElemento={(eIdx, parche) =>
+                              actualizarElemento(bIdx, eIdx, parche)
+                            }
+                            onEliminarElemento={(eIdx) =>
+                              eliminarElemento(bIdx, eIdx)
+                            }
+                            onMoverElemento={(eIdx, dir) =>
+                              moverElemento(bIdx, eIdx, dir)
+                            }
+                            onReordenarElementos={(oldIdx, newIdx) =>
+                              actualizarEstructura((est) => {
+                                const els =
+                                  est[semanaIdx]?.dias[diaIdx]?.bloques[bIdx]
+                                    ?.elementos;
+                                if (!els) return;
+                                est[semanaIdx]!.dias[diaIdx]!.bloques[
+                                  bIdx
+                                ]!.elementos = arrayMove(els, oldIdx, newIdx);
+                              })
+                            }
+                            onAñadirSerie={(eIdx) => añadirSerie(bIdx, eIdx)}
+                            onEliminarSerie={(eIdx, sIdx) =>
+                              eliminarSerie(bIdx, eIdx, sIdx)
+                            }
+                            onActualizarSerie={(eIdx, sIdx, parche) =>
+                              actualizarSerie(bIdx, eIdx, sIdx, parche)
+                            }
+                          />
+                        )}
+                      </SortableWrapper>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
 
               <div className="flex items-center gap-2">
                 <button
@@ -877,6 +958,8 @@ function VistaBloque({
   estructura,
   semanaActualIdx,
   diaActualIdx,
+  dragHandle,
+  sensores,
   onActualizar,
   onEliminar,
   onMover,
@@ -888,6 +971,7 @@ function VistaBloque({
   onActualizarElemento,
   onEliminarElemento,
   onMoverElemento,
+  onReordenarElementos,
   onAñadirSerie,
   onEliminarSerie,
   onActualizarSerie,
@@ -899,6 +983,8 @@ function VistaBloque({
   estructura: EstructuraPrograma;
   semanaActualIdx: number;
   diaActualIdx: number;
+  dragHandle: React.ReactNode;
+  sensores: ReturnType<typeof useSensors>;
   onActualizar: (parche: Partial<Bloque>) => void;
   onEliminar: () => void;
   onMover: (dir: -1 | 1) => void;
@@ -910,6 +996,7 @@ function VistaBloque({
   onActualizarElemento: (eIdx: number, parche: Partial<Elemento>) => void;
   onEliminarElemento: (eIdx: number) => void;
   onMoverElemento: (eIdx: number, dir: -1 | 1) => void;
+  onReordenarElementos: (oldIdx: number, newIdx: number) => void;
   onAñadirSerie: (eIdx: number) => void;
   onEliminarSerie: (eIdx: number, sIdx: number) => void;
   onActualizarSerie: (
@@ -921,9 +1008,19 @@ function VistaBloque({
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [moverMenuAbierto, setMoverMenuAbierto] = useState(false);
 
+  const onDragEndElementos = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = bloque.elementos.findIndex((e) => e.id === active.id);
+    const newIdx = bloque.elementos.findIndex((e) => e.id === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    onReordenarElementos(oldIdx, newIdx);
+  };
+
   return (
     <div className="border border-neutral-800 rounded-2xl bg-neutral-950">
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-neutral-800">
+        {dragHandle}
         <input
           value={bloque.titulo}
           onChange={(e) => onActualizar({ titulo: e.target.value })}
@@ -1028,25 +1125,44 @@ function VistaBloque({
             Sin elementos. Añade uno abajo.
           </div>
         ) : (
-          <div className="space-y-2">
-            {bloque.elementos.map((el, eIdx) => (
-              <VistaElemento
-                key={el.id}
-                elemento={el}
-                coachId={coachId}
-                esPrimero={eIdx === 0}
-                esUltimo={eIdx === bloque.elementos.length - 1}
-                onActualizar={(parche) => onActualizarElemento(eIdx, parche)}
-                onEliminar={() => onEliminarElemento(eIdx)}
-                onMover={(dir) => onMoverElemento(eIdx, dir)}
-                onAñadirSerie={() => onAñadirSerie(eIdx)}
-                onEliminarSerie={(sIdx) => onEliminarSerie(eIdx, sIdx)}
-                onActualizarSerie={(sIdx, parche) =>
-                  onActualizarSerie(eIdx, sIdx, parche)
-                }
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensores}
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEndElementos}
+          >
+            <SortableContext
+              items={bloque.elementos.map((e) => e.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {bloque.elementos.map((el, eIdx) => (
+                  <SortableWrapper key={el.id} id={el.id}>
+                    {(handle) => (
+                      <VistaElemento
+                        elemento={el}
+                        coachId={coachId}
+                        esPrimero={eIdx === 0}
+                        esUltimo={eIdx === bloque.elementos.length - 1}
+                        dragHandle={handle}
+                        onActualizar={(parche) =>
+                          onActualizarElemento(eIdx, parche)
+                        }
+                        onEliminar={() => onEliminarElemento(eIdx)}
+                        onMover={(dir) => onMoverElemento(eIdx, dir)}
+                        onAñadirSerie={() => onAñadirSerie(eIdx)}
+                        onEliminarSerie={(sIdx) =>
+                          onEliminarSerie(eIdx, sIdx)
+                        }
+                        onActualizarSerie={(sIdx, parche) =>
+                          onActualizarSerie(eIdx, sIdx, parche)
+                        }
+                      />
+                    )}
+                  </SortableWrapper>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-800">
@@ -1115,6 +1231,7 @@ function VistaElemento({
   coachId,
   esPrimero,
   esUltimo,
+  dragHandle,
   onActualizar,
   onEliminar,
   onMover,
@@ -1126,6 +1243,7 @@ function VistaElemento({
   coachId: string;
   esPrimero: boolean;
   esUltimo: boolean;
+  dragHandle: React.ReactNode;
   onActualizar: (parche: Partial<Elemento>) => void;
   onEliminar: () => void;
   onMover: (dir: -1 | 1) => void;
@@ -1425,6 +1543,7 @@ function VistaElemento({
         </div>
 
         <div className="flex flex-col items-center gap-0.5 pl-1">
+          {dragHandle}
           <button
             onClick={() => onMover(-1)}
             disabled={esPrimero}
