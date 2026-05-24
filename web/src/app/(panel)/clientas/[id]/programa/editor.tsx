@@ -27,13 +27,26 @@ type EjercicioBiblioteca = {
 
 type EjercicioInfo = { nombre: string; material: string[] };
 
-// "Sin peso libre" si NINGÚN ejercicio del plan usa peso libre (mancuerna,
-// barra, kettlebell, máquina). Si solo usa peso corporal, bandas, etc.,
-// las sugerencias serán de reps/variantes en lugar de subir kg.
-function deduceSinPesoLibre(materiales: string[]): boolean {
-  const PESO_LIBRE = ["mancuerna", "barra", "kettlebell", "máquina", "maquina", "polea", "pesa"];
-  const low = materiales.map((m) => m.toLowerCase());
-  return !low.some((m) => PESO_LIBRE.some((k) => m.includes(k)));
+// "Sin peso libre" si NINGÚN indicador (nombre + material) menciona peso
+// libre. Para ejercicios con peso corporal/bandas/botellas las sugerencias
+// son de reps/variantes en lugar de subir kg.
+//
+// Mira tanto material[] (idealmente lo correcto, pero muchos ejercicios
+// migrados tienen este array vacío) como el nombre como fallback.
+const PESO_LIBRE = [
+  "mancuerna",
+  "barra",
+  "kettlebell",
+  "máquina",
+  "maquina",
+  "polea",
+  "pesa",
+  "smith",
+  "disco",
+];
+function deduceSinPesoLibre(materiales: string[], nombre = ""): boolean {
+  const todo = (materiales.join(" ") + " " + nombre).toLowerCase();
+  return !PESO_LIBRE.some((k) => todo.includes(k));
 }
 
 export function EditorAsignacionCliente({
@@ -359,7 +372,7 @@ function FilaEjercicio({
   onEliminar: () => void;
 }) {
   const nombre = info?.nombre ?? elemento.ejercicio_nombre ?? "(Ejercicio)";
-  const sinPesoLibre = deduceSinPesoLibre(info?.material ?? []);
+  const sinPesoLibre = deduceSinPesoLibre(info?.material ?? [], nombre);
 
   // Calcular sugerencia basada en la primera serie como referencia
   let sugerencia: Sugerencia | null = null;
@@ -493,6 +506,7 @@ function Banner({
     variante_dificil: "text-blue-400 bg-blue-950/30 border-blue-900/50",
     consolidar: "text-neutral-400 bg-neutral-900/60 border-neutral-800",
     regresar: "text-amber-400 bg-amber-950/30 border-amber-900/50",
+    reintroducir: "text-purple-400 bg-purple-950/30 border-purple-900/50",
     primera_vez: "text-neutral-500 bg-neutral-900/40 border-neutral-800",
   };
   return (

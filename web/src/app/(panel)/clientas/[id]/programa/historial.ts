@@ -20,12 +20,15 @@ export type HistorialEjercicio = {
 };
 
 /**
- * Sugerencia de progresión generada por heurística simple:
+ * Sugerencia de progresión generada por heurística:
  *   - Si completó al 100% con RIR bajo (≤1) → progresar.
+ *   - Si completó pero sin RIR registrado → progresar con cautela
+ *     (asumimos margen, solo si fue reciente; si pasó >14d, "reintroduce").
  *   - Si tiene peso (gym): subir peso pequeño (+2.5 kg o +5%).
  *   - Si NO tiene peso (entreno en casa, peso corporal, bandas):
  *       sugerir +2 reps o "variante más difícil".
  *   - Si falló (no completó) → mantener / bajar volumen.
+ *   - Si llevamos >14 días sin que lo haga → "reintroduce, no progreses".
  *   - Sin historial → "primera vez".
  */
 export type Sugerencia = {
@@ -35,6 +38,7 @@ export type Sugerencia = {
     | "variante_dificil"
     | "consolidar"
     | "regresar"
+    | "reintroducir"
     | "primera_vez";
   texto: string;
   /** Cambios a aplicar a series futuras si el coach acepta. */
@@ -60,6 +64,53 @@ function parsearNumero(s: string | undefined | null): number | null {
  *   - sinMaterial: heurística → si todos los ejercicios usan peso corporal/bandas,
  *     no sugerir subir peso sino reps o variante.
  */
+function diasDesde(iso: string): number {
+  return Math.floor(
+    (Date.now() - new Date(iso + "T00:00:00Z").getTime()) / 86400000
+  );
+}
+
+function calcularIncrementoPeso(pesoActual: number): number {
+  if (pesoActual < 10) return 1;
+  if (pesoActual < 30) return 2.5;
+  if (pesoActual < 60) return 5;
+  return 7.5;
+}
+
+function progresionPorPeso(
+  pesoActual: number,
+  rirInfo: string
+): Sugerencia {
+  const incremento = calcularIncrementoPeso(pesoActual);
+  const nuevoPeso = pesoActual + incremento;
+  return {
+    tipo: "progresar_peso",
+    texto: `${rirInfo}: sube de ${pesoActual} a ${nuevoPeso} kg`,
+    parche: { peso: `${nuevoPeso} kg` },
+  };
+}
+
+function progresionPorReps(
+  repsActual: number | null,
+  rirInfo: string
+): Sugerencia {
+  if (repsActual && repsActual >= 15) {
+    return {
+      tipo: "variante_dificil",
+      texto:
+        "Reps ya altas + carga ligera: prueba variante más difícil (unilateral, tempo lento, isométrico, mayor ROM)",
+    };
+  }
+  const nuevasReps = repsActual ? Math.round(repsActual + 2) : null;
+  return {
+    tipo: "progresar_reps",
+    texto: nuevasReps
+      ? `${rirInfo}: sube a ~${nuevasReps} reps esta semana`
+      : `${rirInfo}: añade 2 reps esta semana`,
+    parche: nuevasReps ? { reps: String(nuevasReps) } : undefined,
+  };
+}
+
 export function sugerirProgresion(
   historial: HistorialEjercicio,
   serieActual: SerieEjercicio,
@@ -67,6 +118,18 @@ export function sugerirProgresion(
 ): Sugerencia {
   if (historial.vecesHechas === 0) {
     return { tipo: "primera_vez", texto: "Primera vez — observa cómo lo hace" };
+  }
+
+  // Si lleva más de 14 días sin hacer el ejercicio, no progresar
+  // a ciegas: introducirlo de nuevo con la carga anterior para evaluar.
+  const diasDesdeUltima = historial.ultimaFecha
+    ? diasDesde(historial.ultimaFecha)
+    : null;
+  if (diasDesdeUltima != null && diasDesdeUltima > 14) {
+    return {
+      tipo: "reintroducir",
+      texto: `Hace ${diasDesdeUltima} días que no lo hace — reintroduce con la misma carga, observa, ya progresarás`,
+    };
   }
 
   if (!historial.ultimaCompletada) {
@@ -77,54 +140,58 @@ export function sugerirProgresion(
   }
 
   const rir = historial.ultimoRir;
-  const fueFacil = rir != null && rir <= 1;
-  const fueMedio = rir != null && rir >= 2 && rir <= 3;
-
-  if (!fueFacil && !fueMedio && rir == null) {
-    // Sin RIR registrado: asumir que completó pero no sabemos esfuerzo
-    return {
-      tipo: "consolidar",
-      texto: "Completada sin RIR registrado — mantén la carga otra semana",
-    };
-  }
-
-  if (fueMedio) {
-    return {
-      tipo: "consolidar",
-      texto: `Último RIR ${rir} (medio) — buen progreso, mantén otra sesión`,
-    };
-  }
-
-  // RIR bajo → progresar
   const pesoActual = parsearNumero(serieActual.peso);
   const repsActual = parsearNumero(serieActual.reps);
 
+  // CON RIR explícito: heurística más segura
+  if (rir != null) {
+    if (rir >= 2 && rir <= 3) {
+      return {
+        tipo: "consolidar",
+        texto: `Último RIR ${rir} (medio) — buen progreso, mantén otra sesión`,
+      };
+    }
+    if (rir >= 4) {
+      return {
+        tipo: "consolidar",
+        texto: `Último RIR ${rir} (muy reservado) — sube reps ligeramente o ajusta técnica`,
+      };
+    }
+    // RIR ≤ 1 → progresar
+    const rirInfo = `Última vez RIR ${rir}`;
+    if (sinPesoLibre || !pesoActual || pesoActual === 0) {
+      return progresionPorReps(repsActual, rirInfo);
+    }
+    return progresionPorPeso(pesoActual, rirInfo);
+  }
+
+  // SIN RIR: heurística por volumen completado + tiempo
+  // Si completó al 100% recientemente, sugerir progresión cauta.
+  // No tenemos certeza del esfuerzo, así que avisamos.
+  const sufijo =
+    "(la clienta no marcó RIR, sugerencia con cautela — confírma con ella)";
   if (sinPesoLibre || !pesoActual || pesoActual === 0) {
-    // Entreno en casa o sin material → progresar por reps/variante
     if (repsActual && repsActual >= 15) {
       return {
         tipo: "variante_dificil",
-        texto:
-          "Reps altas + RIR bajo: prueba una variante más difícil (unilateral, tempo lento, isométrico)",
+        texto: `Completada con reps altas ${sufijo}: prueba variante más difícil`,
       };
     }
-    const nuevasReps = repsActual ? Math.round(repsActual + 2) : null;
+    const nuevasReps = repsActual ? Math.round(repsActual + 1) : null;
     return {
       tipo: "progresar_reps",
       texto: nuevasReps
-        ? `Última vez RIR ${rir}: sube a ~${nuevasReps} reps esta semana`
-        : `Última vez RIR ${rir}: añade 2 reps esta semana`,
+        ? `Completada ${sufijo}: prueba ${nuevasReps} reps`
+        : `Completada ${sufijo}: añade 1 rep`,
       parche: nuevasReps ? { reps: String(nuevasReps) } : undefined,
     };
   }
-
-  // Tiene peso → sugerir incremento progresivo
-  const incremento =
-    pesoActual < 10 ? 1 : pesoActual < 30 ? 2.5 : pesoActual < 60 ? 5 : 7.5;
+  // Peso: incremento mínimo
+  const incremento = Math.max(1, calcularIncrementoPeso(pesoActual) / 2);
   const nuevoPeso = pesoActual + incremento;
   return {
     tipo: "progresar_peso",
-    texto: `Última vez RIR ${rir}: sube de ${pesoActual} a ${nuevoPeso} kg`,
+    texto: `Completada ${sufijo}: prueba +${incremento} kg (de ${pesoActual} a ${nuevoPeso})`,
     parche: { peso: `${nuevoPeso} kg` },
   };
 }
