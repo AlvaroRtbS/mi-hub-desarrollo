@@ -262,6 +262,30 @@ export default async function HoyPage() {
     <div>
       <Saludo nombre={clienta.nombre} nivel={nivel} xp={xp} />
 
+      {/* Banner de racha — solo si tiene racha ≥3 para no saturar */}
+      {adherencia.rachaActual >= 3 && (
+        <div
+          className="mt-3 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 animate-in slide-in-from-bottom-2"
+          style={{
+            background:
+              "linear-gradient(90deg, color-mix(in srgb, var(--brand) 25%, transparent), color-mix(in srgb, var(--brand) 8%, transparent))",
+            borderLeft: "3px solid var(--brand)",
+          }}
+        >
+          <div className="text-sm">
+            <span className="mr-1.5">
+              {adherencia.rachaActual >= 14
+                ? "🚀"
+                : adherencia.rachaActual >= 7
+                  ? "🔥"
+                  : "💪"}
+            </span>
+            <strong>{adherencia.rachaActual} días seguidos</strong>{" "}
+            entrenando. ¡Sigue así!
+          </div>
+        </div>
+      )}
+
       {/* Stats rápidas */}
       <div className="grid grid-cols-3 gap-2 mt-4">
         <Stat label="Racha" valor={adherencia.rachaActual} extra={adherencia.rachaActual >= 7 ? "🔥" : adherencia.rachaActual >= 3 ? "💪" : ""} />

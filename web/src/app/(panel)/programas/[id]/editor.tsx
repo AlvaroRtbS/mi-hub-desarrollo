@@ -25,6 +25,8 @@ import {
   actualizarMetadatosPrograma,
   eliminarPrograma,
   duplicarPrograma,
+  contarAsignacionesActivas,
+  propagarEstructuraAAsignaciones,
 } from "../acciones";
 import type {
   EstructuraPrograma,
@@ -691,6 +693,7 @@ export function EditorPrograma({
             >
               Asignar a clienta
             </Boton>
+            <BotonPropagar programaId={programaId} sucio={sucio} />
             <a
               href={`/imprimir/programa/${programaId}`}
               target="_blank"
@@ -1627,5 +1630,125 @@ function VistaElemento({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Botón "Aplicar a todas las clientas" — propaga la estructura actual
+ * a todas las asignaciones activas de este programa.
+ *
+ * Útil para coaches que mantienen UN programa base (ej. "Pérdida de
+ * peso 12 semanas") y van iterando: cambias el programa una vez y se
+ * refleja en todas las clientas que lo tienen asignado.
+ *
+ * Confirma siempre por modal porque sobrescribe customizaciones por
+ * clienta (si las hubiera en estructura_snapshot).
+ */
+function BotonPropagar({
+  programaId,
+  sucio,
+}: {
+  programaId: string;
+  sucio: boolean;
+}) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [cuenta, setCuenta] = useState<number | null>(null);
+  const [propagando, startTransition] = useTransition();
+
+  async function abrir() {
+    setConfirmando(true);
+    setCuenta(null);
+    const n = await contarAsignacionesActivas(programaId);
+    setCuenta(n);
+  }
+
+  function aplicar() {
+    startTransition(async () => {
+      const r = await propagarEstructuraAAsignaciones(programaId);
+      if (!r.ok) {
+        alert(r.error ?? "No se pudo propagar.");
+        return;
+      }
+      alert(
+        `Estructura aplicada a ${r.actualizadas} clienta${r.actualizadas === 1 ? "" : "s"}.`
+      );
+      setConfirmando(false);
+    });
+  }
+
+  return (
+    <>
+      <button
+        onClick={abrir}
+        disabled={sucio}
+        title={
+          sucio
+            ? "Guarda los cambios pendientes antes de propagar"
+            : "Aplica la versión guardada de este programa a todas las clientas que lo tienen asignado"
+        }
+        className="inline-flex items-center text-xs px-3 py-1.5 rounded border border-neutral-700 text-neutral-300 hover:bg-neutral-900 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Aplicar a todas
+      </button>
+
+      {confirmando && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => !propagando && setConfirmando(false)}
+        >
+          <div
+            className="bg-neutral-950 border border-neutral-800 rounded-2xl max-w-md w-full p-5 animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-semibold mb-2">
+              Aplicar este programa a todas las clientas
+            </h3>
+            {cuenta == null ? (
+              <p className="text-sm text-neutral-500 animate-pulse">
+                Contando clientas afectadas…
+              </p>
+            ) : cuenta === 0 ? (
+              <p className="text-sm text-neutral-400">
+                No hay ninguna clienta con este programa asignado todavía.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-neutral-300">
+                  Esto reemplazará la estructura de{" "}
+                  <strong>
+                    {cuenta} clienta{cuenta === 1 ? "" : "s"}
+                  </strong>{" "}
+                  con la versión actual del programa.
+                </p>
+                <p className="text-xs text-amber-400 bg-amber-950/30 border border-amber-900/50 rounded px-3 py-2">
+                  ⚠ Si alguna de ellas tenía customizaciones (pesos
+                  ajustados, ejercicios sustituidos), se perderán.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={() => setConfirmando(false)}
+                disabled={propagando}
+                className="text-sm px-3 py-1.5 rounded text-neutral-400 hover:text-white"
+              >
+                Cancelar
+              </button>
+              {cuenta != null && cuenta > 0 && (
+                <button
+                  onClick={aplicar}
+                  disabled={propagando}
+                  className="text-sm px-3 py-1.5 rounded text-white"
+                  style={{ backgroundColor: "var(--brand)" }}
+                >
+                  {propagando ? "Aplicando…" : `Aplicar a ${cuenta}`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

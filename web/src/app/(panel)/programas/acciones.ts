@@ -139,6 +139,64 @@ export async function guardarEstructura(
   return { ok: true, id };
 }
 
+/**
+ * Cuenta cuántas asignaciones activas tiene un programa.
+ * Útil para preview previo a "aplicar cambios a todas".
+ */
+export async function contarAsignacionesActivas(
+  programaId: string
+): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const { count } = await supabase
+    .from("asignaciones")
+    .select("id", { count: "exact", head: true })
+    .eq("programa_id", programaId)
+    .eq("activa", true);
+  return count ?? 0;
+}
+
+/**
+ * Propaga la estructura actual del programa a todas las asignaciones
+ * activas de ese programa (sobrescribe sus estructura_snapshot).
+ * Útil cuando la coach mantiene UN programa base y quiere reflejar
+ * cambios en todas las clientas que lo tienen asignado.
+ *
+ * Si alguna asignación tenía customizaciones, se pierden. Por eso es
+ * destructivo y el cliente debe pedir confirmación clara.
+ */
+export async function propagarEstructuraAAsignaciones(
+  programaId: string
+): Promise<{
+  ok: boolean;
+  actualizadas: number;
+  error?: string;
+}> {
+  const supabase = await createSupabaseServerClient();
+
+  // Cargar la estructura actual del programa
+  const { data: prog, error: errProg } = await supabase
+    .from("programas")
+    .select("estructura")
+    .eq("id", programaId)
+    .maybeSingle();
+  if (errProg || !prog) {
+    return { ok: false, actualizadas: 0, error: "Programa no encontrado." };
+  }
+
+  const { error, count } = await supabase
+    .from("asignaciones")
+    .update({ estructura_snapshot: prog.estructura }, { count: "exact" })
+    .eq("programa_id", programaId)
+    .eq("activa", true);
+
+  if (error) return { ok: false, actualizadas: 0, error: error.message };
+
+  revalidatePath("/clientas");
+  revalidatePath("/calendario");
+  revalidatePath("/inicio");
+  return { ok: true, actualizadas: count ?? 0 };
+}
+
 export async function duplicarPrograma(id: string): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
   const coachId = await obtenerCoachId();
