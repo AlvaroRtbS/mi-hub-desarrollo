@@ -79,6 +79,7 @@ function extractItems(body: unknown): unknown[] {
   if (body && typeof body === "object") {
     const obj = body as Record<string, unknown>;
     for (const k of [
+      "docs", // TS usa Mongoose paginate-v2: { docs, totalDocs, page, ... }
       "items",
       "data",
       "results",
