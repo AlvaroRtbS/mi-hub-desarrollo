@@ -15,6 +15,8 @@ type DatosPrograma = {
   programa_nombre: string;
   coach_nombre: string;
   coach_marca_nombre: string | null;
+  coach_marca_color_primario: string | null;
+  coach_marca_logo_url: string | null;
 };
 
 export const dynamic = "force-dynamic";
@@ -65,17 +67,40 @@ export default async function ProgramaPublicoPage({
   const estaEnCurso =
     offsetHoy >= 0 && semanaIdxHoy < prog.estructura.length;
 
+  const colorMarca = prog.coach_marca_color_primario ?? "#16a34a";
+  const logoUrl = prog.coach_marca_logo_url;
+  const tituloMarca = prog.coach_marca_nombre ?? prog.coach_nombre;
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div
+      className="min-h-screen bg-neutral-950 text-neutral-100"
+      style={{
+        ["--brand" as string]: colorMarca,
+        ["--brand-hover" as string]: colorMarca,
+      }}
+    >
       <div className="max-w-md mx-auto px-4 py-6">
         <div className="flex items-center justify-between gap-2 mb-2 no-print">
-          <div className="text-xs text-neutral-500 uppercase tracking-wide">
-            {prog.coach_marca_nombre ?? prog.coach_nombre}
+          <div className="flex items-center gap-2 min-w-0">
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={tituloMarca}
+                className="size-7 rounded object-cover bg-white shrink-0"
+              />
+            )}
+            <div
+              className="text-xs uppercase tracking-wide truncate"
+              style={{ color: colorMarca }}
+            >
+              {tituloMarca}
+            </div>
           </div>
           <BotonImprimir />
         </div>
         <div className="text-xs text-neutral-500 uppercase tracking-wide mb-1 hidden print:block">
-          {prog.coach_marca_nombre ?? prog.coach_nombre}
+          {tituloMarca}
         </div>
         <h1 className="text-2xl font-semibold mb-1">{prog.programa_nombre}</h1>
         <div className="text-sm text-neutral-400">

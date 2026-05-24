@@ -11,6 +11,8 @@ type InvitacionInfo = {
   clienta_email: string;
   coach_nombre: string;
   coach_marca_nombre: string | null;
+  coach_marca_color_primario: string | null;
+  coach_marca_logo_url: string | null;
   valida: boolean;
   motivo: string | null;
 };
@@ -42,20 +44,41 @@ export default async function InvitacionPage({
             {info.motivo === "expirada"
               ? "Este link de invitación ha caducado. Pide a tu entrenadora que te envíe uno nuevo."
               : info.motivo === "ya_usada"
-              ? "Este link ya se ha usado. Si ya creaste tu cuenta, entra desde la pantalla de login."
-              : "El link no es válido o ha caducado."}
+                ? "Este link ya se ha usado. Si ya creaste tu cuenta, entra desde la pantalla de login."
+                : "El link no es válido o ha caducado."}
           </p>
         </div>
       </div>
     );
   }
 
+  const colorMarca = info.coach_marca_color_primario ?? "#16a34a";
+  const logoUrl = info.coach_marca_logo_url;
+  const tituloMarca = info.coach_marca_nombre ?? info.coach_nombre;
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4">
+    <div
+      className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4"
+      style={{
+        ["--brand" as string]: colorMarca,
+        ["--brand-hover" as string]: colorMarca,
+      }}
+    >
       <div className="max-w-md w-full">
         <div className="text-center mb-6">
-          <div className="text-xs text-neutral-500 uppercase tracking-wide mb-1">
-            {info.coach_marca_nombre ?? info.coach_nombre}
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={tituloMarca}
+              className="mx-auto h-16 w-16 rounded-full object-cover bg-white mb-4"
+            />
+          )}
+          <div
+            className="text-xs uppercase tracking-wide mb-1 font-medium"
+            style={{ color: colorMarca }}
+          >
+            {tituloMarca}
           </div>
           <h1 className="text-2xl font-semibold">¡Hola, {info.clienta_nombre}!</h1>
           <p className="text-sm text-neutral-400 mt-2">
