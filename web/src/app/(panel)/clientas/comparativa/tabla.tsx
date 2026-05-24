@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { inicialesNombre } from "@/lib/utilidades";
 
 type GrupoFila = { id: string; nombre: string; color: string | null };
@@ -97,7 +98,84 @@ export function TablaComparativa({ filas }: { filas: FilaComparativa[] }) {
     return copia;
   }, [filas, orden, direccion]);
 
+  function exportarCSV() {
+    const headers = [
+      "Nombre",
+      "Apellidos",
+      "Estado",
+      "Programa",
+      "Días en programa",
+      "Adherencia %",
+      "Racha actual",
+      "Racha máxima",
+      "Sesiones completadas",
+      "Días sin entrenar",
+      "Último peso (kg)",
+      "Δ Peso (kg)",
+      "Nivel",
+      "XP",
+      "Logros",
+      "Mensajes sin leer",
+      "Días sin contactar",
+      "Grupos",
+    ];
+    const rows = filasOrdenadas.map((f) => [
+      f.nombre,
+      f.apellidos ?? "",
+      f.estado,
+      f.programaNombre ?? "",
+      f.diasEnPrograma ?? "",
+      f.adherencia ?? "",
+      f.rachaActual,
+      f.rachaMaxima,
+      f.sesionesCompletadas,
+      f.diasSinEntrenar ?? "",
+      f.pesoUltimo ?? "",
+      f.deltaPeso ?? "",
+      f.nivel,
+      f.xp,
+      f.numLogros,
+      f.mensajesNoLeidos,
+      f.diasSinContactar ?? "",
+      f.grupos.map((g) => g.nombre).join("|"),
+    ]);
+    const escapar = (v: unknown) => {
+      const s = String(v ?? "");
+      if (/[",\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const csv = [
+      headers.map(escapar).join(","),
+      ...rows.map((r) => r.map(escapar).join(",")),
+    ].join("\n");
+    // BOM para que Excel detecte UTF-8 correctamente
+    const blob = new Blob(["﻿" + csv], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const fecha = new Date().toISOString().slice(0, 10);
+    a.download = `comparativa-clientas-${fecha}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
+    <div>
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={exportarCSV}
+          className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white px-3 py-1.5 rounded border border-neutral-800 hover:border-neutral-700"
+          title="Descargar la tabla actual como CSV (Excel-compatible)"
+        >
+          <Download className="size-3.5" />
+          Exportar CSV
+        </button>
+      </div>
+
     <div className="border border-neutral-800 rounded-2xl overflow-x-auto bg-neutral-950">
       <table className="w-full text-sm">
         <thead className="bg-neutral-900 text-neutral-400 text-xs uppercase tracking-wide">
@@ -118,6 +196,7 @@ export function TablaComparativa({ filas }: { filas: FilaComparativa[] }) {
           ))}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }
