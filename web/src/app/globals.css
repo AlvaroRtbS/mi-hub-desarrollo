@@ -113,6 +113,25 @@ html:not([data-theme]) .bg-neutral-800,
 html[data-theme="dark"] .bg-neutral-800 { background-color: #262626 !important; }
 
 /* ============================================================================
+   Superficies "brand-tinted" (bg-brand-950, border-brand-900 con alpha):
+   en lugar de un verde oscuro hardcoded, las hacemos color-mix con la marca
+   del coach. Así adaptan al color de marca elegido Y a los temas.
+   ============================================================================ */
+.bg-brand-950 { background-color: color-mix(in srgb, var(--brand) 10%, transparent) !important; }
+.bg-brand-950\/10 { background-color: color-mix(in srgb, var(--brand) 4%, transparent) !important; }
+.bg-brand-950\/20 { background-color: color-mix(in srgb, var(--brand) 6%, transparent) !important; }
+.bg-brand-950\/30 { background-color: color-mix(in srgb, var(--brand) 8%, transparent) !important; }
+.bg-brand-950\/40 { background-color: color-mix(in srgb, var(--brand) 10%, transparent) !important; }
+.bg-brand-950\/50 { background-color: color-mix(in srgb, var(--brand) 12%, transparent) !important; }
+.bg-brand-950\/70 { background-color: color-mix(in srgb, var(--brand) 15%, transparent) !important; }
+.bg-brand-950\/90 { background-color: color-mix(in srgb, var(--brand) 18%, transparent) !important; }
+
+.border-brand-900 { border-color: color-mix(in srgb, var(--brand) 35%, transparent) !important; }
+.border-brand-900\/30 { border-color: color-mix(in srgb, var(--brand) 25%, transparent) !important; }
+.border-brand-900\/40 { border-color: color-mix(in srgb, var(--brand) 30%, transparent) !important; }
+.border-brand-900\/50 { border-color: color-mix(in srgb, var(--brand) 40%, transparent) !important; }
+
+/* ============================================================================
    Microanimaciones reutilizables.
    Tailwind no incluye `animate-in` por defecto (es del plugin tw-animate),
    así que defino las que ya se referencian en la app y unas extra. Todas se

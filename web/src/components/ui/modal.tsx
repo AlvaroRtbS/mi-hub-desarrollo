@@ -59,7 +59,7 @@ export function Modal({
     >
       <div
         className={
-          "w-full bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden " +
+          "w-full bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden " +
           ANCHOS[tamano]
         }
         onClick={(e) => e.stopPropagation()}

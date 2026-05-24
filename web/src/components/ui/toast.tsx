@@ -98,7 +98,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             role="status"
             aria-live={t.tipo === "error" ? "assertive" : "polite"}
           >
-            <span className="text-base leading-tight">{iconoTipo[t.tipo]}</span>
+            <span className={"text-base leading-tight font-bold " + colorIconoTipo[t.tipo]}>{iconoTipo[t.tipo]}</span>
             <div className="flex-1 text-sm leading-snug">{t.mensaje}</div>
             <button
               onClick={() => quitar(t.id)}
@@ -114,10 +114,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Diseño neutral + borde izquierdo coloreado por tipo. Funciona bien en
+// oscuro, claro y crema (el fondo se remappea en cada tema).
 const estilosTipo: Record<ToastTipo, string> = {
-  success: "bg-green-950/90 border-green-900/50 text-green-100",
-  error: "bg-red-950/90 border-red-900/50 text-red-100",
-  info: "bg-neutral-900/95 border-neutral-800 text-neutral-100",
+  success:
+    "bg-neutral-900 border-neutral-800 border-l-4 border-l-green-500 text-neutral-100",
+  error:
+    "bg-neutral-900 border-neutral-800 border-l-4 border-l-red-500 text-neutral-100",
+  info:
+    "bg-neutral-900 border-neutral-800 border-l-4 border-l-blue-500 text-neutral-100",
+};
+
+const colorIconoTipo: Record<ToastTipo, string> = {
+  success: "text-green-500",
+  error: "text-red-500",
+  info: "text-blue-500",
 };
 
 const iconoTipo: Record<ToastTipo, string> = {

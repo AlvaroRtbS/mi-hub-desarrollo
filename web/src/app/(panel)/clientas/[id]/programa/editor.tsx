@@ -473,7 +473,7 @@ function InputInline({
       value={valor}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-transparent border border-transparent hover:border-neutral-800 focus:border-neutral-700 rounded px-1.5 py-0.5 text-xs focus:outline-none placeholder:text-neutral-700"
+      className="w-full bg-transparent border border-neutral-800/60 hover:border-neutral-700 focus:border-neutral-600 rounded px-1.5 py-0.5 text-xs focus:outline-none placeholder:text-neutral-600"
     />
   );
 }
