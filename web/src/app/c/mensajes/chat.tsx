@@ -139,6 +139,22 @@ export function ChatClienta({
         </div>
       )}
 
+      {/* Respuestas rápidas — comunes en chat coach-clienta */}
+      {!borrador && (
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 mb-1">
+          {RESPUESTAS_RAPIDAS.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setBorrador(r)}
+              className="shrink-0 text-xs px-3 py-1.5 rounded-full border border-neutral-800 bg-neutral-900 text-neutral-300 hover:border-neutral-600 hover:text-white"
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      )}
+
       <form
         onSubmit={enviar}
         className="border-t border-neutral-800 pt-3 flex items-end gap-2"
@@ -167,3 +183,12 @@ export function ChatClienta({
     </div>
   );
 }
+
+const RESPUESTAS_RAPIDAS = [
+  "✅ Hecho",
+  "Voy ahora",
+  "Hoy no puedo",
+  "Lo muevo mañana",
+  "Duda 🤔",
+  "Gracias 🙏",
+];

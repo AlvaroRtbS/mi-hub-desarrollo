@@ -10,7 +10,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 
-type Tab = { href: string; label: string };
+type Tab = { href: string; label: string; badge?: number };
 
 const ICONS = {
   "/c/hoy": Home,
@@ -50,7 +50,18 @@ export function TabBar({
                   style={{ backgroundColor: colorMarca }}
                 />
               )}
-              {Icon && <Icon size={20} strokeWidth={activa ? 2 : 1.75} />}
+              <span className="relative">
+                {Icon && <Icon size={20} strokeWidth={activa ? 2 : 1.75} />}
+                {t.badge != null && t.badge > 0 && (
+                  <span
+                    className="absolute -top-1 -right-2 text-[9px] text-white px-1 rounded-full min-w-[1rem] text-center font-medium"
+                    style={{ backgroundColor: colorMarca }}
+                    aria-label={`${t.badge} sin leer`}
+                  >
+                    {t.badge > 9 ? "9+" : t.badge}
+                  </span>
+                )}
+              </span>
               <span className="mt-0.5">{t.label}</span>
             </Link>
           );

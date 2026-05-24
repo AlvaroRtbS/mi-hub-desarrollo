@@ -53,8 +53,20 @@ export default async function ClientaLayout({
   const logoUrl = coachObj?.marca_logo_url ?? null;
   const tituloMarca = coachObj?.marca_nombre ?? coachObj?.nombre ?? "";
 
+  // Cuenta mensajes del coach no leídos para mostrar badge en la tab "Chat"
+  const { count: mensajesNoLeidos } = await supabase
+    .from("mensajes")
+    .select("id", { count: "exact", head: true })
+    .eq("clienta_id", clienta.id)
+    .eq("remitente", "coach")
+    .eq("leido", false);
+
   // Lista plana de tabs para el cliente
-  const tabs = TABS.map((t) => ({ href: t.href, label: t.label }));
+  const tabs = TABS.map((t) => ({
+    href: t.href,
+    label: t.label,
+    badge: t.href === "/c/mensajes" ? (mensajesNoLeidos ?? 0) : 0,
+  }));
 
   return (
     <div
