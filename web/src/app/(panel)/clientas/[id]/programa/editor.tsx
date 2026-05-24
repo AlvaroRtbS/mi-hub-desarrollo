@@ -29,6 +29,14 @@ import {
   type Sugerencia,
 } from "./historial";
 
+type EjercicioInfo = {
+  nombre: string;
+  instrucciones?: string | null;
+  videoUrl?: string | null;
+  imagenUrl?: string | null;
+  material: string[];
+};
+
 type EjercicioBiblioteca = {
   id: string;
   nombre: string;
@@ -42,8 +50,6 @@ function uuid(): string {
   }
   return `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
-
-type EjercicioInfo = { nombre: string; material: string[] };
 
 // "Sin peso libre" si NINGÚN indicador (nombre + material) menciona peso
 // libre. Para ejercicios con peso corporal/bandas/botellas las sugerencias
@@ -528,6 +534,9 @@ function FilaEjercicio({
 }) {
   const nombre = info?.nombre ?? elemento.ejercicio_nombre ?? "(Ejercicio)";
   const sinPesoLibre = deduceSinPesoLibre(info?.material ?? [], nombre);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
+  const [hoverThumb, setHoverThumb] = useState(false);
+  const tieneDetalle = !!(info?.instrucciones || info?.videoUrl || info?.imagenUrl);
 
   // Calcular sugerencia basada en la primera serie como referencia
   let sugerencia: Sugerencia | null = null;
@@ -569,7 +578,58 @@ function FilaEjercicio({
 
       <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2 pr-20">
         <div className="flex items-center gap-2 min-w-0">
+          {/* Thumbnail con hover-vídeo si está disponible */}
+          {(info?.videoUrl || info?.imagenUrl) && (
+            <div
+              className="size-9 rounded bg-neutral-900 relative overflow-hidden shrink-0 cursor-pointer"
+              onMouseEnter={() => setHoverThumb(true)}
+              onMouseLeave={() => setHoverThumb(false)}
+              onClick={() => setDetalleAbierto((v) => !v)}
+              title="Ver detalle"
+            >
+              {info?.imagenUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={info.imagenUrl}
+                  alt=""
+                  className={
+                    "absolute inset-0 w-full h-full object-cover transition-opacity " +
+                    (hoverThumb && info?.videoUrl ? "opacity-0" : "opacity-100")
+                  }
+                />
+              )}
+              {info?.videoUrl && (
+                // eslint-disable-next-line jsx-a11y/media-has-caption
+                <video
+                  src={info.videoUrl}
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  autoPlay={hoverThumb}
+                  className={
+                    "absolute inset-0 w-full h-full object-cover transition-opacity " +
+                    (hoverThumb ? "opacity-100" : "opacity-0")
+                  }
+                />
+              )}
+            </div>
+          )}
           <span className="font-medium text-sm truncate">{nombre}</span>
+          {tieneDetalle && (
+            <button
+              onClick={() => setDetalleAbierto((v) => !v)}
+              className="text-neutral-500 hover:text-neutral-200 shrink-0"
+              title={detalleAbierto ? "Ocultar detalle" : "Ver detalle"}
+              aria-expanded={detalleAbierto}
+            >
+              {detalleAbierto ? (
+                <ChevronUp className="size-3.5" />
+              ) : (
+                <ChevronDown className="size-3.5" />
+              )}
+            </button>
+          )}
           {modificado && (
             <span
               className="inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-full font-medium shrink-0"
@@ -601,6 +661,30 @@ function FilaEjercicio({
           </div>
         )}
       </div>
+
+      {/* Detalle expandible: vídeo + instrucciones */}
+      {detalleAbierto && tieneDetalle && (
+        <div className="mb-3 p-3 bg-neutral-950 border border-neutral-800 rounded-lg animate-in slide-in-from-bottom-2">
+          {info?.videoUrl && (
+            <video
+              src={info.videoUrl}
+              controls
+              playsInline
+              className="w-full max-w-md mx-auto rounded mb-2 max-h-64"
+            />
+          )}
+          {info?.instrucciones && (
+            <p className="text-xs text-neutral-300 whitespace-pre-line leading-relaxed">
+              {info.instrucciones}
+            </p>
+          )}
+          {elemento.notas && (
+            <p className="text-xs text-amber-400 mt-2 italic">
+              <strong>Nota específica para esta clienta:</strong> {elemento.notas}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Sugerencia */}
       {sugerencia && sugerencia.tipo !== "primera_vez" && (

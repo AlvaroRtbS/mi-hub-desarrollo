@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import type { EstructuraPrograma } from "@/lib/supabase/tipos";
 import { EditorAsignacionCliente } from "./editor";
 import { calcularHistorialEjercicio } from "./historial";
@@ -127,23 +128,51 @@ export default async function ProgramaClientaPage({
     }
   }
 
-  // Info de los ejercicios actualmente usados (para detectar si usan peso libre)
+  // Info de los ejercicios actualmente usados — incluye instrucciones,
+  // URLs firmadas de vídeo/imagen y material (para sugerencias + previsualización).
   const { data: ejerciciosData } = await supabase
     .from("ejercicios")
-    .select("id, nombre, material")
+    .select("id, nombre, instrucciones, video_url, imagen_url, material")
     .in("id", Array.from(ejercicioIds));
+
+  const ejerciciosArr = (ejerciciosData ?? []) as Array<{
+    id: string;
+    nombre: string;
+    instrucciones: string | null;
+    video_url: string | null;
+    imagen_url: string | null;
+    material: string[];
+  }>;
+
+  const [urlsVideo, urlsImagen] = await Promise.all([
+    obtenerUrlsFirmadas(
+      "ejercicios-videos",
+      ejerciciosArr.map((e) => e.video_url),
+      3600
+    ),
+    obtenerUrlsFirmadas(
+      "ejercicios-imagenes",
+      ejerciciosArr.map((e) => e.imagen_url),
+      3600
+    ),
+  ]);
 
   const ejerciciosInfo = new Map<
     string,
-    { nombre: string; material: string[] }
+    {
+      nombre: string;
+      instrucciones: string | null;
+      videoUrl: string | null;
+      imagenUrl: string | null;
+      material: string[];
+    }
   >();
-  for (const e of (ejerciciosData ?? []) as Array<{
-    id: string;
-    nombre: string;
-    material: string[];
-  }>) {
+  for (const e of ejerciciosArr) {
     ejerciciosInfo.set(e.id, {
       nombre: e.nombre,
+      instrucciones: e.instrucciones,
+      videoUrl: e.video_url ? urlsVideo.get(e.video_url) ?? null : null,
+      imagenUrl: e.imagen_url ? urlsImagen.get(e.imagen_url) ?? null : null,
       material: e.material ?? [],
     });
   }
