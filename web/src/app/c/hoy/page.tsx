@@ -189,6 +189,59 @@ export default async function HoyPage() {
 
   const registrosHoy: RegistrosSesion = sesionHoy?.registros ?? {};
 
+  // Para cada ejercicio del día, buscar el último registro previo
+  // (mejor peso de la última sesión anterior con datos de ese elemento).
+  const elementoIdsHoy: string[] = [];
+  for (const b of dia.bloques) {
+    for (const el of b.elementos) {
+      if (el.tipo === "ejercicio") elementoIdsHoy.push(el.id);
+    }
+  }
+
+  const ultimoPorElemento = new Map<
+    string,
+    { fecha: string; peso: string; reps: string }
+  >();
+  if (elementoIdsHoy.length > 0) {
+    const { data: sesionesPrevias } = await supabase
+      .from("sesiones")
+      .select("fecha, registros")
+      .eq("clienta_id", clienta.id)
+      .lt("fecha", hoy)
+      .order("fecha", { ascending: false })
+      .limit(30);
+
+    for (const s of (sesionesPrevias ?? []) as Array<{
+      fecha: string;
+      registros: RegistrosSesion | null;
+    }>) {
+      const regs = s.registros ?? {};
+      for (const elId of elementoIdsHoy) {
+        if (ultimoPorElemento.has(elId)) continue;
+        const reg = regs[elId];
+        if (!reg?.series_realizadas) continue;
+        let mejorPesoNum = -1;
+        let mejor: { peso: string; reps: string } | null = null;
+        for (const sr of reg.series_realizadas) {
+          if (!sr.completado) continue;
+          const p = parseFloat(sr.peso ?? "");
+          if (!isNaN(p) && p > mejorPesoNum) {
+            mejorPesoNum = p;
+            mejor = { peso: sr.peso, reps: sr.reps };
+          }
+        }
+        if (mejor) {
+          ultimoPorElemento.set(elId, {
+            fecha: s.fecha,
+            peso: mejor.peso,
+            reps: mejor.reps,
+          });
+        }
+      }
+      if (ultimoPorElemento.size >= elementoIdsHoy.length) break;
+    }
+  }
+
   // Adherencia
   const { data: sesionesData } = await supabase
     .from("sesiones")
@@ -242,6 +295,7 @@ export default async function HoyPage() {
                 metaEjercicios={metaPorEjercicio}
                 urlsImagenes={urlsImagenesEjercicios}
                 registros={registrosHoy}
+                ultimoPorElemento={ultimoPorElemento}
                 clientaId={clienta.id}
                 fecha={hoy}
                 semana={semanaIdx + 1}
@@ -357,6 +411,7 @@ function BloqueClienta({
   metaEjercicios,
   urlsImagenes,
   registros,
+  ultimoPorElemento,
   clientaId,
   fecha,
   semana,
@@ -370,6 +425,10 @@ function BloqueClienta({
   >;
   urlsImagenes: Map<string, string>;
   registros: RegistrosSesion;
+  ultimoPorElemento: Map<
+    string,
+    { fecha: string; peso: string; reps: string }
+  >;
   clientaId: string;
   fecha: string;
   semana: number;
@@ -424,6 +483,7 @@ function BloqueClienta({
                   registroExistente={
                     registros[el.id]?.series_realizadas ?? null
                   }
+                  ultimoRegistro={ultimoPorElemento.get(el.id) ?? null}
                 />
               </div>
             )}

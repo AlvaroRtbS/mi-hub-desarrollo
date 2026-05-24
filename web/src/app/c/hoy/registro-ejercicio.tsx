@@ -27,6 +27,7 @@ export function RegistroEjercicio({
   dia,
   elemento,
   registroExistente,
+  ultimoRegistro,
 }: {
   clientaId: string;
   fecha: string;
@@ -34,6 +35,7 @@ export function RegistroEjercicio({
   dia: number;
   elemento: ElementoEjercicio;
   registroExistente: SerieRealizada[] | null;
+  ultimoRegistro: { fecha: string; peso: string; reps: string } | null;
 }) {
   const router = useRouter();
   const [enviando, startTransition] = useTransition();
@@ -115,9 +117,19 @@ export function RegistroEjercicio({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
-        <div className="text-[10px] uppercase tracking-wide text-neutral-500">
-          Series
+      <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="text-[10px] uppercase tracking-wide text-neutral-500">
+            Series
+          </div>
+          {ultimoRegistro && (
+            <div
+              className="text-[10px] text-amber-400/80 bg-amber-950/20 border border-amber-900/30 rounded px-1.5 py-0.5"
+              title={`Última vez: ${ultimoRegistro.fecha}`}
+            >
+              Último: {ultimoRegistro.peso || "—"} kg × {ultimoRegistro.reps || "—"}
+            </div>
+          )}
         </div>
         <div className="text-[10px] text-neutral-500">
           {completadas}/{total}
