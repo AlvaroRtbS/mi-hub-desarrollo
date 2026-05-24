@@ -10,7 +10,18 @@ import type {
 import { Boton } from "@/components/ui/boton";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
-import { Lightbulb, Save, RotateCcw, Trash2, Plus, X, Search } from "lucide-react";
+import {
+  Lightbulb,
+  Save,
+  RotateCcw,
+  Trash2,
+  Plus,
+  X,
+  Search,
+  ChevronUp,
+  ChevronDown,
+  Pencil,
+} from "lucide-react";
 import { guardarSnapshotAsignacion } from "./acciones";
 import {
   sugerirProgresion,
@@ -24,6 +35,13 @@ type EjercicioBiblioteca = {
   grupos_musculares: string[];
   material: string[];
 };
+
+function uuid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 type EjercicioInfo = { nombre: string; material: string[] };
 
@@ -55,13 +73,19 @@ export function EditorAsignacionCliente({
   ejerciciosInfo,
   historiales,
   biblioteca,
+  idsModificadosBase,
 }: {
   asignacionId: string;
   estructuraInicial: EstructuraPrograma;
   ejerciciosInfo: Record<string, EjercicioInfo>;
   historiales: Record<string, HistorialEjercicio>;
   biblioteca: EjercicioBiblioteca[];
+  idsModificadosBase: string[];
 }) {
+  const idsModificadosSet = useMemo(
+    () => new Set(idsModificadosBase),
+    [idsModificadosBase]
+  );
   const router = useRouter();
   const toast = useToast();
   const [estructura, setEstructura] = useState<EstructuraPrograma>(
@@ -137,11 +161,7 @@ export function EditorAsignacionCliente({
     actualizar((e) => {
       const bloque = e[semIdx]?.dias[diaIdx]?.bloques[bloqueIdx];
       if (!bloque) return;
-      // Crear elemento ejercicio nuevo con 3 series por defecto
-      const nuevoId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const nuevoId = uuid();
       bloque.elementos.push({
         id: nuevoId,
         tipo: "ejercicio",
@@ -155,6 +175,72 @@ export function EditorAsignacionCliente({
       });
     });
     setAñadirA(null);
+  }
+
+  function moverElemento(
+    semIdx: number,
+    diaIdx: number,
+    bloqueIdx: number,
+    elIdx: number,
+    direccion: -1 | 1
+  ) {
+    actualizar((e) => {
+      const bloque = e[semIdx]?.dias[diaIdx]?.bloques[bloqueIdx];
+      if (!bloque) return;
+      const destino = elIdx + direccion;
+      if (destino < 0 || destino >= bloque.elementos.length) return;
+      const tmp = bloque.elementos[elIdx]!;
+      bloque.elementos[elIdx] = bloque.elementos[destino]!;
+      bloque.elementos[destino] = tmp;
+    });
+  }
+
+  function añadirBloque(semIdx: number, diaIdx: number) {
+    actualizar((e) => {
+      const dia = e[semIdx]?.dias[diaIdx];
+      if (!dia) return;
+      dia.bloques.push({
+        id: uuid(),
+        titulo: `Bloque ${dia.bloques.length + 1}`,
+        elementos: [],
+      });
+    });
+  }
+
+  function eliminarBloque(
+    semIdx: number,
+    diaIdx: number,
+    bloqueIdx: number
+  ) {
+    const bloque =
+      estructura[semIdx]?.dias[diaIdx]?.bloques[bloqueIdx];
+    if (!bloque) return;
+    const n = bloque.elementos.length;
+    if (
+      n > 0 &&
+      !confirm(
+        `¿Eliminar el bloque "${bloque.titulo}" con sus ${n} elemento${n === 1 ? "" : "s"}?`
+      )
+    )
+      return;
+    actualizar((e) => {
+      const dia = e[semIdx]?.dias[diaIdx];
+      if (!dia) return;
+      dia.bloques.splice(bloqueIdx, 1);
+    });
+  }
+
+  function renombrarBloque(
+    semIdx: number,
+    diaIdx: number,
+    bloqueIdx: number,
+    titulo: string
+  ) {
+    actualizar((e) => {
+      const bloque = e[semIdx]?.dias[diaIdx]?.bloques[bloqueIdx];
+      if (!bloque) return;
+      bloque.titulo = titulo;
+    });
   }
 
   function descartar() {
@@ -264,18 +350,46 @@ export function EditorAsignacionCliente({
                     )}
                   </h3>
                 </div>
-                {dia.descanso || dia.bloques.length === 0 ? (
+                {dia.descanso && dia.bloques.length === 0 ? (
                   <div className="px-4 py-6 text-sm text-neutral-500 italic">
-                    {dia.descanso ? "Día de descanso." : "Sin contenido."}
+                    Día de descanso.
                   </div>
                 ) : (
                   <div className="divide-y divide-neutral-900">
                     {dia.bloques.map((bloque, bloqueIdx) => (
-                      <div key={bloqueIdx} className="px-4 py-3">
-                        <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
-                          {bloque.titulo || "Bloque"}
+                      <div key={bloque.id} className="px-4 py-3">
+                        <div className="flex items-center gap-2 mb-2 group/bloque">
+                          <input
+                            type="text"
+                            value={bloque.titulo}
+                            onChange={(e) =>
+                              renombrarBloque(
+                                semanaIdx,
+                                diaIdx,
+                                bloqueIdx,
+                                e.target.value
+                              )
+                            }
+                            placeholder="Bloque"
+                            className="bg-transparent text-xs uppercase tracking-wide text-neutral-400 hover:text-white border border-transparent hover:border-neutral-800 rounded px-1.5 py-0.5 focus:outline-none focus:border-neutral-700 flex-1 min-w-0"
+                          />
+                          <button
+                            onClick={() =>
+                              eliminarBloque(semanaIdx, diaIdx, bloqueIdx)
+                            }
+                            title="Eliminar bloque"
+                            className="opacity-0 group-hover/bloque:opacity-100 hover:text-red-400 text-neutral-500 p-1 transition"
+                            aria-label="Eliminar bloque"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
                         </div>
                         <div className="space-y-3">
+                          {bloque.elementos.length === 0 && (
+                            <p className="text-xs text-neutral-600 italic px-2">
+                              Bloque vacío. Añade un ejercicio.
+                            </p>
+                          )}
                           {bloque.elementos.map((el, elIdx) =>
                             el.tipo === "ejercicio" ? (
                               <FilaEjercicio
@@ -283,6 +397,27 @@ export function EditorAsignacionCliente({
                                 elemento={el}
                                 info={ejerciciosInfo[el.ejercicio_id]}
                                 historial={historiales[el.ejercicio_id]}
+                                modificado={idsModificadosSet.has(el.id)}
+                                puedeSubir={elIdx > 0}
+                                puedeBajar={elIdx < bloque.elementos.length - 1}
+                                onSubir={() =>
+                                  moverElemento(
+                                    semanaIdx,
+                                    diaIdx,
+                                    bloqueIdx,
+                                    elIdx,
+                                    -1
+                                  )
+                                }
+                                onBajar={() =>
+                                  moverElemento(
+                                    semanaIdx,
+                                    diaIdx,
+                                    bloqueIdx,
+                                    elIdx,
+                                    1
+                                  )
+                                }
                                 onEditarSerie={(serieIdx, parche) =>
                                   editarSerie(
                                     semanaIdx,
@@ -337,6 +472,16 @@ export function EditorAsignacionCliente({
                         </div>
                       </div>
                     ))}
+                    {/* Añadir bloque al día */}
+                    <div className="px-4 py-3">
+                      <button
+                        onClick={() => añadirBloque(semanaIdx, diaIdx)}
+                        className="w-full text-xs text-neutral-500 hover:text-white inline-flex items-center justify-center gap-1.5 py-2 border border-dashed border-neutral-800/60 hover:border-neutral-600 rounded-lg transition"
+                      >
+                        <Plus className="size-3.5" />
+                        Añadir bloque
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -360,6 +505,11 @@ function FilaEjercicio({
   elemento,
   info,
   historial,
+  modificado,
+  puedeSubir,
+  puedeBajar,
+  onSubir,
+  onBajar,
   onEditarSerie,
   onAplicarATodas,
   onEliminar,
@@ -367,6 +517,11 @@ function FilaEjercicio({
   elemento: ElementoEjercicio;
   info: EjercicioInfo | undefined;
   historial: HistorialEjercicio | undefined;
+  modificado: boolean;
+  puedeSubir: boolean;
+  puedeBajar: boolean;
+  onSubir: () => void;
+  onBajar: () => void;
   onEditarSerie: (serieIdx: number, parche: Partial<SerieEjercicio>) => void;
   onAplicarATodas: (parche: Partial<SerieEjercicio>) => void;
   onEliminar: () => void;
@@ -382,16 +537,54 @@ function FilaEjercicio({
 
   return (
     <div className="bg-neutral-900/30 rounded-lg p-3 group/ej relative">
-      <button
-        onClick={onEliminar}
-        title="Quitar este ejercicio del plan"
-        className="absolute top-2 right-2 opacity-30 hover:opacity-100 hover:text-red-400 transition p-1"
-        aria-label="Quitar ejercicio"
-      >
-        <Trash2 className="size-3.5" />
-      </button>
-      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2 pr-6">
-        <div className="font-medium text-sm">{nombre}</div>
+      {/* Controles esquina superior derecha */}
+      <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-30 group-hover/ej:opacity-100 transition">
+        <button
+          onClick={onSubir}
+          disabled={!puedeSubir}
+          title="Mover arriba"
+          aria-label="Mover arriba"
+          className="hover:text-white text-neutral-500 p-1 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <ChevronUp className="size-3.5" />
+        </button>
+        <button
+          onClick={onBajar}
+          disabled={!puedeBajar}
+          title="Mover abajo"
+          aria-label="Mover abajo"
+          className="hover:text-white text-neutral-500 p-1 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <ChevronDown className="size-3.5" />
+        </button>
+        <button
+          onClick={onEliminar}
+          title="Quitar este ejercicio del plan"
+          className="hover:text-red-400 text-neutral-500 p-1"
+          aria-label="Quitar ejercicio"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      </div>
+
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2 pr-20">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-medium text-sm truncate">{nombre}</span>
+          {modificado && (
+            <span
+              className="inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-full font-medium shrink-0"
+              style={{
+                color: "var(--brand)",
+                backgroundColor:
+                  "color-mix(in srgb, var(--brand) 12%, transparent)",
+              }}
+              title="Este ejercicio está personalizado para esta clienta (difiere del programa base)"
+            >
+              <Pencil className="size-2.5" />
+              personalizado
+            </span>
+          )}
+        </div>
         {historial && historial.vecesHechas > 0 && (
           <div className="text-[10px] text-neutral-500">
             {historial.vecesHechas} vez{historial.vecesHechas === 1 ? "" : "es"} hecho

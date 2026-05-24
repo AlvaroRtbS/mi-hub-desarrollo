@@ -26,7 +26,7 @@ export default async function ProgramaClientaPage({
   const { data: asignacion } = await supabase
     .from("asignaciones")
     .select(
-      "id, fecha_inicio, fecha_fin, estructura_snapshot, programas(id, nombre)"
+      "id, fecha_inicio, fecha_fin, programa_id, estructura_snapshot, programas(id, nombre)"
     )
     .eq("clienta_id", clientaId)
     .eq("activa", true)
@@ -56,9 +56,49 @@ export default async function ProgramaClientaPage({
     id: string;
     fecha_inicio: string;
     fecha_fin: string | null;
+    programa_id: string;
     estructura_snapshot: EstructuraPrograma;
     programas: { id: string; nombre: string } | null;
   };
+
+  // Cargar la estructura del programa BASE para detectar qué ejercicios
+  // de la asignación se han personalizado respecto a la plantilla.
+  const { data: programaBase } = await supabase
+    .from("programas")
+    .select("estructura")
+    .eq("id", asign.programa_id)
+    .maybeSingle();
+  const estructuraBase = (programaBase?.estructura ??
+    []) as EstructuraPrograma;
+
+  // Compara cada elemento del snapshot con su equivalente en base por id.
+  // Devuelve Set con los ids de elementos que difieren (= personalizados).
+  const idsModificados = new Set<string>();
+  const ejerciciosBaseById = new Map<string, unknown>();
+  for (const sem of estructuraBase) {
+    for (const dia of sem.dias) {
+      for (const bloque of dia.bloques) {
+        for (const el of bloque.elementos) {
+          ejerciciosBaseById.set(el.id, el);
+        }
+      }
+    }
+  }
+  for (const sem of asign.estructura_snapshot ?? []) {
+    for (const dia of sem.dias) {
+      for (const bloque of dia.bloques) {
+        for (const el of bloque.elementos) {
+          const base = ejerciciosBaseById.get(el.id);
+          if (!base) {
+            // No está en el base → fue añadido por la coach
+            idsModificados.add(el.id);
+          } else if (JSON.stringify(base) !== JSON.stringify(el)) {
+            idsModificados.add(el.id);
+          }
+        }
+      }
+    }
+  }
 
   // Cargar todas las sesiones de la clienta para calcular historial por
   // ejercicio (las usamos en sugerencias de progresión).
@@ -158,6 +198,7 @@ export default async function ProgramaClientaPage({
         ejerciciosInfo={Object.fromEntries(ejerciciosInfo)}
         historiales={Object.fromEntries(historiales)}
         biblioteca={biblioteca}
+        idsModificadosBase={Array.from(idsModificados)}
       />
     </div>
   );
