@@ -662,6 +662,15 @@ export function EditorPrograma({
             >
               Asignar a clienta
             </Boton>
+            <a
+              href={`/imprimir/programa/${programaId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-xs px-3 py-1.5 rounded border border-neutral-700 text-neutral-300 hover:bg-neutral-900 hover:text-white"
+              title="Abre una vista lista para imprimir o guardar como PDF"
+            >
+              Imprimir / PDF
+            </a>
           </div>
           <div className="flex items-center gap-2">
             <button

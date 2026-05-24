@@ -12,6 +12,7 @@ import {
   Apple,
   LineChart,
   MessageSquare,
+  Settings,
 } from "lucide-react";
 
 const enlaces = [
@@ -24,6 +25,8 @@ const enlaces = [
   { href: "/metricas", label: "Métricas", Icon: LineChart },
   { href: "/mensajes", label: "Mensajes", Icon: MessageSquare },
 ];
+
+const enlaceAjustes = { href: "/ajustes", label: "Ajustes", Icon: Settings };
 
 export default async function PanelLayout({
   children,
@@ -64,6 +67,15 @@ export default async function PanelLayout({
             </Link>
           ))}
         </nav>
+        <div className="px-3 pb-2">
+          <Link
+            href={enlaceAjustes.href}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-neutral-300 hover:bg-neutral-900 hover:text-white"
+          >
+            <enlaceAjustes.Icon size={16} className="text-neutral-500" />
+            <span>{enlaceAjustes.label}</span>
+          </Link>
+        </div>
         <div className="p-3 border-t border-neutral-800">
           <LogoutButton />
         </div>
