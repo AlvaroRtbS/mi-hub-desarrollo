@@ -18,6 +18,7 @@ import { NotasInternas } from "./notas-internas";
 import { BotonResumenIA } from "./boton-resumen-ia";
 import { PanelLogros } from "./panel-logros";
 import { HeatmapAdherencia } from "./heatmap-adherencia";
+import { HeatmapAnual } from "./heatmap-anual";
 import { PanelObjetivos } from "./panel-objetivos";
 import { GruposClienta } from "./grupos-clienta";
 import { type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
@@ -597,6 +598,9 @@ function SeccionAdherencia({
       </div>
       <div className="mt-5 pt-5 border-t border-neutral-900">
         <HeatmapAdherencia clientaId={clientaId} />
+      </div>
+      <div className="mt-5">
+        <HeatmapAnual clientaId={clientaId} />
       </div>
     </div>
   );

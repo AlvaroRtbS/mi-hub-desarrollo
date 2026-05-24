@@ -157,17 +157,46 @@ export function EditorPrograma({
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       // No interceptar si el usuario está escribiendo en un input/textarea
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
         return;
       }
+      // ⌘Z / Ctrl+Z → deshacer
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         deshacer();
+        return;
+      }
+      // 1-7 → saltar a día N de la semana actual
+      if (
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        /^[1-7]$/.test(e.key)
+      ) {
+        e.preventDefault();
+        setDiaIdx(parseInt(e.key, 10) - 1);
+        return;
+      }
+      // ←/→ → semana anterior/siguiente
+      if (e.key === "ArrowLeft" && (e.altKey || e.shiftKey)) {
+        e.preventDefault();
+        setSemanaIdx((i) => Math.max(0, i - 1));
+        return;
+      }
+      if (e.key === "ArrowRight" && (e.altKey || e.shiftKey)) {
+        e.preventDefault();
+        setSemanaIdx((i) => Math.min(estructura.length - 1, i + 1));
+        return;
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [deshacer]);
+  }, [deshacer, estructura.length]);
 
   // --- Semanas ---
   const añadirSemana = () => {
@@ -787,6 +816,25 @@ export function EditorPrograma({
               <h2 className="text-lg font-semibold">{diaActual.titulo}</h2>
               <p className="text-xs text-neutral-500 mt-0.5">
                 Día {diaActual.dia} · Semana {semanaActual?.semana}
+                <span className="ml-2 text-neutral-600">
+                  · Atajos:{" "}
+                  <kbd className="px-1 py-0.5 bg-neutral-900 rounded border border-neutral-800">
+                    1
+                  </kbd>
+                  -
+                  <kbd className="px-1 py-0.5 bg-neutral-900 rounded border border-neutral-800">
+                    7
+                  </kbd>{" "}
+                  saltar día ·{" "}
+                  <kbd className="px-1 py-0.5 bg-neutral-900 rounded border border-neutral-800">
+                    ⇧
+                  </kbd>
+                  +
+                  <kbd className="px-1 py-0.5 bg-neutral-900 rounded border border-neutral-800">
+                    ←/→
+                  </kbd>{" "}
+                  semana
+                </span>
               </p>
             </div>
             <div className="flex items-center gap-3">

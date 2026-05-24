@@ -17,6 +17,59 @@
   }
 }
 
+/* ============================================================================
+   Microanimaciones reutilizables.
+   Tailwind no incluye `animate-in` por defecto (es del plugin tw-animate),
+   así que defino las que ya se referencian en la app y unas extra. Todas se
+   desactivan automáticamente con prefers-reduced-motion para accesibilidad.
+   ============================================================================ */
+@keyframes mh-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mh-slide-in-right {
+  from { opacity: 0; transform: translateX(0.5rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes mh-slide-in-up {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes mh-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes mh-pulse-brand {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 40%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--brand) 0%, transparent); }
+}
+@keyframes mh-spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+/* Clases utilitarias para usar en componentes */
+.animate-in.fade-in {
+  animation: mh-fade-in 180ms ease-out both;
+}
+.animate-in.slide-in-from-right-2 {
+  animation: mh-fade-in 180ms ease-out both, mh-slide-in-right 180ms ease-out both;
+}
+.animate-in.slide-in-from-bottom-2 {
+  animation: mh-fade-in 180ms ease-out both, mh-slide-in-up 180ms ease-out both;
+}
+.animate-in.zoom-in-95 {
+  animation: mh-scale-in 160ms ease-out both;
+}
+.animate-pulse-brand {
+  animation: mh-pulse-brand 1.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in, [class*="animate-in"], .animate-pulse-brand {
+    animation: none !important;
+  }
+}
+
 /* CSS de impresión: para "Guardar como PDF" desde la página /p/[token] */
 @media print {
   html {
