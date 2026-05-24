@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Color principal de la marca del coach. Se sobreescribe en los
+       layouts cuando el coach ha guardado un color en /ajustes. */
+    --brand: #16a34a;
+    --brand-hover: #15803d;
+  }
   html {
     color-scheme: dark;
   }

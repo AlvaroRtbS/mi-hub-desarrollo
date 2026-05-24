@@ -8,9 +8,11 @@ const config: Config = {
         brand: {
           50: "#f0fdf4",
           400: "#4ade80",
-          500: "#22c55e",
-          600: "#16a34a",
-          700: "#15803d",
+          // 500/600/700 son dinámicos: el coach los configura en /ajustes y
+          // las variables CSS se inyectan en los layouts. Default = verde.
+          500: "var(--brand, #22c55e)",
+          600: "var(--brand, #16a34a)",
+          700: "var(--brand-hover, #15803d)",
           900: "#14532d",
           950: "#052e16",
         },

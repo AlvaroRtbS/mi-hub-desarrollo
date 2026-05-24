@@ -8,6 +8,7 @@ import {
   Camera,
   MessageCircle,
 } from "lucide-react";
+import { TabBar } from "./tab-bar";
 
 const TABS = [
   { href: "/c/hoy", Icon: Home, label: "Hoy" },
@@ -15,7 +16,7 @@ const TABS = [
   { href: "/c/metricas", Icon: Ruler, label: "Medidas" },
   { href: "/c/fotos", Icon: Camera, label: "Fotos" },
   { href: "/c/mensajes", Icon: MessageCircle, label: "Chat" },
-];
+] as const;
 
 export default async function ClientaLayout({
   children,
@@ -30,7 +31,9 @@ export default async function ClientaLayout({
 
   const { data: clienta } = await supabase
     .from("clientas")
-    .select("id, nombre, apellidos, coaches(nombre, marca_nombre)")
+    .select(
+      "id, nombre, apellidos, coaches(nombre, marca_nombre, marca_color_primario, marca_logo_url)"
+    )
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -41,22 +44,50 @@ export default async function ClientaLayout({
   const coachObj = clienta.coaches as unknown as {
     nombre: string;
     marca_nombre: string | null;
+    marca_color_primario: string | null;
+    marca_logo_url: string | null;
   } | null;
 
+  const colorMarca = coachObj?.marca_color_primario ?? "#16a34a";
+  const colorHover = oscurecerHex(colorMarca, 12);
+  const logoUrl = coachObj?.marca_logo_url ?? null;
+  const tituloMarca = coachObj?.marca_nombre ?? coachObj?.nombre ?? "";
+
+  // Lista plana de tabs para el cliente
+  const tabs = TABS.map((t) => ({ href: t.href, label: t.label }));
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
+    <div
+      className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col"
+      style={{
+        ["--brand" as string]: colorMarca,
+        ["--brand-hover" as string]: colorHover,
+      }}
+    >
+
       {/* Cabecera */}
       <header className="border-b border-neutral-800 bg-neutral-950 sticky top-0 z-10">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <div className="text-xs text-neutral-500 uppercase tracking-wide">
-              {coachObj?.marca_nombre ?? coachObj?.nombre ?? ""}
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={tituloMarca}
+              className="size-9 rounded object-cover bg-white"
+            />
+          ) : null}
+          <div className="flex-1 min-w-0">
+            <div
+              className="text-xs uppercase tracking-wide truncate"
+              style={{ color: colorMarca }}
+            >
+              {tituloMarca}
             </div>
-            <div className="text-sm font-medium">{clienta.nombre}</div>
+            <div className="text-sm font-medium truncate">{clienta.nombre}</div>
           </div>
           <Link
             href="/c/perfil"
-            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-sm"
+            className="size-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-sm shrink-0"
             aria-label="Perfil"
           >
             👤
@@ -70,20 +101,20 @@ export default async function ClientaLayout({
       </main>
 
       {/* Tab bar móvil pegada abajo */}
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-neutral-800 bg-neutral-950 z-10 pb-[env(safe-area-inset-bottom)]">
-        <div className="max-w-md mx-auto grid grid-cols-5">
-          {TABS.map((t) => (
-            <Link
-              key={t.href}
-              href={t.href}
-              className="flex flex-col items-center py-2 text-[10px] text-neutral-400 hover:text-white transition"
-            >
-              <t.Icon size={20} strokeWidth={1.75} />
-              <span className="mt-0.5">{t.label}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
+      <TabBar tabs={tabs} colorMarca={colorMarca} />
     </div>
+  );
+}
+
+function oscurecerHex(hex: string, porcentaje: number): string {
+  const m = hex.replace("#", "").match(/^([0-9a-f]{6})$/i);
+  if (!m) return hex;
+  const factor = Math.max(0, 1 - porcentaje / 100);
+  const r = Math.round(parseInt(m[1].slice(0, 2), 16) * factor);
+  const g = Math.round(parseInt(m[1].slice(2, 4), 16) * factor);
+  const b = Math.round(parseInt(m[1].slice(4, 6), 16) * factor);
+  return (
+    "#" +
+    [r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")
   );
 }

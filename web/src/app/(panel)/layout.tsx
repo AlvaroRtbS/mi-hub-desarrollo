@@ -39,12 +39,21 @@ export default async function PanelLayout({
 
   const { data: coach } = await supabase
     .from("coaches")
-    .select("nombre, email")
+    .select("nombre, email, marca_color_primario")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  const colorMarca = (coach?.marca_color_primario as string | null) ?? "#16a34a";
+  const colorHover = oscurecerHex(colorMarca, 12);
+
   return (
-    <div className="min-h-screen flex">
+    <div
+      className="min-h-screen flex"
+      style={{
+        ["--brand" as string]: colorMarca,
+        ["--brand-hover" as string]: colorHover,
+      }}
+    >
       <aside className="w-64 border-r border-neutral-800 bg-neutral-950 flex flex-col">
         <div className="px-5 py-5 border-b border-neutral-800">
           <div className="text-lg font-semibold">mi-hub</div>
@@ -82,5 +91,20 @@ export default async function PanelLayout({
       </aside>
       <main className="flex-1 overflow-auto">{children}</main>
     </div>
+  );
+}
+
+// Devuelve el hex de entrada oscurecido un % de luminosidad (sin alpha).
+// Útil para derivar el color de hover a partir del color primario del coach.
+function oscurecerHex(hex: string, porcentaje: number): string {
+  const m = hex.replace("#", "").match(/^([0-9a-f]{6})$/i);
+  if (!m) return hex;
+  const factor = Math.max(0, 1 - porcentaje / 100);
+  const r = Math.round(parseInt(m[1].slice(0, 2), 16) * factor);
+  const g = Math.round(parseInt(m[1].slice(2, 4), 16) * factor);
+  const b = Math.round(parseInt(m[1].slice(4, 6), 16) * factor);
+  return (
+    "#" +
+    [r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")
   );
 }
