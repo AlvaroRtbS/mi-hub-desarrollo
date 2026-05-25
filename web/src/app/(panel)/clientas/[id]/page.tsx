@@ -161,25 +161,37 @@ export default async function ClientaPage({
   let adherencia: ReturnType<typeof calcularAdherencia> | null = null;
   let tokenShare: string | null = null;
   if (asignacionActiva) {
-    const { data: asignFull } = await supabase
-      .from("asignaciones")
-      .select("estructura_snapshot")
-      .eq("id", asignacionActiva.id)
-      .single();
-    if (asignFull) {
-      const programados = diasProgramadosDeAsignacion(
-        asignacionActiva.fecha_inicio,
-        asignFull.estructura_snapshot as EstructuraPrograma,
-        hoyIso
-      );
-      adherencia = calcularAdherencia(programados, sesionesAll);
+    // El estructura_snapshot puede ser muy grande (1+ MB en programas
+    // migrados de TS con tareas/formularios). Envolvemos en try/catch
+    // para que un fallo aquí no rompa el render entero de la ficha.
+    try {
+      const { data: asignFull, error: errAsign } = await supabase
+        .from("asignaciones")
+        .select("estructura_snapshot")
+        .eq("id", asignacionActiva.id)
+        .single();
+      if (!errAsign && asignFull) {
+        const programados = diasProgramadosDeAsignacion(
+          asignacionActiva.fecha_inicio,
+          asignFull.estructura_snapshot as EstructuraPrograma,
+          hoyIso
+        );
+        adherencia = calcularAdherencia(programados, sesionesAll);
+      }
+    } catch (e) {
+      console.error("[clienta/" + id + "] adherencia falló:", e);
+      // continuamos sin adherencia, la página sigue funcionando
     }
-    const { data: tk } = await supabase
-      .from("asignacion_share_tokens")
-      .select("token")
-      .eq("asignacion_id", asignacionActiva.id)
-      .maybeSingle();
-    tokenShare = tk?.token ?? null;
+    try {
+      const { data: tk } = await supabase
+        .from("asignacion_share_tokens")
+        .select("token")
+        .eq("asignacion_id", asignacionActiva.id)
+        .maybeSingle();
+      tokenShare = tk?.token ?? null;
+    } catch (e) {
+      console.error("[clienta/" + id + "] share token falló:", e);
+    }
   }
 
   // Invitación activa
