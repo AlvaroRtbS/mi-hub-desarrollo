@@ -801,11 +801,31 @@ type TSExerciseEnWitem = {
   defaultInstructions?: string | null;
 };
 
+type TSValor = {
+  type?: "exact" | "range" | "min" | "max" | string;
+  value?: number | string | null;
+  min?: number | string | null;
+  max?: number | string | null;
+};
+
+type TSVariable = {
+  key: string; // "reps", "weight", "time", "rest", "rir", "tempo", "distance"
+  unit?: string | null; // "kg", "s", "m", etc.
+  value?: TSValor;
+};
+
 type TSExerciseSet = {
+  // === Shape NUEVO observado en programas reales (TS 2026): ===
+  index?: number;
+  rest?: number | string | null; // descanso entre series (top-level)
+  type?: string;
+  setType?: string;
+  variables?: TSVariable[];
+
+  // === Shape LEGACY (por si algún ejercicio aún lo tiene): ===
   reps?: string | number | null;
   weight?: string | number | null;
   weightUnit?: string | null;
-  rest?: string | number | null;
   rir?: string | number | null;
   tempo?: string | null;
   notes?: string | null;
@@ -913,16 +933,90 @@ const NOMBRES_DIAS_LOCAL = [
   "Domingo",
 ];
 
+/**
+ * Formatea un TSValor con su unidad en un string legible.
+ *   { type: "exact", value: 30 }, "s"     → "30s"
+ *   { type: "exact", value: 40 }, "kg"    → "40 kg"
+ *   { type: "range", min: 8, max: 12 }    → "8-12"
+ *   { type: "min", value: 8 }, "reps"     → "≥8"
+ */
+function formatearValor(v: TSValor | undefined | null, unit?: string | null): string {
+  if (!v) return "";
+  const u = (unit ?? "").trim();
+  const sufijo = u === "kg" ? ` ${u}` : u; // peso lleva espacio, segundos/metros pegado
+  if (v.type === "range") {
+    const mn = v.min ?? "";
+    const mx = v.max ?? "";
+    if (mn === "" && mx === "") return "";
+    return `${mn}-${mx}${sufijo}`;
+  }
+  if (v.type === "min") {
+    return v.value == null ? "" : `≥${v.value}${sufijo}`;
+  }
+  if (v.type === "max") {
+    return v.value == null ? "" : `≤${v.value}${sufijo}`;
+  }
+  // "exact" o cualquier otro
+  return v.value == null ? "" : `${v.value}${sufijo}`;
+}
+
 function parseSerie(s: TSExerciseSet) {
-  const pesoNum = s.weight == null ? null : String(s.weight);
-  const unidad = (s.weightUnit ?? "kg").toString();
+  // Shape LEGACY (compatibilidad):
+  if (s.reps != null || s.weight != null) {
+    const pesoNum = s.weight == null ? null : String(s.weight);
+    const unidad = (s.weightUnit ?? "kg").toString();
+    return {
+      reps: s.reps == null ? "" : String(s.reps),
+      peso: pesoNum
+        ? `${pesoNum}${pesoNum.toLowerCase().includes("kg") ? "" : " " + unidad}`
+        : "",
+      rir: s.rir == null ? undefined : String(s.rir),
+      descanso: s.rest == null ? undefined : String(s.rest),
+      tempo: s.tempo ?? undefined,
+      notas: s.notes ?? undefined,
+    };
+  }
+
+  // Shape NUEVO: variables array
+  const vars = s.variables ?? [];
+  function getVar(key: string): { v: TSValor; unit: string } | null {
+    const found = vars.find((x) => x.key === key);
+    if (!found) return null;
+    return { v: found.value ?? {}, unit: found.unit ?? "" };
+  }
+
+  function fmtVar(key: string): string {
+    const r = getVar(key);
+    if (!r) return "";
+    return formatearValor(r.v, r.unit);
+  }
+
+  const repsFmt = fmtVar("reps");
+  const timeFmt = fmtVar("time");
+  const distFmt = fmtVar("distance");
+  const pesoFmt = fmtVar("weight");
+  const rirFmt = fmtVar("rir");
+  const tempoFmt = fmtVar("tempo");
+  const restFmt = fmtVar("rest");
+
+  // Para "esfuerzo" usamos el primero que tenga valor:
+  // reps > tiempo > distancia.
+  const esfuerzo = repsFmt || timeFmt || distFmt || "";
+
+  // Descanso: prioriza el variable "rest" sobre el top-level s.rest
+  let descanso = restFmt;
+  if (!descanso && s.rest != null) {
+    const r = String(s.rest);
+    descanso = r.match(/^\d+$/) ? `${r}s` : r;
+  }
+
   return {
-    reps: s.reps == null ? "" : String(s.reps),
-    peso: pesoNum ? `${pesoNum}${pesoNum.toLowerCase().includes("kg") ? "" : " " + unidad}` : "",
-    rir: s.rir == null ? undefined : String(s.rir),
-    descanso: s.rest == null ? undefined : String(s.rest),
-    tempo: s.tempo ?? undefined,
-    notas: s.notes ?? undefined,
+    reps: esfuerzo,
+    peso: pesoFmt,
+    rir: rirFmt || undefined,
+    descanso: descanso || undefined,
+    tempo: tempoFmt || undefined,
+    notas: undefined,
   };
 }
 
