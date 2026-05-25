@@ -66,6 +66,10 @@ export function BotonAsignar({
         return;
       }
       setAbierto(false);
+      // Llevar directamente al editor per-clienta tras asignar:
+      // es el flujo natural — recién asignado, la coach probablemente
+      // quiere personalizar el plan para esta clienta concreta.
+      router.push(`/clientas/${clientaId}/programa`);
       router.refresh();
     });
   }

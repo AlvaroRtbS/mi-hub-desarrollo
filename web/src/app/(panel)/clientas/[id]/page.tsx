@@ -257,7 +257,17 @@ export default async function ClientaPage({
               ? `${asignacionActiva.programas.num_semanas} sem`
               : "Sin asignar"
           }
-          tooltip="Programa en curso ahora mismo"
+          tooltip={
+            asignacionActiva
+              ? "Programa en curso. Click para personalizarlo para esta clienta sin afectar el original."
+              : "Aún sin programa asignado"
+          }
+          href={
+            asignacionActiva
+              ? `/clientas/${clienta.id}/programa`
+              : undefined
+          }
+          cta={asignacionActiva ? "Personalizar plan" : undefined}
         />
         <Kpi
           label="Racha"
@@ -362,11 +372,15 @@ function Kpi({
   valor,
   detalle,
   tooltip,
+  href,
+  cta,
 }: {
   label: string;
   valor: string;
   detalle?: string;
   tooltip?: string;
+  href?: string;
+  cta?: string;
 }) {
   const labelNode = (
     <div className="text-[10px] uppercase tracking-wide text-neutral-500 mb-1 inline-flex items-center gap-1">
@@ -375,8 +389,8 @@ function Kpi({
     </div>
   );
 
-  return (
-    <div className="border border-neutral-800 rounded-2xl p-4">
+  const contenido = (
+    <>
       {tooltip ? (
         <Tooltip contenido={tooltip} posicion="bottom">
           {labelNode}
@@ -390,8 +404,28 @@ function Kpi({
       {detalle && (
         <div className="text-xs text-neutral-500 mt-0.5 truncate">{detalle}</div>
       )}
-    </div>
+      {cta && href && (
+        <div
+          className="text-[11px] mt-2 inline-flex items-center gap-1 font-medium"
+          style={{ color: "var(--brand)" }}
+        >
+          {cta} →
+        </div>
+      )}
+    </>
   );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block border border-neutral-800 rounded-2xl p-4 hover:border-neutral-700 hover:bg-neutral-900/40 transition group"
+      >
+        {contenido}
+      </Link>
+    );
+  }
+  return <div className="border border-neutral-800 rounded-2xl p-4">{contenido}</div>;
 }
 
 function Mini({
