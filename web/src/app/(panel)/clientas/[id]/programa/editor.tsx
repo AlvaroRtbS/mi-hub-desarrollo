@@ -6,6 +6,7 @@ import type {
   EstructuraPrograma,
   SerieEjercicio,
   ElementoEjercicio,
+  Elemento,
 } from "@/lib/supabase/tipos";
 import { Boton } from "@/components/ui/boton";
 import { Modal } from "@/components/ui/modal";
@@ -453,13 +454,7 @@ export function EditorAsignacionCliente({
                                 }
                               />
                             ) : (
-                              <div
-                                key={el.id}
-                                className="text-xs text-neutral-500 italic px-2"
-                              >
-                                {tipoLegible(el.tipo)}
-                                {"titulo" in el ? `: ${el.titulo}` : ""}
-                              </div>
+                              <FilaNoEjercicio key={el.id} elemento={el} />
                             )
                           )}
                           <button
@@ -820,6 +815,165 @@ function tipoLegible(tipo: string): string {
     enlace: "🔗 Enlace",
   };
   return mapa[tipo] ?? tipo;
+}
+
+/**
+ * Renderiza una fila de elemento NO ejercicio (contenido, recordatorio,
+ * métrica prompt, vídeo externo, etc.) con expand/collapse para ver
+ * el contenido real (markdown, URL, etc.).
+ */
+function FilaNoEjercicio({ elemento }: { elemento: Elemento }) {
+  const [abierto, setAbierto] = useState(false);
+  const tipo = elemento.tipo;
+  const titulo = (elemento as { titulo?: string }).titulo ?? "";
+  const tieneDetalle =
+    !!(elemento as { markdown?: string }).markdown ||
+    !!(elemento as { mensaje?: string }).mensaje ||
+    !!(elemento as { url?: string }).url ||
+    !!(elemento as { descripcion?: string }).descripcion ||
+    !!(elemento as { hora?: string }).hora ||
+    !!(elemento as { metrica_tipo?: string }).metrica_tipo;
+
+  return (
+    <div className="px-2 py-1.5 bg-neutral-900/30 rounded">
+      <button
+        onClick={() => tieneDetalle && setAbierto((v) => !v)}
+        className={
+          "w-full text-left text-xs text-neutral-400 inline-flex items-center gap-1.5 " +
+          (tieneDetalle ? "cursor-pointer hover:text-white" : "cursor-default")
+        }
+      >
+        {tieneDetalle && (
+          <span className="text-neutral-600">
+            {abierto ? (
+              <ChevronUp className="size-3" />
+            ) : (
+              <ChevronDown className="size-3" />
+            )}
+          </span>
+        )}
+        <span className="italic">
+          {tipoLegible(tipo)}
+          {titulo ? `: ${titulo}` : ""}
+        </span>
+      </button>
+      {abierto && (
+        <div className="mt-2 ml-4 text-xs text-neutral-300 animate-in slide-in-from-bottom-2">
+          <DetalleElemento elemento={elemento} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetalleElemento({ elemento }: { elemento: Elemento }) {
+  const e = elemento as {
+    markdown?: string;
+    mensaje?: string;
+    hora?: string;
+    url?: string;
+    proveedor?: string;
+    descripcion?: string;
+    metrica_tipo?: string;
+    titulo?: string;
+  };
+
+  switch (elemento.tipo) {
+    case "contenido":
+      return (
+        <div className="whitespace-pre-line leading-relaxed bg-neutral-950 border border-neutral-800 rounded p-3">
+          {e.markdown || (
+            <span className="text-neutral-600 italic">Sin contenido</span>
+          )}
+        </div>
+      );
+    case "recordatorio":
+      return (
+        <div className="space-y-1">
+          {e.hora && (
+            <div>
+              <span className="text-neutral-500">Hora:</span> {e.hora}
+            </div>
+          )}
+          {e.mensaje && (
+            <div className="bg-neutral-950 border border-neutral-800 rounded p-3 whitespace-pre-line">
+              {e.mensaje}
+            </div>
+          )}
+        </div>
+      );
+    case "metrica_prompt":
+      return (
+        <div>
+          <span className="text-neutral-500">Métrica:</span>{" "}
+          {e.metrica_tipo || "(sin especificar)"}
+        </div>
+      );
+    case "video_externo":
+    case "video":
+      return (
+        <div className="space-y-2">
+          {e.url && (
+            <a
+              href={e.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-500 hover:underline break-all"
+            >
+              {e.url}
+            </a>
+          )}
+          {e.proveedor && (
+            <div className="text-neutral-500">Proveedor: {e.proveedor}</div>
+          )}
+        </div>
+      );
+    case "pdf":
+      return e.url ? (
+        <a
+          href={e.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand-500 hover:underline break-all"
+        >
+          {e.url}
+        </a>
+      ) : (
+        <span className="text-neutral-600 italic">Sin URL</span>
+      );
+    case "enlace":
+      return (
+        <div className="space-y-1">
+          {e.descripcion && (
+            <div className="text-neutral-400">{e.descripcion}</div>
+          )}
+          {e.url && (
+            <a
+              href={e.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-500 hover:underline break-all"
+            >
+              {e.url}
+            </a>
+          )}
+        </div>
+      );
+    case "foto_progreso_prompt":
+      return (
+        <div className="text-neutral-500 italic">
+          La clienta verá un botón para subir una foto de progreso en este punto.
+        </div>
+      );
+    case "pasos_prompt":
+      return (
+        <div className="text-neutral-500 italic">
+          La clienta verá un prompt para registrar sus pasos del día.
+        </div>
+      );
+    default:
+      return null;
+  }
 }
 
 function ModalAñadirEjercicio({
