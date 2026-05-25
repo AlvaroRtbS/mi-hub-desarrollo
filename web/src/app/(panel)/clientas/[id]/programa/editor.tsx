@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Pencil,
 } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { guardarSnapshotAsignacion } from "./acciones";
 import {
   sugerirProgresion,
@@ -875,15 +876,24 @@ function DetalleElemento({ elemento }: { elemento: Elemento }) {
     proveedor?: string;
     descripcion?: string;
     metrica_tipo?: string;
+    imagenes?: string[];
+    periodo?: "dia" | "semana" | "media_semanal";
+    instrucciones?: string;
+    permitir_capturas?: boolean;
     titulo?: string;
   };
 
   switch (elemento.tipo) {
     case "contenido":
       return (
-        <div className="whitespace-pre-line leading-relaxed bg-neutral-950 border border-neutral-800 rounded p-3">
-          {e.markdown || (
-            <span className="text-neutral-600 italic">Sin contenido</span>
+        <div className="space-y-2">
+          <div className="whitespace-pre-line leading-relaxed bg-neutral-950 border border-neutral-800 rounded p-3">
+            {e.markdown || (
+              <span className="text-neutral-600 italic">Sin contenido</span>
+            )}
+          </div>
+          {e.imagenes && e.imagenes.length > 0 && (
+            <ImagenesReadonly imagenes={e.imagenes} />
           )}
         </div>
       );
@@ -965,15 +975,82 @@ function DetalleElemento({ elemento }: { elemento: Elemento }) {
           La clienta verá un botón para subir una foto de progreso en este punto.
         </div>
       );
-    case "pasos_prompt":
+    case "pasos_prompt": {
+      const labelPeriodo =
+        e.periodo === "semana"
+          ? "de la semana"
+          : e.periodo === "media_semanal"
+            ? "media semanal"
+            : "del día";
       return (
-        <div className="text-neutral-500 italic">
-          La clienta verá un prompt para registrar sus pasos del día.
+        <div className="space-y-1.5">
+          <div className="text-neutral-300">
+            Pide pasos <strong>{labelPeriodo}</strong>
+            {e.permitir_capturas !== false ? " (puede adjuntar captura)" : ""}
+          </div>
+          {e.instrucciones && (
+            <div className="bg-neutral-950 border border-neutral-800 rounded p-3 whitespace-pre-line text-xs">
+              {e.instrucciones}
+            </div>
+          )}
         </div>
       );
+    }
     default:
       return null;
   }
+}
+
+/**
+ * Mini-galería read-only de imágenes adjuntas (paths en programa-adjuntos).
+ * Carga URLs firmadas en paralelo.
+ */
+function ImagenesReadonly({ imagenes }: { imagenes: string[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelado = false;
+    async function cargar() {
+      const supabase = createSupabaseBrowserClient();
+      const nuevo: Record<string, string> = {};
+      for (const path of imagenes) {
+        const { data } = await supabase.storage
+          .from("programa-adjuntos")
+          .createSignedUrl(path, 3600);
+        if (data?.signedUrl) nuevo[path] = data.signedUrl;
+      }
+      if (!cancelado) setUrls(nuevo);
+    }
+    cargar();
+    return () => {
+      cancelado = true;
+    };
+  }, [imagenes]);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {imagenes.map((path) => (
+        <a
+          key={path}
+          href={urls[path]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="size-16 rounded overflow-hidden bg-neutral-900 border border-neutral-800 hover:border-neutral-600 transition"
+        >
+          {urls[path] ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={urls[path]}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full grid place-items-center text-[10px] text-neutral-600">
+              …
+            </div>
+          )}
+        </a>
+      ))}
+    </div>
+  );
 }
 
 function ModalAñadirEjercicio({

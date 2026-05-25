@@ -106,6 +106,8 @@ export type ElementoContenido = {
   tipo: "contenido";
   titulo: string;
   markdown: string;
+  /** Imágenes/capturas adjuntas (paths en bucket programa-adjuntos). */
+  imagenes?: string[];
 };
 
 export type ElementoMetricaPrompt = {
@@ -122,6 +124,12 @@ export type ElementoFotoPrompt = {
 export type ElementoPasosPrompt = {
   id: string;
   tipo: "pasos_prompt";
+  /** Período al que se refiere el conteo. Default "dia" para compat. */
+  periodo?: "dia" | "semana" | "media_semanal";
+  /** Instrucciones libres del coach para la clienta. */
+  instrucciones?: string;
+  /** Si es true, la clienta puede adjuntar capturas/fotos al rellenar. */
+  permitir_capturas?: boolean;
 };
 
 export type ElementoRecordatorio = {

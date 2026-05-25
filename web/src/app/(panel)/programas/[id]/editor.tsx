@@ -40,6 +40,7 @@ import type {
 } from "@/lib/supabase/tipos";
 import { NOMBRES_DIAS, detectarProveedorVideo } from "@/lib/supabase/tipos";
 import { SubirArchivo } from "@/components/ui/subir-archivo";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SortableWrapper } from "./sortable-wrapper";
 import { SelectorEjercicios } from "./selector-ejercicios";
 import { ModalAsignar } from "./modal-asignar";
@@ -424,7 +425,13 @@ export function EditorPrograma({
       let nuevo: Elemento;
       switch (tipo) {
         case "contenido":
-          nuevo = { id: uuid(), tipo: "contenido", titulo: "Nota", markdown: "" };
+          nuevo = {
+            id: uuid(),
+            tipo: "contenido",
+            titulo: "Nota",
+            markdown: "",
+            imagenes: [],
+          };
           break;
         case "metrica_prompt":
           nuevo = { id: uuid(), tipo: "metrica_prompt", metrica_tipo: "peso" };
@@ -433,7 +440,14 @@ export function EditorPrograma({
           nuevo = { id: uuid(), tipo: "foto_progreso_prompt" };
           break;
         case "pasos_prompt":
-          nuevo = { id: uuid(), tipo: "pasos_prompt" };
+          nuevo = {
+            id: uuid(),
+            tipo: "pasos_prompt",
+            periodo: "media_semanal",
+            instrucciones:
+              "Sube una captura de tu app de pasos con la media semanal.",
+            permitir_capturas: true,
+          };
           break;
         case "recordatorio":
           nuevo = { id: uuid(), tipo: "recordatorio", hora: "20:00", mensaje: "" };
@@ -1257,7 +1271,7 @@ function VistaBloque({
                       ["enlace", "🔗 Enlace externo"],
                       ["metrica_prompt", "⚖️ Pedir métrica"],
                       ["foto_progreso_prompt", "📸 Pedir foto"],
-                      ["pasos_prompt", "👣 Pedir pasos del día"],
+                      ["pasos_prompt", "👣 Pedir pasos (con captura)"],
                       ["recordatorio", "🔔 Recordatorio"],
                     ] as const
                   ).map(([tipo, label]) => (
@@ -1396,7 +1410,7 @@ function VistaElemento({
           )}
 
           {elemento.tipo === "contenido" && (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="text-xs text-neutral-500">📝 Nota / contenido</div>
               <input
                 value={elemento.titulo}
@@ -1410,6 +1424,12 @@ function VistaElemento({
                 placeholder="Texto que verá la clienta..."
                 rows={3}
                 className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500 resize-y"
+              />
+              <ImagenesAdjuntas
+                coachId={coachId}
+                elementoId={elemento.id}
+                imagenes={elemento.imagenes ?? []}
+                onActualizar={(nuevas) => onActualizar({ imagenes: nuevas })}
               />
             </div>
           )}
@@ -1439,8 +1459,49 @@ function VistaElemento({
           )}
 
           {elemento.tipo === "pasos_prompt" && (
-            <div className="text-sm text-neutral-300">
-              👣 Solicitar pasos del día
+            <div className="space-y-2">
+              <div className="text-xs text-neutral-500">👣 Pedir pasos</div>
+              <label className="block">
+                <span className="block text-[11px] text-neutral-500 mb-0.5">
+                  Período
+                </span>
+                <select
+                  value={elemento.periodo ?? "dia"}
+                  onChange={(e) =>
+                    onActualizar({
+                      periodo: e.target.value as
+                        | "dia"
+                        | "semana"
+                        | "media_semanal",
+                    })
+                  }
+                  className="bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+                >
+                  <option value="dia">Del día</option>
+                  <option value="semana">De la semana (total)</option>
+                  <option value="media_semanal">Media semanal</option>
+                </select>
+              </label>
+              <textarea
+                value={elemento.instrucciones ?? ""}
+                onChange={(e) =>
+                  onActualizar({ instrucciones: e.target.value })
+                }
+                placeholder="Instrucciones para la clienta (ej: sube una captura de la app)"
+                rows={2}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500 resize-y"
+              />
+              <label className="inline-flex items-center gap-2 text-xs text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={elemento.permitir_capturas !== false}
+                  onChange={(e) =>
+                    onActualizar({ permitir_capturas: e.target.checked })
+                  }
+                  className="accent-brand-500"
+                />
+                Permitir que la clienta adjunte captura(s) al rellenar
+              </label>
             </div>
           )}
 
@@ -1750,5 +1811,145 @@ function BotonPropagar({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Componente reutilizable: subir múltiples imágenes adjuntas a un elemento
+ * del programa. Guarda los paths en bucket "programa-adjuntos".
+ * Muestra thumbnails con botón de quitar y un botón "+ Imagen" para añadir.
+ */
+function ImagenesAdjuntas({
+  coachId,
+  elementoId,
+  imagenes,
+  onActualizar,
+}: {
+  coachId: string;
+  elementoId: string;
+  imagenes: string[];
+  onActualizar: (nuevas: string[]) => void;
+}) {
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const refInput = useRef<HTMLInputElement>(null);
+
+  // Cargar URLs firmadas para las thumbnails (caduca en 1h)
+  useEffect(() => {
+    let cancelado = false;
+    async function cargar() {
+      if (imagenes.length === 0) {
+        setUrls({});
+        return;
+      }
+      const supabase = createSupabaseBrowserClient();
+      const nuevo: Record<string, string> = {};
+      for (const path of imagenes) {
+        const { data } = await supabase.storage
+          .from("programa-adjuntos")
+          .createSignedUrl(path, 3600);
+        if (data?.signedUrl) nuevo[path] = data.signedUrl;
+      }
+      if (!cancelado) setUrls(nuevo);
+    }
+    cargar();
+    return () => {
+      cancelado = true;
+    };
+  }, [imagenes]);
+
+  async function alSeleccionar(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivos = Array.from(e.target.files ?? []);
+    if (archivos.length === 0) return;
+    setSubiendo(true);
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const nuevasRutas: string[] = [];
+      for (const archivo of archivos) {
+        const ext = archivo.name.split(".").pop() ?? "jpg";
+        const ruta = `${coachId}/img-${elementoId}-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 6)}.${ext}`;
+        const { error: errSubida } = await supabase.storage
+          .from("programa-adjuntos")
+          .upload(ruta, archivo, { cacheControl: "3600", upsert: false });
+        if (errSubida) {
+          setError(errSubida.message);
+          continue;
+        }
+        nuevasRutas.push(ruta);
+      }
+      onActualizar([...imagenes, ...nuevasRutas]);
+    } finally {
+      setSubiendo(false);
+      if (refInput.current) refInput.current.value = "";
+    }
+  }
+
+  function quitar(path: string) {
+    onActualizar(imagenes.filter((p) => p !== path));
+  }
+
+  return (
+    <div className="pt-1">
+      <div className="text-[11px] text-neutral-500 mb-1.5">
+        Imágenes adjuntas{" "}
+        <span className="text-neutral-600">({imagenes.length})</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {imagenes.map((path) => (
+          <div
+            key={path}
+            className="relative size-16 rounded overflow-hidden bg-neutral-900 border border-neutral-800 group"
+          >
+            {urls[path] ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={urls[path]}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full grid place-items-center text-[10px] text-neutral-600">
+                …
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => quitar(path)}
+              className="absolute top-0 right-0 size-5 grid place-items-center bg-black/80 text-white text-xs opacity-0 group-hover:opacity-100 transition"
+              aria-label="Quitar imagen"
+              title="Quitar imagen"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <label
+          className={
+            "size-16 rounded border border-dashed grid place-items-center text-xs cursor-pointer transition " +
+            (subiendo
+              ? "border-neutral-700 text-neutral-600"
+              : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white")
+          }
+        >
+          {subiendo ? "…" : "+ Imagen"}
+          <input
+            ref={refInput}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="hidden"
+            disabled={subiendo}
+            onChange={alSeleccionar}
+          />
+        </label>
+      </div>
+      {error && (
+        <div className="text-[11px] text-red-400 mt-1.5">{error}</div>
+      )}
+    </div>
   );
 }
