@@ -7,6 +7,7 @@ import { LOGROS, calcularNivel, xpTotal as calcularXpTotal, type TipoLogro } fro
 import { calcularAdherencia, diasProgramadosDeAsignacion } from "@/lib/adherencia";
 import { BotonCompletarSesion } from "./boton-completar";
 import { RegistroEjercicio } from "./registro-ejercicio";
+import { RegistroPasos } from "./registro-pasos";
 
 type SerieRealizada = {
   peso: string;
@@ -528,7 +529,26 @@ function BloqueClienta({
               <div className="flex-1 text-neutral-300">📸 Sube una foto de progreso</div>
             )}
             {el.tipo === "pasos_prompt" && (
-              <div className="flex-1 text-neutral-300">👣 Registra tus pasos del día</div>
+              <div className="flex-1">
+                <RegistroPasos
+                  clientaId={clientaId}
+                  fecha={fecha}
+                  semana={semana}
+                  dia={dia}
+                  elementoId={el.id}
+                  periodo={el.periodo}
+                  instrucciones={el.instrucciones}
+                  permitirCapturas={el.permitir_capturas !== false}
+                  pasosIniciales={
+                    (registros[el.id] as { pasos?: number | null } | undefined)
+                      ?.pasos ?? null
+                  }
+                  capturasIniciales={
+                    (registros[el.id] as { capturas?: string[] } | undefined)
+                      ?.capturas ?? []
+                  }
+                />
+              </div>
             )}
             {el.tipo === "recordatorio" && (
               <div className="flex-1 text-neutral-300">

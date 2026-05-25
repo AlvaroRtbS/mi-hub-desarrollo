@@ -12,6 +12,10 @@ type SerieRealizada = {
 
 type RegistroElemento = {
   series_realizadas?: SerieRealizada[];
+  /** Para elementos tipo pasos_prompt: número de pasos registrados. */
+  pasos?: number | null;
+  /** Para elementos tipo pasos_prompt: paths de capturas subidas por la clienta. */
+  capturas?: string[];
 };
 
 type RegistrosSesion = Record<string, RegistroElemento>;
@@ -133,6 +137,66 @@ export async function guardarRegistroSerie(input: {
     })
     .eq("id", sesionId);
   if (errUpd) return { ok: false, error: errUpd.message };
+
+  revalidatePath("/c/hoy");
+  return { ok: true };
+}
+
+/**
+ * Guarda la respuesta a un pasos_prompt: número de pasos y/o capturas
+ * adjuntas. Si la sesión del día no existe, la crea.
+ */
+export async function guardarRegistroPasos(input: {
+  clientaId: string;
+  fecha: string;
+  semana: number;
+  dia: number;
+  elementoId: string;
+  pasos: number | null;
+  capturas: string[];
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: clienta, error: errCl } = await supabase
+    .from("clientas")
+    .select("id, coach_id")
+    .eq("id", input.clientaId)
+    .maybeSingle<{ id: string; coach_id: string }>();
+  if (errCl || !clienta) {
+    return { ok: false, error: errCl?.message ?? "Clienta no encontrada." };
+  }
+
+  const { data: existente } = await supabase
+    .from("sesiones")
+    .select("id, registros")
+    .eq("clienta_id", input.clientaId)
+    .eq("fecha", input.fecha)
+    .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
+
+  const registros: RegistrosSesion = existente?.registros ?? {};
+  const elementoReg = registros[input.elementoId] ?? {};
+  registros[input.elementoId] = {
+    ...elementoReg,
+    pasos: input.pasos,
+    capturas: input.capturas,
+  };
+
+  if (!existente) {
+    const { error: errIns } = await supabase.from("sesiones").insert({
+      coach_id: clienta.coach_id,
+      clienta_id: input.clientaId,
+      fecha: input.fecha,
+      semana: input.semana,
+      dia: input.dia,
+      registros,
+    });
+    if (errIns) return { ok: false, error: errIns.message };
+  } else {
+    const { error: errUpd } = await supabase
+      .from("sesiones")
+      .update({ registros })
+      .eq("id", existente.id);
+    if (errUpd) return { ok: false, error: errUpd.message };
+  }
 
   revalidatePath("/c/hoy");
   return { ok: true };

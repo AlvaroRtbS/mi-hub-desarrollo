@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { inicialesNombre } from "@/lib/utilidades";
+import { BotonVistaClienta } from "@/components/boton-vista-clienta";
 import { Conversacion } from "./conversacion";
 
 type Mensaje = {
@@ -22,7 +23,7 @@ export default async function ConversacionPage({
 
   const { data: clienta } = await supabase
     .from("clientas")
-    .select("id, nombre, apellidos, email, estado")
+    .select("id, nombre, apellidos, email, estado, user_id")
     .eq("id", clientaId)
     .maybeSingle();
 
@@ -77,6 +78,10 @@ export default async function ConversacionPage({
         clientaNombre={clienta.nombre}
         mensajesIniciales={mensajes}
         datosPlantilla={datosPlantilla}
+      />
+      <BotonVistaClienta
+        clientaId={clienta.id as string}
+        yaEnlazada={!!(clienta as { user_id?: string | null }).user_id}
       />
     </div>
   );
