@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   Home,
   ClipboardList,
+  Apple,
   Ruler,
   Camera,
   MessageCircle,
@@ -14,6 +15,7 @@ import { TourBienvenida } from "./tour-bienvenida";
 const TABS = [
   { href: "/c/hoy", Icon: Home, label: "Hoy" },
   { href: "/c/programa", Icon: ClipboardList, label: "Programa" },
+  { href: "/c/nutricion", Icon: Apple, label: "Dieta" },
   { href: "/c/metricas", Icon: Ruler, label: "Medidas" },
   { href: "/c/fotos", Icon: Camera, label: "Fotos" },
   { href: "/c/mensajes", Icon: MessageCircle, label: "Chat" },
