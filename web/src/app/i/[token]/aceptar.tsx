@@ -4,6 +4,35 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
+// Traduce los errores técnicos de Supabase Auth a algo que la clienta entienda.
+function traducirError(msg: string): string {
+  const m = (msg || "").toLowerCase();
+  if (m.includes("weak password") || m.includes("at least") || m.includes("should be"))
+    return "La contraseña es demasiado débil. Usa al menos 8 caracteres.";
+  if (m.includes("already registered") || m.includes("exists") || m.includes("registered"))
+    return "Este email ya tiene una cuenta.";
+  if (m.includes("invalid login") || m.includes("credentials"))
+    return "Email o contraseña incorrectos.";
+  if (m.includes("network") || m.includes("fetch") || m.includes("failed to"))
+    return "Problema de conexión. Inténtalo de nuevo.";
+  return "Algo no ha ido bien. Inténtalo otra vez o avisa a tu entrenadora.";
+}
+
+function traducirMotivo(motivo: string | null): string {
+  switch (motivo) {
+    case "no_autenticada":
+      return "Tu sesión no se inició bien. Cierra esta página y vuelve a abrir el enlace.";
+    case "token_no_encontrado":
+      return "El enlace de invitación no es válido.";
+    case "ya_usada":
+      return "Esta invitación ya se usó. Entra desde la pantalla de inicio.";
+    case "expirada":
+      return "La invitación ha caducado. Pídele a tu entrenadora un enlace nuevo.";
+    default:
+      return "No se pudo activar la cuenta. Avisa a tu entrenadora.";
+  }
+}
+
 export function AceptarInvitacion({
   token,
   email,
@@ -35,8 +64,8 @@ export function AceptarInvitacion({
     setEnviando(true);
     const supabase = createSupabaseBrowserClient();
 
-    // 1. Intentar signup (puede fallar si el email ya existe en auth)
-    const { error: errSignup } = await supabase.auth.signUp({
+    // 1. Intentar registro. Guardamos si quedó sesión iniciada.
+    const { data: signUpData, error: errSignup } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -44,29 +73,38 @@ export function AceptarInvitacion({
       },
     });
 
+    let haySesion = !!signUpData?.session;
+
     // Si el email ya existe, intentar login con la contraseña que acaba de poner
-    // (caso: la clienta usó tu app antes con esta misma cuenta, o se equivocó)
+    // (caso: la clienta usó la app antes con esta cuenta, o se equivocó).
     if (errSignup) {
-      if (
-        errSignup.message.toLowerCase().includes("registered") ||
-        errSignup.message.toLowerCase().includes("exists")
-      ) {
-        const { error: errLogin } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const m = errSignup.message.toLowerCase();
+      if (m.includes("registered") || m.includes("exists")) {
+        const { data: loginData, error: errLogin } =
+          await supabase.auth.signInWithPassword({ email, password });
         if (errLogin) {
           setError(
-            "Este email ya tiene una cuenta en la app. Si es tuya, prueba a entrar directamente desde la pantalla de login. Si olvidaste la contraseña, pide ayuda a tu entrenadora."
+            "Este email ya tiene una cuenta. Si es tuya, entra desde la pantalla de inicio; si olvidaste la contraseña, pídele a tu entrenadora un enlace nuevo."
           );
           setEnviando(false);
           return;
         }
+        haySesion = !!loginData?.session;
       } else {
-        setError(errSignup.message);
+        setError(traducirError(errSignup.message));
         setEnviando(false);
         return;
       }
+    }
+
+    // Si NO quedó sesión iniciada, es que Supabase exige confirmar el email
+    // antes de entrar. Avisamos con claridad en vez de fallar en silencio.
+    if (!haySesion) {
+      setError(
+        "Te hemos enviado un correo para confirmar tu cuenta. Ábrelo, confirma, y luego entra desde la pantalla de inicio. (Si no lo ves, revisa la carpeta de spam.)"
+      );
+      setEnviando(false);
+      return;
     }
 
     // 2. Canjear la invitación: enlaza auth.user con clientas.user_id
@@ -75,14 +113,14 @@ export function AceptarInvitacion({
     });
 
     if (errCanje) {
-      setError(`Error al activar la cuenta: ${errCanje.message}`);
+      setError("No se pudo activar tu cuenta: " + traducirError(errCanje.message));
       setEnviando(false);
       return;
     }
 
     const r = (data as Array<{ ok: boolean; motivo: string | null }>)[0];
     if (!r?.ok) {
-      setError(`No se pudo activar la cuenta (${r?.motivo ?? "desconocido"}).`);
+      setError(traducirMotivo(r?.motivo ?? null));
       setEnviando(false);
       return;
     }
