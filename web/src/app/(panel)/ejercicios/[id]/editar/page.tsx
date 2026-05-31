@@ -25,7 +25,8 @@ export default async function EditarEjercicioPage({
     .from("coaches")
     .select("id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
+  if (!coach) redirect("/login");
 
   const { data: ejercicio } = await supabase
     .from("ejercicios")

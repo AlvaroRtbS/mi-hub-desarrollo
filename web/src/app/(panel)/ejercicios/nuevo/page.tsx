@@ -14,7 +14,8 @@ export default async function NuevoEjercicioPage() {
     .from("coaches")
     .select("id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
+  if (!coach) redirect("/login");
 
   return (
     <div className="p-8 max-w-3xl">
@@ -23,7 +24,7 @@ export default async function NuevoEjercicioPage() {
         Crea un ejercicio para tu biblioteca personal.
       </p>
       <FormularioEjercicio
-        coachId={coach!.id}
+        coachId={coach.id}
         accion={crearEjercicio}
         textoBoton="Crear ejercicio"
       />
