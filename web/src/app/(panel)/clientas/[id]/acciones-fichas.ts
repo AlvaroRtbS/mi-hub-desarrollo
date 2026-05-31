@@ -2,22 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { TipoFicha } from "./fichas-tipos";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
-
-export const TIPOS_FICHA = [
-  { id: "anamnesis", label: "Anamnesis", emoji: "🧬" },
-  { id: "lesiones", label: "Lesiones / limitaciones", emoji: "🩹" },
-  {
-    id: "preferencias_alimentarias",
-    label: "Preferencias alimentarias",
-    emoji: "🥗",
-  },
-  { id: "historial_deportivo", label: "Historial deportivo", emoji: "🏃" },
-  { id: "disponibilidad", label: "Disponibilidad", emoji: "📅" },
-] as const;
-
-export type TipoFicha = (typeof TIPOS_FICHA)[number]["id"];
 
 async function obtenerCoachId(): Promise<string | null> {
   const supabase = await createSupabaseServerClient();

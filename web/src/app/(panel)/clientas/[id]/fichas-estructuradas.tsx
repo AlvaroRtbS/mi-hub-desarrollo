@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
-import { guardarFicha, TIPOS_FICHA, type TipoFicha } from "./acciones-fichas";
+import { guardarFicha } from "./acciones-fichas";
+import { TIPOS_FICHA, type TipoFicha } from "./fichas-tipos";
 
 type Ficha = {
   tipo: TipoFicha;

@@ -28,7 +28,7 @@ import { TabsNav, type TabClienta } from "./tabs-nav";
 import { FichasEstructuradas } from "./fichas-estructuradas";
 import { TodosClienta } from "./todos-clienta";
 import { PestanaActividad } from "./pestana-actividad";
-import type { TipoFicha } from "./acciones-fichas";
+import type { TipoFicha } from "./fichas-tipos";
 import { Tooltip } from "@/components/ui/tooltip";
 
 type AsignacionResumen = {
