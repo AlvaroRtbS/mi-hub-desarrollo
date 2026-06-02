@@ -37,10 +37,12 @@ function diaProgramaPara(
 ): { semana: number; dia: number; def: Dia } | null {
   const offset = diasEntre(asignacion.fecha_inicio, fecha);
   if (offset < 0) return null;
+  const est = asignacion.estructura_snapshot;
+  if (!Array.isArray(est)) return null;
   const semanaIdx = Math.floor(offset / 7);
   const diaIdx = offset % 7;
-  const semana = asignacion.estructura_snapshot[semanaIdx];
-  const def = semana?.dias[diaIdx];
+  const semana = est[semanaIdx];
+  const def = semana?.dias?.[diaIdx];
   if (!def) return null;
   return { semana: semanaIdx + 1, dia: diaIdx + 1, def };
 }

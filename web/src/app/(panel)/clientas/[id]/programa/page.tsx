@@ -77,18 +77,18 @@ export default async function ProgramaClientaPage({
   const idsModificados = new Set<string>();
   const ejerciciosBaseById = new Map<string, unknown>();
   for (const sem of estructuraBase) {
-    for (const dia of sem.dias) {
-      for (const bloque of dia.bloques) {
-        for (const el of bloque.elementos) {
+    for (const dia of sem.dias ?? []) {
+      for (const bloque of dia.bloques ?? []) {
+        for (const el of bloque.elementos ?? []) {
           ejerciciosBaseById.set(el.id, el);
         }
       }
     }
   }
   for (const sem of asign.estructura_snapshot ?? []) {
-    for (const dia of sem.dias) {
-      for (const bloque of dia.bloques) {
-        for (const el of bloque.elementos) {
+    for (const dia of sem.dias ?? []) {
+      for (const bloque of dia.bloques ?? []) {
+        for (const el of bloque.elementos ?? []) {
           const base = ejerciciosBaseById.get(el.id);
           if (!base) {
             // No está en el base → fue añadido por la coach
@@ -119,9 +119,9 @@ export default async function ProgramaClientaPage({
   // Recopilar todos los ejercicio_id presentes en la estructura
   const ejercicioIds = new Set<string>();
   for (const sem of asign.estructura_snapshot ?? []) {
-    for (const dia of sem.dias) {
-      for (const bloque of dia.bloques) {
-        for (const el of bloque.elementos) {
+    for (const dia of sem.dias ?? []) {
+      for (const bloque of dia.bloques ?? []) {
+        for (const el of bloque.elementos ?? []) {
           if (el.tipo === "ejercicio") ejercicioIds.add(el.ejercicio_id);
         }
       }

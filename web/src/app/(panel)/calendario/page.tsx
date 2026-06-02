@@ -89,7 +89,8 @@ function calcularTramo(
   const offset = diasEntre(fechaInicio, fechaActual);
   if (offset < 0) return { estado: "no_empezado", faltan: -offset };
 
-  const totalSemanas = estructura.length;
+  const semanas = Array.isArray(estructura) ? estructura : [];
+  const totalSemanas = semanas.length;
   const semanaIdx = Math.floor(offset / 7);
   const diaIdx = offset % 7;
 
@@ -97,8 +98,8 @@ function calcularTramo(
     const finReal = fechaFin ?? sumarDias(fechaInicio, totalSemanas * 7 - 1);
     return { estado: "finalizado", haceDias: diasEntre(finReal, fechaActual) };
   }
-  const semana = estructura[semanaIdx];
-  const dia = semana?.dias[diaIdx];
+  const semana = semanas[semanaIdx];
+  const dia = semana?.dias?.[diaIdx];
   if (!dia) return { estado: "finalizado", haceDias: 0 };
 
   return { estado: "activo", semana: semanaIdx + 1, dia: diaIdx + 1, def: dia };
