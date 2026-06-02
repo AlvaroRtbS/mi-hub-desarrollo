@@ -19,9 +19,15 @@
 - S3: Pulir Inicio (KPIs reales) + bugs menores.
 - Revisión ✅
 
-> **Pendiente para próximas sesiones (de la revisión estática del flujo, no urgente):**
-> - Defensa en profundidad: repetir el filtro `.eq("coach_id", ...)` en los `update`/`delete` de clientas/programas/ejercicios/asignaciones (hoy se confía solo en RLS, que SÍ protege). Barrido limpio.
-> - Menores: escapar caracteres especiales en la búsqueda de clientas (`.or` ilike); limpiar archivos huérfanos en Storage al cambiar/quitar vídeos; validar formato de fecha/teléfono en servidor.
+> **Barrido de robustez/seguridad ✅ (2-jun, sesión nocturna):**
+> - Defensa en profundidad: `.eq("coach_id", ...)` añadido a todos los `update`/`delete` de clientas, ejercicios, programas y snapshot de asignaciones (RLS ya protegía; esto es belt-and-suspenders).
+> - `eliminarEjercicio` y `eliminarPrograma` dejan de tragar el error (eran `void`) → devuelven `ResultadoAccion` y los llamadores lo muestran.
+> - Validación server-side: formato de fecha en `asignarPrograma` y `fecha_nacimiento`; teléfono.
+> - Búsqueda de clientas saneada antes del `.or(...ilike)`.
+> - Subida: validación de tamaño por bucket en cliente (15/25/150 MB).
+>
+> **Pendiente (no urgente):**
+> - Limpiar archivos huérfanos en Storage al cambiar/quitar vídeos (NO hecho a propósito: borrar objetos sin supervisión es arriesgado; lo vemos juntos).
 
 ### Bloque 2 — Portal de la clienta + chat
 - S1: Activar login de clientas + RLS de clienta.
