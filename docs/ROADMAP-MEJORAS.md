@@ -9,10 +9,19 @@
 ## Bloques
 
 ### Bloque 1 — Cimientos
-- S1: Conectar entorno local a Supabase (env vars), `npm install`, arrancar app, build OK, rama de trabajo. Verificar deploy Vercel.
-- S2: Recorrer flujo core (login → clienta → ejercicio → programa → asignar), anotar y arreglar bugs bloqueantes.
+- S1 ✅ (2-jun): entorno local conectado a Supabase, `npm install`, app arranca, typecheck + build OK. Rama de trabajo `roadmap-mejoras`. *(Verificar deploy Vercel: pendiente de confirmar en el dashboard.)*
+- S2 ✅ (2-jun): recorrido del flujo core (login → clienta → programa → asignar) verificado en vivo. Bugs bloqueantes arreglados:
+  - `fecha_fin` de asignación se calculaba mezclando UTC y hora local → desfase ±1 día en Vercel. Corregido a UTC.
+  - "Cambiar programa" ahora **reemplaza** (desactiva la asignación activa previa): una clienta = un programa activo.
+  - `inicio`: guard de sesión (evita crash 500 con sesión expirada).
+  - `eliminarClienta`: ya no traga el error de Supabase (no más "borrada" en falso).
+  - Verificado contra la BD real: 1 sola asignación activa tras reasignar y fecha correcta.
 - S3: Pulir Inicio (KPIs reales) + bugs menores.
 - Revisión ✅
+
+> **Pendiente para próximas sesiones (de la revisión estática del flujo, no urgente):**
+> - Defensa en profundidad: repetir el filtro `.eq("coach_id", ...)` en los `update`/`delete` de clientas/programas/ejercicios/asignaciones (hoy se confía solo en RLS, que SÍ protege). Barrido limpio.
+> - Menores: escapar caracteres especiales en la búsqueda de clientas (`.or` ilike); limpiar archivos huérfanos en Storage al cambiar/quitar vídeos; validar formato de fecha/teléfono en servidor.
 
 ### Bloque 2 — Portal de la clienta + chat
 - S1: Activar login de clientas + RLS de clienta.
