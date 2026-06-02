@@ -12,6 +12,18 @@ function validarEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function validarTelefono(tel: string): boolean {
+  // Dígitos, espacios y los símbolos habituales (+ - ( )), entre 6 y 20 chars.
+  return /^[+0-9()\s-]{6,20}$/.test(tel);
+}
+
+function fechaISOValida(iso: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const d = new Date(iso + "T00:00:00Z");
+  // Rechaza fechas imposibles (p. ej. 2026-02-31 que "rueda" a marzo).
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso;
+}
+
 async function obtenerCoachId(): Promise<string | null> {
   const supabase = await createSupabaseServerClient();
   const {
@@ -40,6 +52,8 @@ export async function crearClienta(formData: FormData): Promise<ResultadoAccion>
 
   if (!nombre) return { ok: false, error: "El nombre es obligatorio." };
   if (!validarEmail(email)) return { ok: false, error: "El email no es válido." };
+  if (telefono && !validarTelefono(telefono))
+    return { ok: false, error: "El teléfono no es válido." };
 
   const { data, error } = await supabase
     .from("clientas")
@@ -71,6 +85,8 @@ export async function actualizarClienta(
   formData: FormData
 ): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   const apellidos = String(formData.get("apellidos") ?? "").trim() || null;
@@ -81,6 +97,14 @@ export async function actualizarClienta(
 
   if (!nombre) return { ok: false, error: "El nombre es obligatorio." };
   if (!validarEmail(email)) return { ok: false, error: "El email no es válido." };
+  if (telefono && !validarTelefono(telefono))
+    return { ok: false, error: "El teléfono no es válido." };
+  if (
+    fechaNacimiento &&
+    (!fechaISOValida(fechaNacimiento) ||
+      new Date(fechaNacimiento + "T00:00:00Z") > new Date())
+  )
+    return { ok: false, error: "La fecha de nacimiento no es válida." };
 
   const { error } = await supabase
     .from("clientas")
@@ -92,7 +116,8 @@ export async function actualizarClienta(
       fecha_nacimiento: fechaNacimiento,
       notas_publicas: notas,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("coach_id", coachId);
 
   if (error) {
     if (error.code === "23505") {
@@ -111,7 +136,14 @@ export async function cambiarEstadoClienta(
   estado: "activa" | "archivada" | "invitada"
 ): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("clientas").update({ estado }).eq("id", id);
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+
+  const { error } = await supabase
+    .from("clientas")
+    .update({ estado })
+    .eq("id", id)
+    .eq("coach_id", coachId);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/clientas");
@@ -121,7 +153,14 @@ export async function cambiarEstadoClienta(
 
 export async function eliminarClienta(id: string): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("clientas").delete().eq("id", id);
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+
+  const { error } = await supabase
+    .from("clientas")
+    .delete()
+    .eq("id", id)
+    .eq("coach_id", coachId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/clientas");
   redirect("/clientas");

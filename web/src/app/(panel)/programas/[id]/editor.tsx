@@ -581,7 +581,9 @@ export function EditorPrograma({
   const eliminar = () => {
     if (!confirm("¿Eliminar este programa? No se puede deshacer.")) return;
     startTransition(async () => {
-      await eliminarPrograma(programaId);
+      const r = await eliminarPrograma(programaId);
+      // En caso de éxito la acción redirige; si vuelve con error, mostrarlo.
+      if (r && !r.ok) setMensaje({ tipo: "error", texto: r.error });
     });
   };
 

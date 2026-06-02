@@ -103,6 +103,9 @@ export async function actualizarMetadatosPrograma(
   formData: FormData
 ): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+
   const nombre = String(formData.get("nombre") ?? "").trim();
   const descripcion = String(formData.get("descripcion") ?? "").trim() || null;
 
@@ -111,7 +114,8 @@ export async function actualizarMetadatosPrograma(
   const { error } = await supabase
     .from("programas")
     .update({ nombre, descripcion })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("coach_id", coachId);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/programas");
@@ -124,6 +128,8 @@ export async function guardarEstructura(
   estructura: EstructuraPrograma
 ): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
 
   // Sincroniza num_semanas con la longitud real.
   const numSemanas = Math.max(1, estructura.length);
@@ -131,7 +137,8 @@ export async function guardarEstructura(
   const { error } = await supabase
     .from("programas")
     .update({ estructura, num_semanas: numSemanas })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("coach_id", coachId);
 
   if (error) return { ok: false, error: error.message };
 
@@ -231,9 +238,17 @@ export async function duplicarPrograma(id: string): Promise<ResultadoAccion> {
   return { ok: true, id: data.id };
 }
 
-export async function eliminarPrograma(id: string): Promise<void> {
+export async function eliminarPrograma(id: string): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
-  await supabase.from("programas").delete().eq("id", id);
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+
+  const { error } = await supabase
+    .from("programas")
+    .delete()
+    .eq("id", id)
+    .eq("coach_id", coachId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/programas");
   redirect("/programas");
 }
@@ -252,6 +267,9 @@ export async function asignarPrograma(formData: FormData): Promise<ResultadoAcci
 
   if (!programaId || !clientaId || !fechaInicio) {
     return { ok: false, error: "Faltan datos (programa, clienta o fecha de inicio)." };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaInicio)) {
+    return { ok: false, error: "La fecha de inicio no es válida." };
   }
 
   const { data: prog, error: errProg } = await supabase

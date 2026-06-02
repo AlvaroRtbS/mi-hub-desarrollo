@@ -4,13 +4,25 @@ import { useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Boton } from "@/components/ui/boton";
 
+type Bucket =
+  | "ejercicios-videos"
+  | "ejercicios-imagenes"
+  | "fotos-progreso"
+  | "nutricion-pdfs"
+  | "programa-adjuntos";
+
+// Límite de tamaño (MB) por bucket. Validación en cliente para dar feedback
+// inmediato; el límite real del bucket en Supabase es la última barrera.
+const LIMITES_MB: Record<Bucket, number> = {
+  "ejercicios-videos": 150,
+  "programa-adjuntos": 150,
+  "ejercicios-imagenes": 15,
+  "fotos-progreso": 15,
+  "nutricion-pdfs": 25,
+};
+
 type Props = {
-  bucket:
-    | "ejercicios-videos"
-    | "ejercicios-imagenes"
-    | "fotos-progreso"
-    | "nutricion-pdfs"
-    | "programa-adjuntos";
+  bucket: Bucket;
   accept: string;
   coachId: string;
   /** Nombre del input hidden que llevará la ruta resultante en el form */
@@ -40,6 +52,13 @@ export function SubirArchivo({
   async function alSeleccionar(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
+
+    const limiteMb = LIMITES_MB[bucket] ?? 50;
+    if (archivo.size > limiteMb * 1024 * 1024) {
+      setError(`El archivo supera el límite de ${limiteMb} MB.`);
+      if (refInput.current) refInput.current.value = "";
+      return;
+    }
 
     setSubiendo(true);
     setError(null);

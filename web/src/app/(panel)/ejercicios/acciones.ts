@@ -79,7 +79,14 @@ export async function actualizarEjercicio(
   if ("error" in datos) return { ok: false, error: datos.error };
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("ejercicios").update(datos).eq("id", id);
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+
+  const { error } = await supabase
+    .from("ejercicios")
+    .update(datos)
+    .eq("id", id)
+    .eq("coach_id", coachId);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/ejercicios");
@@ -87,9 +94,17 @@ export async function actualizarEjercicio(
   return { ok: true, id };
 }
 
-export async function eliminarEjercicio(id: string): Promise<void> {
+export async function eliminarEjercicio(id: string): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
-  await supabase.from("ejercicios").delete().eq("id", id);
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+
+  const { error } = await supabase
+    .from("ejercicios")
+    .delete()
+    .eq("id", id)
+    .eq("coach_id", coachId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/ejercicios");
   redirect("/ejercicios");
 }

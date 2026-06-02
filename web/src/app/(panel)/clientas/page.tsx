@@ -34,7 +34,13 @@ export default async function ClientasPage({
     .order("nombre");
 
   if (filtro !== "todas") query = query.eq("estado", filtro);
-  if (q) query = query.or(`nombre.ilike.%${q}%,apellidos.ilike.%${q}%,email.ilike.%${q}%`);
+  // Sanea q: comas, paréntesis, comodines y barras romperían/alterarían el
+  // filtro PostgREST `.or(...)`. Se eliminan antes de construirlo.
+  const qSafe = q.replace(/[%,()*\\]/g, "").trim();
+  if (qSafe)
+    query = query.or(
+      `nombre.ilike.%${qSafe}%,apellidos.ilike.%${qSafe}%,email.ilike.%${qSafe}%`
+    );
 
   const { data: clientasData, error } = await query;
   const clientas = (clientasData ?? []) as unknown as Array<
