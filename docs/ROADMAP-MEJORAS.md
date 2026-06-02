@@ -16,8 +16,8 @@
   - `inicio`: guard de sesión (evita crash 500 con sesión expirada).
   - `eliminarClienta`: ya no traga el error de Supabase (no más "borrada" en falso).
   - Verificado contra la BD real: 1 sola asignación activa tras reasignar y fecha correcta.
-- S3: Pulir Inicio (KPIs reales) + bugs menores.
-- Revisión ✅
+- S3 ✅ (2-jun, sesión nocturna): auditado Inicio — las queries de KPIs son correctas (no se tocó nada subjetivo de UI sin tu visto bueno). Como "bugs menores" se añadieron guardas anti-crash al renderizar estructuras JSONB (Inicio, calendario, programa por-clienta): un `estructura_snapshot` null/malformado ya no tumba la página con 500.
+- Revisión ✅ (pendiente repaso en vivo en navegador antes de mergear a main)
 
 > **Barrido de robustez/seguridad ✅ (2-jun, sesión nocturna):**
 > - Defensa en profundidad: `.eq("coach_id", ...)` añadido a todos los `update`/`delete` de clientas, ejercicios, programas y snapshot de asignaciones (RLS ya protegía; esto es belt-and-suspenders).
@@ -28,6 +28,8 @@
 >
 > **Pendiente (no urgente):**
 > - Limpiar archivos huérfanos en Storage al cambiar/quitar vídeos (NO hecho a propósito: borrar objetos sin supervisión es arriesgado; lo vemos juntos).
+> - Endurecer `middleware.ts` ante error transitorio de la query de coach (hoy un fallo puntual trata al coach como clienta y lo manda a /c/hoy). NO tocado a propósito: es auth sensible y no se puede testear en vivo sin supervisión.
+> - Badge "personalizado" del editor por-clienta compara contra la plantilla VIVA, no contra el snapshot del momento de asignar (si editas la plantilla base después, marca todo como personalizado). Requiere guardar snapshot original → decisión de diseño.
 
 ### Bloque 2 — Portal de la clienta + chat
 - S1: Activar login de clientas + RLS de clienta.
