@@ -119,9 +119,10 @@ export async function cambiarEstadoClienta(
   return { ok: true };
 }
 
-export async function eliminarClienta(id: string): Promise<void> {
+export async function eliminarClienta(id: string): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
-  await supabase.from("clientas").delete().eq("id", id);
+  const { error } = await supabase.from("clientas").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/clientas");
   redirect("/clientas");
 }

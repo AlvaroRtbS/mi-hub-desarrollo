@@ -145,9 +145,8 @@ export function BotonAsignar({
 
                   {tieneActiva && (
                     <div className="text-xs text-amber-400 bg-amber-950/30 border border-amber-900/50 rounded-lg px-3 py-2">
-                      Esta clienta ya tiene un programa activo. La nueva asignación
-                      convivirá con la anterior — recuerda archivarla manualmente si la
-                      quieres dar por terminada.
+                      Esta clienta ya tiene un programa activo. Al asignar el nuevo,
+                      el anterior se desactivará automáticamente (queda en el historial).
                     </div>
                   )}
                 </>

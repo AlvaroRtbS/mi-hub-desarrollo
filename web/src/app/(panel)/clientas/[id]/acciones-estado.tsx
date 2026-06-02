@@ -28,8 +28,11 @@ export function AccionesEstado({
 
   function eliminar() {
     if (!confirm("¿Eliminar definitivamente esta clienta y todos sus datos?")) return;
+    setError(null);
     iniciarTransicion(async () => {
-      await eliminarClienta(clientaId);
+      const r = await eliminarClienta(clientaId);
+      // En caso de éxito la acción redirige (no retorna); si vuelve con error, mostrarlo.
+      if (r && !r.ok) setError(r.error);
     });
   }
 

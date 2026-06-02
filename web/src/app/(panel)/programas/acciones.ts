@@ -264,10 +264,24 @@ export async function asignarPrograma(formData: FormData): Promise<ResultadoAcci
     return { ok: false, error: errProg?.message ?? "Programa no encontrado." };
   }
 
-  // Calcula fecha_fin como fecha_inicio + (num_semanas * 7) días
-  const fin = new Date(fechaInicio);
-  fin.setDate(fin.getDate() + prog.num_semanas * 7 - 1);
+  // Calcula fecha_fin como fecha_inicio + (num_semanas * 7) días.
+  // Se opera en UTC para evitar un desfase de ±1 día según la zona horaria
+  // del servidor (Vercel corre en UTC negativo); el resto del código
+  // (calendario, historial) usa este mismo patrón.
+  const fin = new Date(fechaInicio + "T00:00:00Z");
+  fin.setUTCDate(fin.getUTCDate() + prog.num_semanas * 7 - 1);
   const fechaFin = fin.toISOString().slice(0, 10);
+
+  // Reemplazar: una clienta = un programa activo. Desactiva cualquier
+  // asignación activa previa de esta clienta antes de crear la nueva.
+  const { error: errDesactivar } = await supabase
+    .from("asignaciones")
+    .update({ activa: false })
+    .eq("clienta_id", clientaId)
+    .eq("coach_id", coachId)
+    .eq("activa", true);
+
+  if (errDesactivar) return { ok: false, error: errDesactivar.message };
 
   const { error } = await supabase.from("asignaciones").insert({
     coach_id: coachId,

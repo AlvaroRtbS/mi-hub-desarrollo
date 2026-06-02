@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { EstructuraPrograma, Dia } from "@/lib/supabase/tipos";
 import { inicialesNombre, formatearFecha } from "@/lib/utilidades";
@@ -52,10 +53,12 @@ export default async function InicioPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) redirect("/login");
+
   const { data: coach } = await supabase
     .from("coaches")
     .select("nombre")
-    .eq("user_id", user!.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   const [
