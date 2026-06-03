@@ -6,6 +6,7 @@ import { urlEmbedVideo } from "@/lib/supabase/tipos";
 import { LOGROS, calcularNivel, xpTotal as calcularXpTotal, type TipoLogro } from "@/lib/gamificacion";
 import { calcularAdherencia, diasProgramadosDeAsignacion } from "@/lib/adherencia";
 import { hoyISO } from "@/lib/utilidades";
+import { ChevronRight } from "lucide-react";
 import { BotonCompletarSesion } from "./boton-completar";
 import { RegistroEjercicio } from "./registro-ejercicio";
 import { RegistroPasos } from "./registro-pasos";
@@ -41,6 +42,15 @@ export default async function HoyPage() {
     .maybeSingle();
 
   if (!clienta) return null;
+
+  // ¿Tiene el formulario inicial pendiente? (para avisarle en Hoy)
+  const { data: formInicial } = await supabase
+    .from("formulario_respuestas")
+    .select("completado")
+    .eq("clienta_id", clienta.id)
+    .eq("tipo", "inicial")
+    .maybeSingle<{ completado: boolean }>();
+  const formularioPendiente = !formInicial?.completado;
 
   // Asignación activa
   const { data: asignacion } = await supabase
@@ -86,6 +96,11 @@ export default async function HoyPage() {
         <p className="text-sm text-neutral-400 mb-6">
           Tu entrenador aún no te ha asignado un programa.
         </p>
+        {formularioPendiente && (
+          <div className="mb-6">
+            <AvisoFormularioInicial />
+          </div>
+        )}
         <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
           Cuando te asigne uno, aparecerá aquí con tu entreno del día.
         </div>
@@ -260,6 +275,8 @@ export default async function HoyPage() {
     <div>
       <Saludo nombre={clienta.nombre} nivel={nivel} xp={xp} />
 
+      {formularioPendiente && <AvisoFormularioInicial />}
+
       {/* Banner de racha — solo si tiene racha ≥3 para no saturar */}
       {adherencia.rachaActual >= 3 && (
         <div
@@ -369,6 +386,24 @@ export default async function HoyPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+function AvisoFormularioInicial() {
+  return (
+    <Link
+      href="/c/formularios/inicial"
+      className="flex items-center gap-3 border border-amber-900/50 bg-amber-950/20 rounded-2xl p-4 mt-4 hover:bg-amber-950/30 transition"
+    >
+      <div className="text-2xl">📋</div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium">Rellena tu formulario inicial</div>
+        <div className="text-xs text-amber-300/80 mt-0.5">
+          Un par de minutos. Ayuda a tu entrenador a ajustar tu plan.
+        </div>
+      </div>
+      <ChevronRight className="size-5 text-amber-500/70 shrink-0" />
+    </Link>
   );
 }
 

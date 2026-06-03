@@ -569,6 +569,12 @@ function SeccionResumen({
             Ver como la clienta →
           </Link>
           <Link
+            href={`/clientas/${clienta.id}/formulario`}
+            className="text-brand-500 hover:text-brand-400"
+          >
+            📋 Formulario inicial →
+          </Link>
+          <Link
             href={`/clientas/${clienta.id}/fotos`}
             className="text-brand-500 hover:text-brand-400"
           >
