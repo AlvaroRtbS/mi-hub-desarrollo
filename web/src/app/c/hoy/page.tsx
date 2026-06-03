@@ -510,11 +510,13 @@ function BloqueClienta({
               </div>
             )}
             {el.tipo === "contenido" && (
-              <div className="flex-1 text-neutral-300">
+              <div className="flex-1 text-neutral-200">
                 <div className="text-xs uppercase tracking-wide text-neutral-500">
                   📝 {el.titulo}
                 </div>
-                <div className="text-sm mt-1 whitespace-pre-wrap">{el.markdown}</div>
+                <div className="text-[15px] leading-relaxed mt-1.5 whitespace-pre-wrap">
+                  {el.markdown}
+                </div>
               </div>
             )}
             {el.tipo === "metrica_prompt" && (

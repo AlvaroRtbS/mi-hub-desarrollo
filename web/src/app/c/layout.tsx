@@ -89,16 +89,27 @@ export default async function ClientaLayout({
 
   return (
     <div
-      className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col"
+      className="min-h-[100dvh] text-neutral-100 flex justify-center md:items-center md:p-6"
       style={{
         ["--brand" as string]: colorMarca,
         ["--brand-hover" as string]: colorHover,
+        backgroundColor: "#0a0a0a",
+        backgroundImage:
+          "radial-gradient(100% 100% at 50% 0%, color-mix(in srgb, var(--brand) 10%, transparent) 0%, transparent 60%)",
+        backgroundAttachment: "fixed",
       }}
     >
-
-      {/* Cabecera */}
-      <header className="border-b border-neutral-800 bg-neutral-950 sticky top-0 z-10">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+      {/* Marco tipo móvil: pantalla completa en móvil, tarjeta centrada en desktop */}
+      <div
+        className="relative flex flex-col w-full h-[100dvh] bg-neutral-950 overflow-hidden md:w-[480px] md:h-[calc(100vh-3rem)] md:max-h-[920px] md:rounded-[2.25rem] md:border md:border-neutral-800/80 md:shadow-2xl"
+        style={{
+          backgroundImage:
+            "radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--brand) 22%, transparent) 0%, transparent 50%)",
+        }}
+      >
+        {/* Cabecera */}
+        <header className="shrink-0 border-b border-neutral-800/80 bg-neutral-950/60 backdrop-blur-md z-10">
+          <div className="px-4 py-3 flex items-center gap-3">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -126,16 +137,15 @@ export default async function ClientaLayout({
         </div>
       </header>
 
-      {/* Contenido */}
-      <main className="flex-1 max-w-md w-full mx-auto px-4 pb-24 pt-4">
-        {children}
-      </main>
+        {/* Contenido (scrollea dentro del marco) */}
+        <main className="flex-1 overflow-y-auto px-4 pt-4 pb-4">{children}</main>
 
-      {/* Tab bar móvil pegada abajo */}
-      <TabBar tabs={tabs} colorMarca={colorMarca} />
+        {/* Tab bar pegada al fondo del marco */}
+        <TabBar tabs={tabs} colorMarca={colorMarca} />
 
-      {/* Tour de bienvenida (solo primera visita) */}
-      <TourBienvenida />
+        {/* Tour de bienvenida (solo primera visita) */}
+        <TourBienvenida />
+      </div>
     </div>
   );
 }
