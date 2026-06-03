@@ -5,6 +5,7 @@ import type { EstructuraPrograma, Bloque, Elemento } from "@/lib/supabase/tipos"
 import { urlEmbedVideo } from "@/lib/supabase/tipos";
 import { LOGROS, calcularNivel, xpTotal as calcularXpTotal, type TipoLogro } from "@/lib/gamificacion";
 import { calcularAdherencia, diasProgramadosDeAsignacion } from "@/lib/adherencia";
+import { hoyISO } from "@/lib/utilidades";
 import { BotonCompletarSesion } from "./boton-completar";
 import { RegistroEjercicio } from "./registro-ejercicio";
 import { RegistroPasos } from "./registro-pasos";
@@ -19,10 +20,6 @@ type RegistrosSesion = Record<
   string,
   { series_realizadas?: SerieRealizada[] }
 >;
-
-function fechaISO(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 function diasEntre(a: string, b: string): number {
   const fa = new Date(a + "T00:00:00Z");
@@ -67,7 +64,7 @@ export default async function HoyPage() {
       }
     | null;
 
-  const hoy = fechaISO(new Date());
+  const hoy = hoyISO();
 
   // Logros + XP
   const { data: logrosData } = await supabase
