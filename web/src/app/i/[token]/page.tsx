@@ -42,7 +42,7 @@ export default async function InvitacionPage({
           <h1 className="text-xl font-semibold mb-2">Invitación no válida</h1>
           <p className="text-sm text-neutral-400">
             {info.motivo === "expirada"
-              ? "Este link de invitación ha caducado. Pide a tu entrenadora que te envíe uno nuevo."
+              ? "Este link de invitación ha caducado. Pide a tu entrenador que te envíe uno nuevo."
               : info.motivo === "ya_usada"
                 ? "Este link ya se ha usado. Si ya creaste tu cuenta, entra desde la pantalla de login."
                 : "El link no es válido o ha caducado."}

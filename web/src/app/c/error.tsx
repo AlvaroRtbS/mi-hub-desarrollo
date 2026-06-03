@@ -20,7 +20,7 @@ export default function ClientaError({
         <div className="text-3xl mb-3">⚠️</div>
         <h2 className="text-lg font-semibold mb-2">No se pudo cargar</h2>
         <p className="text-sm text-neutral-400 mb-1">
-          Inténtalo de nuevo. Si sigue fallando, avisa a tu entrenadora.
+          Inténtalo de nuevo. Si sigue fallando, avisa a tu entrenador.
         </p>
         {error.digest && (
           <p className="text-[10px] text-neutral-600 font-mono mb-4">

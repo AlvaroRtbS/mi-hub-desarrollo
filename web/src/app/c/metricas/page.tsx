@@ -55,7 +55,7 @@ export default async function MetricasClientaPage() {
     <div>
       <h1 className="text-xl font-semibold mb-1">Mis métricas</h1>
       <p className="text-sm text-neutral-400 mb-4">
-        Registra tu evolución para que tu entrenadora la vea.
+        Registra tu evolución para que tu entrenador la vea.
       </p>
 
       <FormularioMiMetrica />

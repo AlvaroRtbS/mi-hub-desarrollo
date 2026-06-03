@@ -78,7 +78,7 @@ export default async function NutricionClientaPage() {
 
       {sinNada && (
         <div className="border border-dashed border-neutral-800 rounded-2xl p-6 text-center text-sm text-neutral-500">
-          Tu entrenadora aún no te ha asignado un plan de nutrición.
+          Tu entrenador aún no te ha asignado un plan de nutrición.
         </div>
       )}
 

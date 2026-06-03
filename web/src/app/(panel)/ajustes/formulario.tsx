@@ -125,7 +125,7 @@ export function FormularioAjustes({ coach }: { coach: CoachData }) {
           <Textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="Soy entrenadora especializada en…"
+            placeholder="Soy entrenador especializado en…"
             rows={3}
           />
         </Campo>

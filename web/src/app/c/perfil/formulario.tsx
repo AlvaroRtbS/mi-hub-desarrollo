@@ -93,7 +93,7 @@ export function FormularioPerfilClienta({
 
         <Campo label="Nombre" valor={`${nombre} ${apellidos ?? ""}`} />
         <div className="text-[10px] text-neutral-600 -mt-1.5">
-          El nombre solo lo puede cambiar tu entrenadora.
+          El nombre solo lo puede cambiar tu entrenador.
         </div>
 
         <Campo label="Email" valor={email} />

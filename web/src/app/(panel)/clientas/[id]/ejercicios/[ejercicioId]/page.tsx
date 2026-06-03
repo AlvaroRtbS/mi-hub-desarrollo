@@ -16,7 +16,7 @@ type Aparicion = {
   dia: number;
   programaNombre: string;
   programaId: string;
-  // Plan original (lo que la entrenadora programó)
+  // Plan original (lo que el entrenador programó)
   planSeries: Array<{ reps: string; peso: string }>;
   // Lo que la clienta realmente registró (puede ser null si no completó)
   realSeries: Array<{ reps?: string; peso?: string; completado?: boolean }> | null;

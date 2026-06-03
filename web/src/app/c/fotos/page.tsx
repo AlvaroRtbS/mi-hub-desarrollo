@@ -46,7 +46,7 @@ export default async function MisFotosPage() {
     <div>
       <h1 className="text-xl font-semibold mb-1">Fotos de progreso</h1>
       <p className="text-sm text-neutral-400 mb-4">
-        Solo tu entrenadora y tú podéis ver tus fotos.
+        Solo tu entrenador y tú podéis ver tus fotos.
       </p>
 
       <GestorMisFotos

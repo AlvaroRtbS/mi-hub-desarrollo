@@ -84,7 +84,7 @@ export default async function HoyPage() {
       <div>
         <h1 className="text-2xl font-semibold mb-1">¡Hola, {clienta.nombre}!</h1>
         <p className="text-sm text-neutral-400 mb-6">
-          Tu entrenadora aún no te ha asignado un programa.
+          Tu entrenador aún no te ha asignado un programa.
         </p>
         <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
           Cuando te asigne uno, aparecerá aquí con tu entreno del día.
@@ -120,7 +120,7 @@ export default async function HoyPage() {
         <div className="border border-neutral-800 rounded-2xl p-6 text-center mt-6">
           <div className="text-2xl mb-2">🎉</div>
           <div className="text-sm">
-            ¡Has terminado el programa! Habla con tu entrenadora para el
+            ¡Has terminado el programa! Habla con tu entrenador para el
             siguiente.
           </div>
         </div>

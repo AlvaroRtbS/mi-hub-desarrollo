@@ -168,7 +168,7 @@ export function ChatClienta({
               enviar(e);
             }
           }}
-          placeholder="Escribe a tu entrenadora..."
+          placeholder="Escribe a tu entrenador..."
           rows={2}
           className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none"
         />

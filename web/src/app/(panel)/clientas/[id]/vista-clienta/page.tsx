@@ -95,7 +95,7 @@ export default async function VistaClientaPage({
 
         {!asignacion ? (
           <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
-            Tu entrenadora aún no te ha asignado un programa. ¡Pronto lo tendrás!
+            Tu entrenador aún no te ha asignado un programa. ¡Pronto lo tendrás!
           </div>
         ) : offsetHoy < 0 ? (
           <div className="border border-amber-900/50 bg-amber-950/20 rounded-2xl p-6 text-center">

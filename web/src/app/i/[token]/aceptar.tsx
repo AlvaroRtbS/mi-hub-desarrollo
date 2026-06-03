@@ -15,7 +15,7 @@ function traducirError(msg: string): string {
     return "Email o contraseña incorrectos.";
   if (m.includes("network") || m.includes("fetch") || m.includes("failed to"))
     return "Problema de conexión. Inténtalo de nuevo.";
-  return "Algo no ha ido bien. Inténtalo otra vez o avisa a tu entrenadora.";
+  return "Algo no ha ido bien. Inténtalo otra vez o avisa a tu entrenador.";
 }
 
 function traducirMotivo(motivo: string | null): string {
@@ -27,9 +27,9 @@ function traducirMotivo(motivo: string | null): string {
     case "ya_usada":
       return "Esta invitación ya se usó. Entra desde la pantalla de inicio.";
     case "expirada":
-      return "La invitación ha caducado. Pídele a tu entrenadora un enlace nuevo.";
+      return "La invitación ha caducado. Pídele a tu entrenador un enlace nuevo.";
     default:
-      return "No se pudo activar la cuenta. Avisa a tu entrenadora.";
+      return "No se pudo activar la cuenta. Avisa a tu entrenador.";
   }
 }
 
@@ -84,7 +84,7 @@ export function AceptarInvitacion({
           await supabase.auth.signInWithPassword({ email, password });
         if (errLogin) {
           setError(
-            "Este email ya tiene una cuenta. Si es tuya, entra desde la pantalla de inicio; si olvidaste la contraseña, pídele a tu entrenadora un enlace nuevo."
+            "Este email ya tiene una cuenta. Si es tuya, entra desde la pantalla de inicio; si olvidaste la contraseña, pídele a tu entrenador un enlace nuevo."
           );
           setEnviando(false);
           return;
@@ -141,7 +141,7 @@ export function AceptarInvitacion({
           className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-400"
         />
         <p className="text-[10px] text-neutral-600 mt-1">
-          Se ha fijado al email con el que tu entrenadora te dio de alta.
+          Se ha fijado al email con el que tu entrenador te dio de alta.
         </p>
       </div>
 

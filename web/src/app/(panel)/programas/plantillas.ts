@@ -1,11 +1,11 @@
 // ============================================================================
 // Plantillas de programa predefinidas
 // ============================================================================
-// Esqueletos listos para que la entrenadora arranque un programa rápido.
+// Esqueletos listos para que el entrenador arranque un programa rápido.
 // Cuando se elige una, se duplica como programa nuevo y se le asigna
 // `origen='plantilla'` para poder filtrarlos después.
 // Los bloques traen ejercicios "tipo" sin enlazar a la biblioteca real —
-// la entrenadora los rellena después con sus propios ejercicios.
+// el entrenador los rellena después con sus propios ejercicios.
 // ============================================================================
 
 import type { EstructuraPrograma, Bloque, Dia } from "@/lib/supabase/tipos";

@@ -19,7 +19,7 @@ import {
   calcularAdherencia,
 } from "@/lib/adherencia";
 
-const SYSTEM_PROMPT = `Eres una asistente analítica de una entrenadora personal. Tu trabajo es resumir, en pocas líneas, la situación actual de UNA clienta concreta para que la entrenadora se ponga al día en 30 segundos antes de hablar con ella.
+const SYSTEM_PROMPT = `Eres una asistente analítica de un entrenador personal. Tu trabajo es resumir, en pocas líneas, la situación actual de UNA clienta concreta para que el entrenador se ponga al día en 30 segundos antes de hablar con ella.
 
 # Cómo escribes
 - En español de España, tono profesional pero cercano.

@@ -26,23 +26,23 @@ const PASOS: Paso[] = [
     icono: <Sparkles className="size-7" />,
     titulo: "¡Bienvenida a tu app!",
     texto:
-      "Aquí es donde verás tu entrenamiento, registrarás tus medidas, subirás fotos de tu progreso y hablarás con tu entrenadora. Te enseño rápido cómo funciona.",
+      "Aquí es donde verás tu entrenamiento, registrarás tus medidas, subirás fotos de tu progreso y hablarás con tu entrenador. Te enseño rápido cómo funciona.",
   },
   {
     icono: <Calendar className="size-7" />,
     titulo: "Tu entreno cada día",
     texto:
-      "Abre HOY en cualquier momento y verás lo que toca: ejercicios, series y pesos. Cuando termines, marca el entreno como completado. Tu entrenadora lo verá al instante.",
+      "Abre HOY en cualquier momento y verás lo que toca: ejercicios, series y pesos. Cuando termines, marca el entreno como completado. Tu entrenador lo verá al instante.",
   },
   {
     icono: <Ruler className="size-7" />,
     titulo: "Registra tu progreso",
     texto:
-      "En MEDIDAS apunta tu peso, perímetros, o lo que tu entrenadora te pida. En FOTOS sube tus fotos de progreso para comparar evolución. Es rápido — sin presión.",
+      "En MEDIDAS apunta tu peso, perímetros, o lo que tu entrenador te pida. En FOTOS sube tus fotos de progreso para comparar evolución. Es rápido — sin presión.",
   },
   {
     icono: <MessageCircle className="size-7" />,
-    titulo: "Habla con tu entrenadora",
+    titulo: "Habla con tu entrenador",
     texto:
       "El CHAT es para todo: dudas con un ejercicio, contarle cómo te ha ido el día, pedirle cambios. Verás respuestas rápidas para usar con un toque cuando tengas prisa.",
   },
@@ -50,7 +50,7 @@ const PASOS: Paso[] = [
     icono: <Camera className="size-7" />,
     titulo: "Listo para empezar",
     texto:
-      "Todo lo que registres aquí lo verá tu entrenadora en tiempo real. Cuanta más info, mejor te puede ajustar el plan. ¡A entrenar! 💪",
+      "Todo lo que registres aquí lo verá tu entrenador en tiempo real. Cuanta más info, mejor te puede ajustar el plan. ¡A entrenar! 💪",
   },
 ];
 

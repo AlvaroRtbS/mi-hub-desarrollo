@@ -40,7 +40,7 @@ export default async function MensajesClientaPage() {
     .eq("leido", false);
 
   const coachObj = clienta.coaches as unknown as { nombre: string } | null;
-  const coachNombre = coachObj?.nombre ?? "Tu entrenadora";
+  const coachNombre = coachObj?.nombre ?? "Tu entrenador";
 
   return (
     <div>

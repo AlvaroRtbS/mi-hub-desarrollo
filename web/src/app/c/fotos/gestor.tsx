@@ -135,7 +135,7 @@ export function GestorMisFotos({
               coachId={coachId}
               subcarpeta={clientaId}
               nombre="url"
-              descripcion="Solo tú y tu entrenadora la veis."
+              descripcion="Solo tú y tu entrenador la veis."
             />
           </div>
 
@@ -164,7 +164,7 @@ export function GestorMisFotos({
 
       {!comparadorActivo && fotos.length > 0 && (
         <div className="text-[10px] text-neutral-600 bg-neutral-900/50 border border-neutral-800 rounded-lg px-3 py-2 mb-3">
-          Tu entrenadora prefiere no usar comparador antes/después contigo. Tus
+          Tu entrenador prefiere no usar comparador antes/después contigo. Tus
           fotos se le muestran solo como galería.
         </div>
       )}

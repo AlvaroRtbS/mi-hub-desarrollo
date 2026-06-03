@@ -153,7 +153,7 @@ export const LOGROS: Record<TipoLogro, DefinicionLogro> = {
     tipo: "primer_mensaje",
     nombre: "Hola",
     emoji: "💬",
-    descripcion: "Primer mensaje a tu entrenadora",
+    descripcion: "Primer mensaje a tu entrenador",
     categoria: "compromiso",
     xp: 10,
   },

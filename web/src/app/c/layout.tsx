@@ -52,7 +52,7 @@ export default async function ClientaLayout({
           <h1 className="text-xl font-semibold mb-2">Cuenta aún no activada</h1>
           <p className="text-sm text-neutral-400">
             Tu cuenta existe pero todavía no está vinculada a tu perfil. Pide a
-            tu entrenadora que te reenvíe el enlace de invitación y ábrelo de
+            tu entrenador que te reenvíe el enlace de invitación y ábrelo de
             nuevo para terminar de activarla.
           </p>
         </div>
