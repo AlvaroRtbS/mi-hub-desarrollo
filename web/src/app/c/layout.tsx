@@ -41,7 +41,23 @@ export default async function ClientaLayout({
     .maybeSingle();
 
   if (!clienta) {
-    redirect("/login");
+    // Usuario autenticado pero su cuenta aún no está enlazada a una ficha de
+    // clienta (p. ej. el canje de invitación no llegó a completarse). NO
+    // redirigimos a /login para evitar un bucle con el middleware: mostramos
+    // un mensaje claro.
+    return (
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
+        <div className="max-w-sm text-center">
+          <div className="text-5xl mb-4">⏳</div>
+          <h1 className="text-xl font-semibold mb-2">Cuenta aún no activada</h1>
+          <p className="text-sm text-neutral-400">
+            Tu cuenta existe pero todavía no está vinculada a tu perfil. Pide a
+            tu entrenadora que te reenvíe el enlace de invitación y ábrelo de
+            nuevo para terminar de activarla.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const coachObj = clienta.coaches as unknown as {

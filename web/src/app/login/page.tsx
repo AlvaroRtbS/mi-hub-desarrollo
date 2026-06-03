@@ -27,7 +27,9 @@ export default function LoginPage() {
       if (error) {
         setError(error.message);
       } else {
-        router.push("/clientas");
+        // Dejar que el middleware enrute según el rol (coach → /inicio,
+        // clienta → /c/hoy). No hardcodear una ruta de coach.
+        router.push("/");
         router.refresh();
       }
     } else {
@@ -58,7 +60,7 @@ export default function LoginPage() {
           </h1>
           <p className="text-sm text-neutral-400 mt-1">
             {modo === "login"
-              ? "Accede a tu panel de entrenadora."
+              ? "Accede a tu cuenta."
               : "Regístrate para crear tu panel."}
           </p>
         </div>

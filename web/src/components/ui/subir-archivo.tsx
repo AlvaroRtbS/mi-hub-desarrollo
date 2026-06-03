@@ -25,6 +25,8 @@ type Props = {
   bucket: Bucket;
   accept: string;
   coachId: string;
+  /** Subcarpeta opcional bajo coachId/ (ej. clienta_id para fotos-progreso) */
+  subcarpeta?: string;
   /** Nombre del input hidden que llevará la ruta resultante en el form */
   nombre: string;
   valorInicial?: string | null;
@@ -38,6 +40,7 @@ export function SubirArchivo({
   bucket,
   accept,
   coachId,
+  subcarpeta,
   nombre,
   valorInicial,
   descripcion,
@@ -66,7 +69,7 @@ export function SubirArchivo({
 
     const ext = archivo.name.split(".").pop() ?? "bin";
     const nombreUnico = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const ruta = `${coachId}/${nombreUnico}`;
+    const ruta = [coachId, subcarpeta, nombreUnico].filter(Boolean).join("/");
 
     const supabase = createSupabaseBrowserClient();
     const { error: errSubida } = await supabase.storage

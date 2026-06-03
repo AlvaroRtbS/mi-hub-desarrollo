@@ -20,7 +20,7 @@ export default async function MisFotosPage() {
 
   const { data: clienta } = await supabase
     .from("clientas")
-    .select("id, comparador_fotos_activo")
+    .select("id, coach_id, comparador_fotos_activo")
     .eq("user_id", user.id)
     .maybeSingle();
   if (!clienta) return null;
@@ -51,6 +51,7 @@ export default async function MisFotosPage() {
 
       <GestorMisFotos
         clientaId={clienta.id}
+        coachId={clienta.coach_id}
         comparadorActivo={clienta.comparador_fotos_activo ?? true}
         fotos={fotosConUrl}
       />

@@ -27,10 +27,12 @@ const TIPOS = [
 
 export function GestorMisFotos({
   clientaId,
+  coachId,
   comparadorActivo,
   fotos,
 }: {
   clientaId: string;
+  coachId: string;
   comparadorActivo: boolean;
   fotos: FotoCliente[];
 }) {
@@ -130,7 +132,8 @@ export function GestorMisFotos({
             <SubirArchivo
               bucket="fotos-progreso"
               accept="image/jpeg,image/png,image/webp"
-              coachId={clientaId}
+              coachId={coachId}
+              subcarpeta={clientaId}
               nombre="url"
               descripcion="Solo tú y tu entrenadora la veis."
             />

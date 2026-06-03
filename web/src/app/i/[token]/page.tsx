@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AceptarInvitacion } from "./aceptar";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +24,8 @@ export default async function InvitacionPage({
 }) {
   const { token } = await params;
 
-  // Llamada sin auth: la función SQL es security definer
-  const supabase = createSupabaseBrowserClient();
+  // Llamada sin auth: la función SQL es security definer (ejecutable por anon).
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("invitacion_info", { t: token });
 
   if (error || !data || data.length === 0) {

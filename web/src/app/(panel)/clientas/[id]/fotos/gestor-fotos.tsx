@@ -179,6 +179,7 @@ export function GestorFotos({
               bucket="fotos-progreso"
               accept="image/jpeg,image/png,image/webp"
               coachId={coachId}
+              subcarpeta={clientaId}
               nombre="url"
               descripcion="Privada — solo tú y la clienta tendréis acceso."
             />
