@@ -32,10 +32,27 @@
 > - Badge "personalizado" del editor por-clienta compara contra la plantilla VIVA, no contra el snapshot del momento de asignar (si editas la plantilla base después, marca todo como personalizado). Requiere guardar snapshot original → decisión de diseño.
 
 ### Bloque 2 — Portal de la clienta + chat
-- S1: Activar login de clientas + RLS de clienta.
-- S2: La clienta ve su programa del día y marca series/sesión.
-- S3: La clienta sube peso, medidas y fotos. Chat coach ↔ clienta.
-- Revisión ✅
+> **Hallazgo de la auditoría (3-jun):** el portal `/c/*` ya estaba ~80% construido
+> (onboarding por invitación, entreno del día con registro, métricas, fotos,
+> nutrición, perfil, chat con realtime). El Bloque 2 es **activar + arreglar +
+> pulir**, no construir.
+
+**Fase A — usable por una clienta real (3-jun):**
+- ✅ Onboarding: login redirige por rol; `/i/[token]` con server client; layout de
+  clienta sin bucle si la cuenta no está enlazada.
+- ✅ Fotos coach↔clienta: ruta unificada `coach_id/clienta_id/archivo` + migración
+  `20260603000000` (APLICADA en Supabase).
+- ✅ Acción de Álvaro: "Confirm email" desactivado en Supabase.
+- ⏳ PENDIENTE: test en vivo end-to-end (invitar clienta real → subir foto → coach la ve).
+
+**Fase B — correctness/seguridad (3-jun, en curso):**
+- ✅ `/c/hoy`: fecha de "hoy" con zona horaria Europe/Madrid (antes UTC → día equivocado de madrugada).
+- ✅ Migración `20260603000001`: trigger que impide a la clienta cambiar columnas sensibles (PENDIENTE de aplicar en Supabase).
+- ⏳ DIFERIDO a sesión supervisada (ruta crítica, probar en vivo): upsert anti-carrera en `sesiones`; mover marcado de "leído" de mensajes fuera del render.
+
+**Fase C — pulido (pendiente):** limpiar huérfanos en Storage al borrar fotos;
+realtime de UPDATE para "visto"; permitir a la clienta borrar su última métrica/foto;
+"olvidé contraseña" para clienta; perf de la lista de mensajes del coach.
 
 ### Bloque 3 — Entrenamiento
 - S1: Pulir editor de programas (drag&drop, duplicar, plantillas).
