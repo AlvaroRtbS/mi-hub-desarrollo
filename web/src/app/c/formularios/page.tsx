@@ -27,6 +27,21 @@ export default async function FormulariosPage() {
 
   const completado = fila?.completado ?? false;
 
+  // Formularios genéricos asignados por el coach (RLS limita a los suyos).
+  const { data: asignaciones } = await supabase
+    .from("formulario_asignaciones")
+    .select("id, completado, completado_en, formularios(titulo)")
+    .eq("clienta_id", clienta.id)
+    .order("creado_en", { ascending: false })
+    .returns<
+      {
+        id: string;
+        completado: boolean;
+        completado_en: string | null;
+        formularios: { titulo: string } | null;
+      }[]
+    >();
+
   return (
     <div>
       <h1 className="text-xl font-semibold mb-1">Formularios</h1>
@@ -34,25 +49,52 @@ export default async function FormulariosPage() {
         Cuestionarios que te pide tu entrenador. Rellénalos para que ajuste tu plan.
       </p>
 
-      <Link
-        href="/c/formularios/inicial"
-        className="flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 hover:bg-neutral-900/50 transition"
-      >
-        <div className="text-2xl">📋</div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium">{FORMULARIO_INICIAL.titulo}</div>
-          <div className="text-xs mt-0.5">
-            {completado ? (
-              <span className="text-emerald-400">
-                ✓ Completado{fila?.completado_en ? ` · ${formatearFecha(fila.completado_en)}` : ""}
-              </span>
-            ) : (
-              <span className="text-amber-400">Pendiente de rellenar</span>
-            )}
+      <div className="space-y-3">
+        <Link
+          href="/c/formularios/inicial"
+          className="flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 hover:bg-neutral-900/50 transition"
+        >
+          <div className="text-2xl">📋</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium">{FORMULARIO_INICIAL.titulo}</div>
+            <div className="text-xs mt-0.5">
+              {completado ? (
+                <span className="text-emerald-400">
+                  ✓ Completado{fila?.completado_en ? ` · ${formatearFecha(fila.completado_en)}` : ""}
+                </span>
+              ) : (
+                <span className="text-amber-400">Pendiente de rellenar</span>
+              )}
+            </div>
           </div>
-        </div>
-        <ChevronRight className="size-5 text-neutral-600 shrink-0" />
-      </Link>
+          <ChevronRight className="size-5 text-neutral-600 shrink-0" />
+        </Link>
+
+        {(asignaciones ?? []).map((a) => (
+          <Link
+            key={a.id}
+            href={`/c/formularios/${a.id}`}
+            className="flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 hover:bg-neutral-900/50 transition"
+          >
+            <div className="text-2xl">📝</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">
+                {a.formularios?.titulo ?? "Formulario"}
+              </div>
+              <div className="text-xs mt-0.5">
+                {a.completado ? (
+                  <span className="text-emerald-400">
+                    ✓ Completado{a.completado_en ? ` · ${formatearFecha(a.completado_en)}` : ""}
+                  </span>
+                ) : (
+                  <span className="text-amber-400">Pendiente de rellenar</span>
+                )}
+              </div>
+            </div>
+            <ChevronRight className="size-5 text-neutral-600 shrink-0" />
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
