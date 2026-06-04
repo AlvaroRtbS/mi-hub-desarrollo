@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { notificarClienta } from "@/lib/push";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
 
@@ -37,6 +38,12 @@ export async function enviarMensaje(
     contenido: texto,
   });
   if (error) return { ok: false, error: error.message };
+
+  await notificarClienta(supabase, clientaId, {
+    title: "Nuevo mensaje de tu entrenador",
+    body: texto.slice(0, 90),
+    url: "/c/mensajes",
+  });
 
   revalidatePath("/mensajes");
   revalidatePath(`/mensajes/${clientaId}`);
@@ -97,6 +104,16 @@ export async function enviarMensajeABroadcast(
       error: error.message,
     };
   }
+
+  await Promise.all(
+    idsFinales.map((cid) =>
+      notificarClienta(supabase, cid, {
+        title: "Nuevo mensaje de tu entrenador",
+        body: texto.slice(0, 90),
+        url: "/c/mensajes",
+      })
+    )
+  );
 
   revalidatePath("/mensajes");
   return {

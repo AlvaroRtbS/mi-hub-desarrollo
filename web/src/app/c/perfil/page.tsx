@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FormularioPerfilClienta } from "./formulario";
+import { NotificacionesToggle } from "./notificaciones-toggle";
 
 export default async function PerfilClientaPage() {
   const supabase = await createSupabaseServerClient();
@@ -26,6 +27,10 @@ export default async function PerfilClientaPage() {
         telefono={clienta.telefono}
         fechaNacimiento={clienta.fecha_nacimiento}
       />
+
+      <div className="mt-6">
+        <NotificacionesToggle />
+      </div>
     </div>
   );
 }

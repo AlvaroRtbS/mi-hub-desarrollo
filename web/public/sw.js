@@ -3,7 +3,7 @@
 //  - Navegaciones (HTML): network-first -> fallback a /offline.html sin red.
 //  - Assets estáticos hasheados (/_next/static, imágenes, fuentes): cache-first.
 //  - /api/* y /auth/* y cualquier origen externo (Supabase): NUNCA se cachean.
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `mihub-static-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
 
@@ -80,4 +80,36 @@ self.addEventListener("fetch", (event) => {
     );
   }
   // El resto: sin intervenir (comportamiento de red por defecto).
+});
+
+// Notificaciones push.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const titulo = data.title || "mi-hub";
+  const opciones = {
+    body: data.body || "",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    data: { url: data.url || "/c/hoy" },
+    vibrate: [80, 40, 80],
+  };
+  event.waitUntil(self.registration.showNotification(titulo, opciones));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/c/hoy";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((lista) => {
+      for (const c of lista) {
+        if (c.url.includes(url) && "focus" in c) return c.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
+  );
 });
