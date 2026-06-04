@@ -1,10 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { EstructuraPrograma } from "@/lib/supabase/tipos";
-import { formatearFecha } from "@/lib/utilidades";
-
-function fechaISO(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+import { formatearFecha, hoyISO } from "@/lib/utilidades";
+import { EmptyState } from "@/components/ui/empty-state";
 
 function diasEntre(a: string, b: string): number {
   const fa = new Date(a + "T00:00:00Z");
@@ -51,14 +48,16 @@ export default async function MiProgramaPage() {
     return (
       <div>
         <h1 className="text-xl font-semibold mb-4">Mi programa</h1>
-        <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
-          Sin programa asignado todavía.
-        </div>
+        <EmptyState
+          icono="📋"
+          titulo="Sin programa asignado todavía"
+          descripcion="Cuando tu entrenador te asigne uno, lo verás aquí con tu entreno de cada día."
+        />
       </div>
     );
   }
 
-  const hoy = fechaISO(new Date());
+  const hoy = hoyISO();
   const offset = diasEntre(asign.fecha_inicio, hoy);
   const semanaIdxHoy = Math.floor(offset / 7);
 

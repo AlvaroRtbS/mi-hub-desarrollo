@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatearFecha } from "@/lib/utilidades";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FormularioMiMetrica } from "./formulario";
 import { MiniGrafica } from "./grafica";
 
@@ -61,9 +62,12 @@ export default async function MetricasClientaPage() {
       <FormularioMiMetrica />
 
       {porTipo.size === 0 ? (
-        <div className="border border-dashed border-neutral-800 rounded-2xl p-6 text-center text-sm text-neutral-500 mt-6">
-          Aún no has registrado ninguna medida. Empieza arriba.
-        </div>
+        <EmptyState
+          icono="📏"
+          titulo="Aún no has registrado ninguna medida"
+          descripcion="Usa el botón de arriba para registrar tu primera."
+          className="mt-6"
+        />
       ) : (
         <div className="mt-6 space-y-4">
           {Array.from(porTipo.entries()).map(([tipo, lista]) => {

@@ -7,6 +7,7 @@ import { formatearFecha } from "@/lib/utilidades";
 import { registrarMiFoto, eliminarMiFoto } from "./acciones";
 import { Confetti } from "@/components/confetti";
 import { useToast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type FotoCliente = {
   id: string;
@@ -170,9 +171,11 @@ export function GestorMisFotos({
       )}
 
       {fotos.length === 0 ? (
-        <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
-          Aún no has subido ninguna foto.
-        </div>
+        <EmptyState
+          icono="📸"
+          titulo="Aún no has subido ninguna foto"
+          descripcion="Sube tu primera foto de progreso con el botón de arriba."
+        />
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {fotos.map((f) => (

@@ -47,9 +47,9 @@ export function MiniGrafica({ puntos }: { puntos: Punto[] }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block">
-      <path d={path} fill="none" stroke="#22c55e" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      <path d={path} fill="none" stroke="var(--brand)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
       {puntos.map((p) => (
-        <circle key={p.fecha} cx={x(p.fecha)} cy={y(p.valor)} r={3} fill="#22c55e" />
+        <circle key={p.fecha} cx={x(p.fecha)} cy={y(p.valor)} r={3} fill="var(--brand)" />
       ))}
     </svg>
   );

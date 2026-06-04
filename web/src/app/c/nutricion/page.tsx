@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { obtenerUrlFirmada } from "@/lib/supabase/archivos";
 import { formatearFecha } from "@/lib/utilidades";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CheckListaCliente } from "./check-lista";
 
 type Plan = {
@@ -77,9 +78,11 @@ export default async function NutricionClientaPage() {
       </p>
 
       {sinNada && (
-        <div className="border border-dashed border-neutral-800 rounded-2xl p-6 text-center text-sm text-neutral-500">
-          Tu entrenador aún no te ha asignado un plan de nutrición.
-        </div>
+        <EmptyState
+          icono="🥗"
+          titulo="Sin plan de nutrición todavía"
+          descripcion="Tu entrenador aún no te ha asignado un plan. Cuando lo haga, aparecerá aquí."
+        />
       )}
 
       {/* Planes de nutrición */}
@@ -113,9 +116,9 @@ export default async function NutricionClientaPage() {
               )}
 
               {p.contenido_markdown && (
-                <pre className="text-sm whitespace-pre-wrap font-sans text-neutral-200 mt-3">
+                <div className="text-sm whitespace-pre-wrap text-neutral-200 mt-3 leading-relaxed">
                   {p.contenido_markdown}
-                </pre>
+                </div>
               )}
 
               {!p.pdfUrlFirmada && !p.contenido_markdown && (
