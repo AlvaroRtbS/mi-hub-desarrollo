@@ -132,7 +132,7 @@ export function ConstructorPlan({
     }
     setSugiriendo(true);
     try {
-      const data = await sugerirMenuLocal(tomas, clientaId);
+      const data = await sugerirMenuLocal(tomas, clientaId, notas);
       if (!data.ok) {
         toast.error(data.error || "No se pudo generar el menú.");
         return;

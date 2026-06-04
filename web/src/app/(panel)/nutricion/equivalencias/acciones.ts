@@ -140,7 +140,8 @@ export type ResultadoMenu =
  */
 export async function sugerirMenuLocal(
   tomas: Toma[],
-  clientaId: string | null
+  clientaId: string | null,
+  notas: string | null
 ): Promise<ResultadoMenu> {
   const { supabase, coachId } = await coachActual();
   if (!coachId) return { ok: false, error: "No autorizado." };
@@ -175,7 +176,11 @@ export async function sugerirMenuLocal(
     intolerancias = [r.alimentacion, r.algo_mas].filter(Boolean).join(". ");
   }
 
-  return { ok: true, tomas: generarMenuPlan(tomas, alimentos, intolerancias) };
+  // Las notas del plan también cuentan: el coach suele escribir ahí las
+  // intolerancias/restricciones de esta clienta concreta.
+  const textoRestricciones = [intolerancias, notas].filter(Boolean).join(". ");
+
+  return { ok: true, tomas: generarMenuPlan(tomas, alimentos, textoRestricciones) };
 }
 
 export async function eliminarPlanEstructurado(id: string): Promise<ResultadoAccion> {
