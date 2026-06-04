@@ -1,5 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { MarcarLeidoAlMontar } from "@/components/marcar-leido";
 import { ChatClienta } from "./chat";
+import { marcarMisMensajesLeidos } from "./acciones";
 
 type Mensaje = {
   id: string;
@@ -31,19 +33,12 @@ export default async function MensajesClientaPage() {
 
   const mensajes = (mensajesData ?? []) as Mensaje[];
 
-  // Marca como leídos los mensajes recibidos del coach
-  await supabase
-    .from("mensajes")
-    .update({ leido: true })
-    .eq("clienta_id", clienta.id)
-    .eq("remitente", "coach")
-    .eq("leido", false);
-
   const coachObj = clienta.coaches as unknown as { nombre: string } | null;
   const coachNombre = coachObj?.nombre ?? "Tu entrenador";
 
   return (
     <div>
+      <MarcarLeidoAlMontar accion={marcarMisMensajesLeidos} />
       <h1 className="text-xl font-semibold mb-1">Chat con {coachNombre}</h1>
       <ChatClienta clientaId={clienta.id} mensajesIniciales={mensajes} />
     </div>

@@ -5,6 +5,31 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
 
+export async function marcarMisMensajesLeidos(): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: clienta } = await supabase
+    .from("clientas")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!clienta) return;
+
+  await supabase
+    .from("mensajes")
+    .update({ leido: true })
+    .eq("clienta_id", clienta.id)
+    .eq("remitente", "coach")
+    .eq("leido", false);
+
+  // Refresca el badge de "Chat" del layout de clienta.
+  revalidatePath("/c/mensajes", "layout");
+}
+
 export async function enviarMiMensaje(
   contenido: string
 ): Promise<ResultadoAccion> {

@@ -82,12 +82,27 @@ export async function guardarRegistroSerie(input: {
       .select("id")
       .single<{ id: string }>();
     if (errCrear || !nueva) {
-      return {
-        ok: false,
-        error: errCrear?.message ?? "No se pudo crear la sesión.",
-      };
+      // Posible condición de carrera (doble guardado simultáneo): otra petición
+      // creó la sesión del día a la vez y chocó con el índice único
+      // (clienta_id, fecha). Reusamos la fila ya existente y mezclamos lo que
+      // la otra petición hubiera guardado, en vez de devolver error.
+      const { data: ya } = await supabase
+        .from("sesiones")
+        .select("id, registros")
+        .eq("clienta_id", input.clientaId)
+        .eq("fecha", input.fecha)
+        .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
+      if (!ya) {
+        return {
+          ok: false,
+          error: errCrear?.message ?? "No se pudo crear la sesión.",
+        };
+      }
+      sesionId = ya.id;
+      Object.assign(registros, ya.registros ?? {});
+    } else {
+      sesionId = nueva.id;
     }
-    sesionId = nueva.id;
   }
 
   // Merge en registros[elementoId].series_realizadas[serieIdx]
@@ -189,7 +204,26 @@ export async function guardarRegistroPasos(input: {
       dia: input.dia,
       registros,
     });
-    if (errIns) return { ok: false, error: errIns.message };
+    if (errIns) {
+      // Carrera: otra petición creó la sesión a la vez. Reusar la existente y
+      // fusionar este elemento sobre sus registros.
+      const { data: ya } = await supabase
+        .from("sesiones")
+        .select("id, registros")
+        .eq("clienta_id", input.clientaId)
+        .eq("fecha", input.fecha)
+        .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
+      if (!ya) return { ok: false, error: errIns.message };
+      const fusion: RegistrosSesion = {
+        ...(ya.registros ?? {}),
+        [input.elementoId]: registros[input.elementoId]!,
+      };
+      const { error: errUpd2 } = await supabase
+        .from("sesiones")
+        .update({ registros: fusion })
+        .eq("id", ya.id);
+      if (errUpd2) return { ok: false, error: errUpd2.message };
+    }
   } else {
     const { error: errUpd } = await supabase
       .from("sesiones")
@@ -243,7 +277,21 @@ export async function marcarSesionCompletada(
       completada: true,
       porcentaje_completado: 100,
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      // Carrera: la sesión ya se creó a la vez. Marcarla como completada.
+      const { data: ya } = await supabase
+        .from("sesiones")
+        .select("id")
+        .eq("clienta_id", clientaId)
+        .eq("fecha", fecha)
+        .maybeSingle<{ id: string }>();
+      if (!ya) return { ok: false, error: error.message };
+      const { error: e2 } = await supabase
+        .from("sesiones")
+        .update({ completada: true, porcentaje_completado: 100 })
+        .eq("id", ya.id);
+      if (e2) return { ok: false, error: e2.message };
+    }
   }
 
   // Disparar recálculo de logros — no esperamos a la respuesta

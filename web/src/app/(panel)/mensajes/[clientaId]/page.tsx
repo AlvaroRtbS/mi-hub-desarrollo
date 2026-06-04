@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { inicialesNombre } from "@/lib/utilidades";
 import { BotonVistaClienta } from "@/components/boton-vista-clienta";
+import { MarcarLeidoAlMontar } from "@/components/marcar-leido";
 import { Conversacion } from "./conversacion";
+import { marcarConversacionLeida } from "../acciones";
 
 type Mensaje = {
   id: string;
@@ -40,17 +42,9 @@ export default async function ConversacionPage({
   // Datos para rellenar variables de plantillas (peso actual, adherencia, racha…)
   const datosPlantilla = await calcularDatosPlantilla(supabase, clientaId);
 
-  // Marca como leídos los entrantes (inline, sin revalidatePath durante render).
-  // El badge de la lista se actualizará en la próxima navegación a /mensajes.
-  await supabase
-    .from("mensajes")
-    .update({ leido: true })
-    .eq("clienta_id", clientaId)
-    .eq("remitente", "clienta")
-    .eq("leido", false);
-
   return (
     <div className="p-6 md:p-8 max-w-3xl">
+      <MarcarLeidoAlMontar accion={marcarConversacionLeida.bind(null, clientaId)} />
       <Link
         href="/mensajes"
         className="text-sm text-neutral-400 hover:text-neutral-200"
