@@ -35,6 +35,8 @@ export async function middleware(request: NextRequest) {
   const esRutaPublica =
     path === "/" ||
     path.startsWith("/login") ||
+    path.startsWith("/auth/") || // callback de magic link / recuperación
+    path.startsWith("/reset-password") || // fijar nueva contraseña
     path.startsWith("/p/") || // programa compartido por link público
     path.startsWith("/i/") || // invitación de clienta (acepta sin login)
     path.startsWith("/api/whatsapp/") || // webhook entrante
