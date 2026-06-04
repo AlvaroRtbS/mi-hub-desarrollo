@@ -88,6 +88,28 @@ export async function PestanaActividad({ clientaId }: { clientaId: string }) {
       .limit(15),
   ]);
 
+  // Feedback post-sesión (esfuerzo/energía). Consulta aparte y tolerante: la
+  // columna `feedback` puede no existir aún si no se aplicó la migración.
+  const feedbackPorSesion = new Map<
+    string,
+    { esfuerzo?: string | null; energia?: string | null }
+  >();
+  {
+    const ids = (sesiones ?? []).map((s) => (s as { id: string }).id);
+    if (ids.length > 0) {
+      const { data: fbs } = await supabase
+        .from("sesiones")
+        .select("id, feedback")
+        .in("id", ids);
+      for (const f of (fbs ?? []) as Array<{
+        id: string;
+        feedback: { esfuerzo?: string | null; energia?: string | null } | null;
+      }>) {
+        if (f.feedback) feedbackPorSesion.set(f.id, f.feedback);
+      }
+    }
+  }
+
   const eventos: Evento[] = [];
 
   for (const s of sesiones ?? []) {
@@ -95,6 +117,16 @@ export async function PestanaActividad({ clientaId }: { clientaId: string }) {
     const fechaUsada =
       (s as { actualizada_en?: string | null }).actualizada_en ??
       `${(s as { fecha: string }).fecha}T12:00:00Z`;
+    const notas = (s as { notas_clienta?: string | null }).notas_clienta ?? null;
+    const fb = feedbackPorSesion.get((s as { id: string }).id);
+    const partesFb: string[] = [];
+    if (fb?.esfuerzo) partesFb.push(`Esfuerzo ${fb.esfuerzo}/5`);
+    if (fb?.energia) partesFb.push(`Energía ${fb.energia}/5`);
+    const detalle =
+      [notas, partesFb.join(" · ")].filter(Boolean).join(" — ") ||
+      (typeof (s as { porcentaje_completado?: number }).porcentaje_completado === "number"
+        ? `${(s as { porcentaje_completado?: number }).porcentaje_completado}% completado`
+        : undefined);
     eventos.push({
       id: `sesion-${(s as { id: string }).id}`,
       fecha: fechaUsada,
@@ -102,11 +134,7 @@ export async function PestanaActividad({ clientaId }: { clientaId: string }) {
       titulo: completada
         ? "Sesión completada"
         : "Sesión registrada (incompleta)",
-      detalle:
-        (s as { notas_clienta?: string | null }).notas_clienta ??
-        (typeof (s as { porcentaje_completado?: number }).porcentaje_completado === "number"
-          ? `${(s as { porcentaje_completado?: number }).porcentaje_completado}% completado`
-          : undefined),
+      detalle,
       icono: completada ? "✓" : "○",
       color: completada ? "verde" : "gris",
     });

@@ -9,6 +9,7 @@ import { hoyISO } from "@/lib/utilidades";
 import { lunesDeEstaSemana } from "@/lib/checkin";
 import { ChevronRight } from "lucide-react";
 import { BotonCompletarSesion } from "./boton-completar";
+import { FeedbackSesion } from "./feedback-sesion";
 import { RegistroEjercicio } from "./registro-ejercicio";
 import { RegistroPasos } from "./registro-pasos";
 
@@ -200,7 +201,7 @@ export default async function HoyPage() {
   // Sesión de hoy (si ya existe)
   const { data: sesionHoy } = await supabase
     .from("sesiones")
-    .select("id, completada, registros, porcentaje_completado")
+    .select("id, completada, registros, porcentaje_completado, notas_clienta")
     .eq("clienta_id", clienta.id)
     .eq("fecha", hoy)
     .maybeSingle<{
@@ -208,9 +209,23 @@ export default async function HoyPage() {
       completada: boolean;
       registros: RegistrosSesion | null;
       porcentaje_completado: number;
+      notas_clienta: string | null;
     }>();
 
   const registrosHoy: RegistrosSesion = sesionHoy?.registros ?? {};
+
+  // Feedback previo de la sesión. Consulta aparte y tolerante: la columna
+  // `feedback` puede no existir todavía si no se aplicó la migración.
+  let feedbackPrevio: { esfuerzo?: string | null; energia?: string | null } = {};
+  const { data: fbRow } = await supabase
+    .from("sesiones")
+    .select("feedback")
+    .eq("clienta_id", clienta.id)
+    .eq("fecha", hoy)
+    .maybeSingle<{
+      feedback: { esfuerzo?: string | null; energia?: string | null } | null;
+    }>();
+  if (fbRow?.feedback) feedbackPrevio = fbRow.feedback;
 
   // Para cada ejercicio del día, buscar el último registro previo
   // (mejor peso de la última sesión anterior con datos de ese elemento).
@@ -361,6 +376,17 @@ export default async function HoyPage() {
               yaCompletada={!!sesionHoy?.completada}
               sesionId={sesionHoy?.id ?? null}
             />
+
+            {sesionHoy?.completada && (
+              <FeedbackSesion
+                fecha={hoy}
+                inicial={{
+                  esfuerzo: feedbackPrevio.esfuerzo,
+                  energia: feedbackPrevio.energia,
+                  comentario: sesionHoy?.notas_clienta,
+                }}
+              />
+            )}
           </div>
         )}
       </div>

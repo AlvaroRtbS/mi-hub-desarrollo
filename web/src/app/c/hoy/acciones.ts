@@ -236,6 +236,46 @@ export async function guardarRegistroPasos(input: {
   return { ok: true };
 }
 
+/**
+ * Guarda el feedback post-sesión de la clienta (esfuerzo percibido y energía
+ * 1-5 + comentario) sobre la sesión del día. La sesión ya debe existir
+ * (se llama tras marcarla completada).
+ */
+export async function guardarFeedbackSesion(
+  fecha: string,
+  feedback: { esfuerzo?: string; energia?: string; comentario?: string }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticada." };
+
+  const { data: clienta } = await supabase
+    .from("clientas")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string }>();
+  if (!clienta) return { ok: false, error: "No eres una clienta." };
+
+  const { error } = await supabase
+    .from("sesiones")
+    .update({
+      feedback: {
+        esfuerzo: feedback.esfuerzo || null,
+        energia: feedback.energia || null,
+      },
+      notas_clienta: feedback.comentario?.trim() || null,
+    })
+    .eq("clienta_id", clienta.id)
+    .eq("fecha", fecha);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/c/hoy");
+  return { ok: true };
+}
+
 export async function marcarSesionCompletada(
   clientaId: string,
   fecha: string,
