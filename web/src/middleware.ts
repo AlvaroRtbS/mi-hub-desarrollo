@@ -99,5 +99,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    // Excluimos estáticos e imágenes y los ficheros públicos de la PWA
+    // (manifest, service worker y página offline) para que se sirvan directos
+    // sin pasar por la redirección de sesión a /login.
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

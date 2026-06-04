@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
 import { ScriptTema } from "@/components/theme-toggle";
+import { RegisterSW } from "@/components/pwa/register-sw";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -15,8 +16,12 @@ export const metadata: Metadata = {
   description: "Plataforma de entrenamiento personal",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg" }],
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   appleWebApp: {
     capable: true,
@@ -43,6 +48,7 @@ export default function RootLayout({
         <ScriptTema />
       </head>
       <body className="font-sans">
+        <RegisterSW />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

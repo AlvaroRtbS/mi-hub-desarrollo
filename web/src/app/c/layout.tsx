@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { TabBar } from "./tab-bar";
 import { TourBienvenida } from "./tour-bienvenida";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 
 const TABS = [
   { href: "/c/hoy", Icon: Home, label: "Hoy" },
@@ -145,6 +146,9 @@ export default async function ClientaLayout({
 
         {/* Tour de bienvenida (solo primera visita) */}
         <TourBienvenida />
+
+        {/* Banner para instalar la PWA (oculto si ya está instalada) */}
+        <InstallPrompt />
       </div>
     </div>
   );
