@@ -16,6 +16,7 @@ retenga clientas. Esfuerzo orientativo: S (pequeño), M (medio), L (grande).
 7. **Formulario inicial tipo conversación** (M) — una pregunta por pantalla con barra de progreso, en vez de un formulario largo que intimida.
 
 ## B) Clienta — ver el VALOR (motivación y resultados)
+> Estado 4-jun: ✅ #8 (tarjeta "Tu evolución" en Medidas) · ✅ #11 ("Tu semana" en Hoy) · ✅ #9 (push notifications — requiere claves VAPID en Vercel + prueba en móvil). Pendientes/opcionales: #10 (hitos, incremental), #12 (compartible), #13 (feedback más personal).
 
 8. **Pantalla "Tu evolución"** (M) — peso + medidas + foto antes/después + adherencia juntos, visual y motivador. (Ya hay comparador; falta la vista unificada de resultados.)
 9. **Notificaciones push (PWA)** (L) — "tu entreno de hoy", "nuevo plan", "te toca check-in", "mensaje de Álvaro". Clave para uso recurrente y retención.
