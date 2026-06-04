@@ -554,56 +554,72 @@ function SeccionResumen({
         )}
       </div>
 
-      {/* Atajos y actividad */}
+      {/* Actividad */}
       <div className="border border-neutral-800 rounded-2xl p-5">
-        <h3 className="font-medium mb-3">Actividad y atajos</h3>
-        <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+        <h3 className="font-medium mb-3">Actividad</h3>
+        <div className="grid grid-cols-2 gap-3 text-sm">
           <Mini label="Sesiones" valor={sesionesCount} />
           <Mini label="Fotos progreso" valor={fotosCount} />
         </div>
-        <div className="flex flex-wrap gap-2 text-xs">
-          <Link
-            href={`/clientas/${clienta.id}/vista-clienta`}
-            className="text-brand-500 hover:text-brand-400"
-          >
-            Ver como la clienta →
-          </Link>
-          <Link
-            href={`/clientas/${clienta.id}/formulario`}
-            className="text-brand-500 hover:text-brand-400"
-          >
-            📋 Formulario inicial →
-          </Link>
-          <Link
-            href={`/clientas/${clienta.id}/fotos`}
-            className="text-brand-500 hover:text-brand-400"
-          >
-            Comparador de fotos →
-          </Link>
-          <Link
-            href={`/clientas/${clienta.id}/ejercicios`}
-            className="text-brand-500 hover:text-brand-400"
-          >
-            Histórico por ejercicio →
-          </Link>
+      </div>
+
+      {/* Más de esta clienta (navegación) */}
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+          Más de esta clienta
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {asignacionActiva && (
             <Link
               href={`/clientas/${clienta.id}/programa`}
-              className="text-brand-500 hover:text-brand-400"
+              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
               title="Personaliza el plan asignado a esta clienta (sin tocar el base)"
             >
-              ✏️ Editar plan personalizado →
+              ✏️ <span className="truncate">Plan personalizado</span>
             </Link>
           )}
+          <Link
+            href={`/clientas/${clienta.id}/fotos`}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
+          >
+            📸 <span className="truncate">Fotos / comparador</span>
+          </Link>
+          <Link
+            href={`/clientas/${clienta.id}/ejercicios`}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
+          >
+            📊 <span className="truncate">Histórico ejercicios</span>
+          </Link>
+          <Link
+            href={`/clientas/${clienta.id}/formulario`}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
+          >
+            📋 <span className="truncate">Formulario inicial</span>
+          </Link>
+          <Link
+            href={`/clientas/${clienta.id}/vista-clienta`}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
+          >
+            👁️ <span className="truncate">Ver como la clienta</span>
+          </Link>
           <a
             href={`/imprimir/clienta/${clienta.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-500 hover:text-brand-400"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
             title="Abre la vista de impresión / PDF de un reporte de esta clienta"
           >
-            Imprimir ficha / PDF →
+            🖨️ <span className="truncate">Imprimir / PDF</span>
           </a>
+        </div>
+      </div>
+
+      {/* Acciones */}
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+          Acciones
+        </h3>
+        <div className="flex flex-wrap gap-2 text-xs">
           <BotonGenerarIA clientaId={clienta.id} />
           {asignacionActiva && (
             <BotonCompartirPrograma

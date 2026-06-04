@@ -133,8 +133,8 @@ export default async function MetricasPage() {
       )}
 
       <p className="text-xs text-neutral-500 mt-4">
-        Solo se muestran las clientas activas. Las gráficas de evolución y el
-        comparador de fotos llegarán en el próximo sprint.
+        Solo se muestran las clientas activas. Para ver la evolución completa con
+        gráficas y comparador de fotos, entra en la ficha de cada clienta.
       </p>
     </div>
   );

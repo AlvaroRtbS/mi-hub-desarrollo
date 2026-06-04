@@ -19,18 +19,39 @@ import {
 import LogoutButton from "@/components/logout-button";
 import { BusquedaGlobal } from "@/components/busqueda-global";
 
-const ENLACES = [
-  { href: "/inicio", label: "Inicio", Icon: Home },
-  { href: "/calendario", label: "Calendario", Icon: Calendar },
-  { href: "/clientas", label: "Clientas", Icon: Users },
-  { href: "/programas", label: "Programas", Icon: ClipboardList },
-  { href: "/ejercicios", label: "Ejercicios", Icon: Dumbbell },
-  { href: "/nutricion", label: "Nutrición", Icon: Apple },
-  { href: "/metricas", label: "Métricas", Icon: LineChart },
-  { href: "/mensajes", label: "Mensajes", Icon: MessageSquare },
+const GRUPOS: {
+  titulo: string | null;
+  enlaces: { href: string; label: string; Icon: typeof Home }[];
+}[] = [
+  {
+    titulo: null,
+    enlaces: [{ href: "/inicio", label: "Inicio", Icon: Home }],
+  },
+  {
+    titulo: "Gestión",
+    enlaces: [
+      { href: "/clientas", label: "Clientas", Icon: Users },
+      { href: "/clientas/comparativa", label: "Comparativa", Icon: LineChart },
+      { href: "/calendario", label: "Calendario", Icon: Calendar },
+      { href: "/mensajes", label: "Mensajes", Icon: MessageSquare },
+    ],
+  },
+  {
+    titulo: "Biblioteca",
+    enlaces: [
+      { href: "/programas", label: "Programas", Icon: ClipboardList },
+      { href: "/ejercicios", label: "Ejercicios", Icon: Dumbbell },
+      { href: "/nutricion", label: "Nutrición", Icon: Apple },
+    ],
+  },
 ];
 
 const ENLACE_AJUSTES = { href: "/ajustes", label: "Ajustes", Icon: Settings };
+
+const TODOS_HREFS = [
+  ...GRUPOS.flatMap((g) => g.enlaces.map((e) => e.href)),
+  ENLACE_AJUSTES.href,
+];
 
 export function Sidebar({
   coachLabel,
@@ -42,8 +63,20 @@ export function Sidebar({
   const pathname = usePathname() ?? "";
   const [abierta, setAbierta] = useState(false);
 
+  // El enlace activo es el de coincidencia de prefijo MÁS LARGA, para que
+  // "/clientas/comparativa" gane a "/clientas" y no se marquen ambos.
+  const hrefActivo = (() => {
+    let best: string | null = null;
+    for (const h of TODOS_HREFS) {
+      if ((pathname === h || pathname.startsWith(h + "/")) && (!best || h.length > best.length)) {
+        best = h;
+      }
+    }
+    return best;
+  })();
+
   function esActiva(href: string) {
-    return pathname === href || pathname.startsWith(href + "/");
+    return href === hrefActivo;
   }
 
   function getBadge(href: string): number {
@@ -97,45 +130,54 @@ export function Sidebar({
           <BusquedaGlobal />
         </div>
 
-        <nav className="flex-1 px-3 py-2 space-y-0.5">
-          {ENLACES.map((e) => {
-            const activa = esActiva(e.href);
-            const badge = getBadge(e.href);
-            return (
-              <Link
-                key={e.href}
-                href={e.href}
-                onClick={() => setAbierta(false)}
-                className={
-                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition " +
-                  (activa
-                    ? "bg-neutral-900 text-white"
-                    : "text-neutral-300 hover:bg-neutral-900 hover:text-white")
-                }
-                style={
-                  activa
-                    ? { borderLeft: "2px solid var(--brand)", paddingLeft: "10px" }
-                    : undefined
-                }
-              >
-                <e.Icon
-                  size={16}
-                  className={activa ? "" : "text-neutral-500"}
-                  style={activa ? { color: "var(--brand)" } : undefined}
-                />
-                <span className="flex-1">{e.label}</span>
-                {badge > 0 && (
-                  <span
-                    className="text-[10px] text-white px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center font-medium"
-                    style={{ backgroundColor: "var(--brand)" }}
-                    aria-label={`${badge} sin leer`}
+        <nav className="flex-1 px-3 py-2 space-y-3 overflow-y-auto">
+          {GRUPOS.map((grupo, gi) => (
+            <div key={gi} className="space-y-0.5">
+              {grupo.titulo && (
+                <div className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+                  {grupo.titulo}
+                </div>
+              )}
+              {grupo.enlaces.map((e) => {
+                const activa = esActiva(e.href);
+                const badge = getBadge(e.href);
+                return (
+                  <Link
+                    key={e.href}
+                    href={e.href}
+                    onClick={() => setAbierta(false)}
+                    className={
+                      "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition " +
+                      (activa
+                        ? "bg-neutral-900 text-white"
+                        : "text-neutral-300 hover:bg-neutral-900 hover:text-white")
+                    }
+                    style={
+                      activa
+                        ? { borderLeft: "2px solid var(--brand)", paddingLeft: "10px" }
+                        : undefined
+                    }
                   >
-                    {badge > 99 ? "99+" : badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+                    <e.Icon
+                      size={16}
+                      className={activa ? "" : "text-neutral-500"}
+                      style={activa ? { color: "var(--brand)" } : undefined}
+                    />
+                    <span className="flex-1">{e.label}</span>
+                    {badge > 0 && (
+                      <span
+                        className="text-[10px] text-white px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center font-medium"
+                        style={{ backgroundColor: "var(--brand)" }}
+                        aria-label={`${badge} sin leer`}
+                      >
+                        {badge > 99 ? "99+" : badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="px-3 pb-2">
