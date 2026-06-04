@@ -7,6 +7,7 @@ import { LOGROS, calcularNivel, xpTotal as calcularXpTotal, type TipoLogro } fro
 import { calcularAdherencia, diasProgramadosDeAsignacion } from "@/lib/adherencia";
 import { hoyISO } from "@/lib/utilidades";
 import { lunesDeEstaSemana } from "@/lib/checkin";
+import type { Toma } from "@/lib/nutricion";
 import { ChevronRight } from "lucide-react";
 import { BotonCompletarSesion } from "./boton-completar";
 import { FeedbackSesion } from "./feedback-sesion";
@@ -62,6 +63,17 @@ export default async function HoyPage() {
     .eq("semana", lunesDeEstaSemana())
     .maybeSingle();
   const checkinPendiente = !checkinFila;
+
+  // Comidas de hoy (plan estructurado por equivalencias, si tiene uno activo)
+  const { data: planNutri } = await supabase
+    .from("nutricion_planes_estructurados")
+    .select("tomas")
+    .eq("clienta_id", clienta.id)
+    .eq("activo", true)
+    .order("actualizado_en", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ tomas: Toma[] }>();
+  const tomasHoy = planNutri?.tomas ?? [];
 
   // Asignación activa
   const { data: asignacion } = await supabase
@@ -390,6 +402,36 @@ export default async function HoyPage() {
           </div>
         )}
       </div>
+
+      {/* Tus comidas de hoy */}
+      {tomasHoy.length > 0 && (
+        <div className="mt-6 border border-neutral-800 rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">🍽️ Tus comidas de hoy</div>
+            <Link href="/c/nutricion" className="text-xs text-brand-500">
+              Ver dieta →
+            </Link>
+          </div>
+          <div className="space-y-2.5">
+            {tomasHoy.map((t) => (
+              <div key={t.id} className="flex items-start gap-3 text-sm">
+                <div className="w-24 shrink-0">
+                  <div className="font-medium text-neutral-200">{t.nombre}</div>
+                  {t.hora && (
+                    <div className="text-[10px] text-neutral-500">{t.hora}</div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 text-neutral-300">
+                  {t.menu && t.menu.length > 0
+                    ? t.menu.slice(0, 2).join(" · ") +
+                      (t.menu.length > 2 ? "…" : "")
+                    : `${t.hc} HC · ${t.p} P · ${t.g} G${t.v ? ` · ${t.v} verdura` : ""}`}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Logros recientes */}
       {logros.length > 0 && (

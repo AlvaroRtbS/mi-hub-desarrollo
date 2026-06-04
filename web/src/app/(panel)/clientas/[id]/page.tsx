@@ -26,6 +26,7 @@ import { PanelObjetivos } from "./panel-objetivos";
 import { GruposClienta } from "./grupos-clienta";
 import { type TipoLogro, xpTotal as calcularXpTotal } from "@/lib/gamificacion";
 import { GraficasMetricas } from "./graficas";
+import { PasosRecientes } from "./pasos-recientes";
 import { TabsNav, type TabClienta } from "./tabs-nav";
 import { FichasEstructuradas } from "./fichas-estructuradas";
 import { TodosClienta } from "./todos-clienta";
@@ -738,6 +739,8 @@ function SeccionMetricas({
           </ul>
         )}
       </div>
+
+      <PasosRecientes clientaId={clientaId} />
 
       <div className="border border-neutral-800 rounded-2xl p-5">
         <h3 className="font-medium mb-4">Evolución</h3>

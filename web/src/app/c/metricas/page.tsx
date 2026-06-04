@@ -3,6 +3,7 @@ import { formatearFecha } from "@/lib/utilidades";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormularioMiMetrica } from "./formulario";
 import { MiniGrafica } from "./grafica";
+import { PasosDiarios } from "./pasos-diarios";
 
 type MetricaFila = {
   id: string;
@@ -31,9 +32,9 @@ export default async function MetricasClientaPage() {
 
   const { data: clienta } = await supabase
     .from("clientas")
-    .select("id")
+    .select("id, pasos_ingest_token")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .maybeSingle<{ id: string; pasos_ingest_token: string | null }>();
   if (!clienta) return null;
 
   const { data: metricasData } = await supabase
@@ -43,6 +44,18 @@ export default async function MetricasClientaPage() {
     .order("fecha", { ascending: false });
 
   const metricas = (metricasData ?? []) as MetricaFila[];
+
+  const { data: pasosData } = await supabase
+    .from("pasos_diarios")
+    .select("fecha, pasos, fuente")
+    .eq("clienta_id", clienta.id)
+    .order("fecha", { ascending: false })
+    .limit(14);
+  const pasosRecientes = (pasosData ?? []) as Array<{
+    fecha: string;
+    pasos: number;
+    fuente: string | null;
+  }>;
 
   // Agrupar por tipo para gráficas
   const porTipo = new Map<string, MetricaFila[]>();
@@ -58,6 +71,8 @@ export default async function MetricasClientaPage() {
       <p className="text-sm text-neutral-400 mb-4">
         Registra tu evolución para que tu entrenador la vea.
       </p>
+
+      <PasosDiarios token={clienta.pasos_ingest_token} recientes={pasosRecientes} />
 
       <FormularioMiMetrica />
 

@@ -37,7 +37,8 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/login") ||
     path.startsWith("/p/") || // programa compartido por link público
     path.startsWith("/i/") || // invitación de clienta (acepta sin login)
-    path.startsWith("/api/whatsapp/"); // webhook entrante
+    path.startsWith("/api/whatsapp/") || // webhook entrante
+    path.startsWith("/api/pasos/"); // ingesta de pasos (atajo iPhone, token propio)
 
   if (!user && !esRutaPublica) {
     const url = request.nextUrl.clone();
