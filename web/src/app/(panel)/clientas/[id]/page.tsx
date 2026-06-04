@@ -597,6 +597,12 @@ function SeccionResumen({
             📋 <span className="truncate">Formulario inicial</span>
           </Link>
           <Link
+            href={`/clientas/${clienta.id}/checkins`}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
+          >
+            ✅ <span className="truncate">Check-ins semanales</span>
+          </Link>
+          <Link
             href={`/clientas/${clienta.id}/vista-clienta`}
             className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
           >

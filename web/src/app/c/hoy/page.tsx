@@ -6,6 +6,7 @@ import { urlEmbedVideo } from "@/lib/supabase/tipos";
 import { LOGROS, calcularNivel, xpTotal as calcularXpTotal, type TipoLogro } from "@/lib/gamificacion";
 import { calcularAdherencia, diasProgramadosDeAsignacion } from "@/lib/adherencia";
 import { hoyISO } from "@/lib/utilidades";
+import { lunesDeEstaSemana } from "@/lib/checkin";
 import { ChevronRight } from "lucide-react";
 import { BotonCompletarSesion } from "./boton-completar";
 import { RegistroEjercicio } from "./registro-ejercicio";
@@ -51,6 +52,15 @@ export default async function HoyPage() {
     .eq("tipo", "inicial")
     .maybeSingle<{ completado: boolean }>();
   const formularioPendiente = !formInicial?.completado;
+
+  // ¿Tiene el check-in de esta semana pendiente?
+  const { data: checkinFila } = await supabase
+    .from("checkins")
+    .select("semana")
+    .eq("clienta_id", clienta.id)
+    .eq("semana", lunesDeEstaSemana())
+    .maybeSingle();
+  const checkinPendiente = !checkinFila;
 
   // Asignación activa
   const { data: asignacion } = await supabase
@@ -276,6 +286,7 @@ export default async function HoyPage() {
       <Saludo nombre={clienta.nombre} nivel={nivel} xp={xp} />
 
       {formularioPendiente && <AvisoFormularioInicial />}
+      {!formularioPendiente && checkinPendiente && <AvisoCheckin />}
 
       {/* Banner de racha — solo si tiene racha ≥3 para no saturar */}
       {adherencia.rachaActual >= 3 && (
@@ -386,6 +397,24 @@ export default async function HoyPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+function AvisoCheckin() {
+  return (
+    <Link
+      href="/c/checkins"
+      className="flex items-center gap-3 border border-brand-900/50 bg-brand-950/20 rounded-2xl p-4 mt-4 hover:bg-brand-950/30 transition"
+    >
+      <div className="text-2xl">✅</div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium">Check-in de la semana</div>
+        <div className="text-xs text-brand-300/80 mt-0.5">
+          Un minuto para contarle a tu entrenador cómo te ha ido.
+        </div>
+      </div>
+      <ChevronRight className="size-5 text-brand-500/70 shrink-0" />
+    </Link>
   );
 }
 
