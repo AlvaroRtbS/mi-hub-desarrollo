@@ -9,7 +9,8 @@
     "discover": "tsx discover.ts",
     "discover-programa": "tsx discover-programa.ts",
     "estado": "tsx estado.ts",
-    "limpiar-huerfanos": "tsx limpiar-huerfanos.ts"
+    "limpiar-huerfanos": "tsx limpiar-huerfanos.ts",
+    "importar-estructura": "tsx importar-estructura.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

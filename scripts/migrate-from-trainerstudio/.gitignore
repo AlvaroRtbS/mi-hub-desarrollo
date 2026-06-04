@@ -6,3 +6,6 @@ swagger.json
 swagger2.json
 api.json
 discovered.json
+discovered-programa.json
+discovered-wblocks.json
+_*.json
