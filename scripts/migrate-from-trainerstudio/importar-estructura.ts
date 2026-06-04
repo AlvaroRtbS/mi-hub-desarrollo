@@ -58,6 +58,77 @@ function horaDe(iso?: string): string {
   return d.toISOString().slice(11, 16);
 }
 
+/** Valor textual de una variable de set de TS: exact → "30", range → "6-8". */
+function valorVariable(v: Item): string {
+  const val = v?.value;
+  if (val == null) return "";
+  if (val.type === "range") return `${val.min ?? ""}-${val.max ?? ""}`;
+  return String(val.value ?? "");
+}
+
+/**
+ * Convierte los `sets[]` de TS (con `variables[]` {key,value,unit}) en
+ * SerieEjercicio[] de mi-hub. Claves conocidas en TS: reps (count),
+ * time (s) → se vuelca en reps como "30s", rest (s) → descanso.
+ * También soporta peso (weight/kg/load) por si aparece, y un fallback a
+ * sets con campos planos (reps/weight) de versiones antiguas.
+ */
+function seriesDeSets(sets?: Item[]): Array<Record<string, string>> {
+  return (sets ?? []).map((s: Item) => {
+    const vars: Record<string, { val: string; unit?: string }> = {};
+    for (const v of s.variables ?? []) {
+      if (v?.key) vars[v.key] = { val: valorVariable(v), unit: v.unit };
+    }
+    let reps = "";
+    if (vars.reps) reps = vars.reps.val;
+    else if (vars.time) reps = `${vars.time.val}${vars.time.unit ?? "s"}`;
+    else if (vars.distance) reps = `${vars.distance.val}${vars.distance.unit ?? ""}`;
+    const peso = vars.weight
+      ? `${vars.weight.val}${vars.weight.unit ?? "kg"}`
+      : vars.kg
+        ? `${vars.kg.val}kg`
+        : vars.load
+          ? `${vars.load.val}${vars.load.unit ?? "kg"}`
+          : "";
+    const descanso = vars.rest
+      ? `${vars.rest.val}${vars.rest.unit ?? "s"}`
+      : typeof s.rest === "number"
+        ? `${s.rest}s`
+        : "";
+    const rir = vars.rir ? vars.rir.val : undefined;
+    return {
+      reps: reps || String(s.reps ?? s.repetitions ?? s.targetReps ?? ""),
+      peso: peso || String(s.weight ?? s.kg ?? s.targetWeight ?? ""),
+      ...(rir ? { rir } : {}),
+      ...(descanso ? { descanso } : {}),
+    };
+  });
+}
+
+/** Un circuitExercise de TS → un ElementoEjercicio de mi-hub (o contenido si no se enlaza). */
+function ejercicioDeCircuito(ce: Item, ejMap: Map<string, string>): Record<string, any> {
+  const id = randomUUID();
+  const ex = ce.exercise ?? {};
+  const ejId = ejMap.get(ex._id);
+  const series = seriesDeSets(ce.sets);
+  if (ejId) {
+    return {
+      id,
+      tipo: "ejercicio",
+      ejercicio_id: ejId,
+      ejercicio_nombre: ex.name,
+      series,
+      ...(ce.instructions ? { notas: ce.instructions } : {}),
+    };
+  }
+  return {
+    id,
+    tipo: "contenido",
+    titulo: ex.name ?? "Ejercicio",
+    markdown: ce.instructions || ex.defaultInstructions || "",
+  };
+}
+
 function mapItem(it: Item, ejMap: Map<string, string>): Record<string, any> {
   const id = randomUUID();
   switch (it.type) {
@@ -80,14 +151,9 @@ function mapItem(it: Item, ejMap: Map<string, string>): Record<string, any> {
     case "EXERCISE": {
       const ex = it.exercise ?? {};
       const ejId = ejMap.get(ex._id);
-      const setsRaw: Item[] =
-        (it.exerciseSets?.length ? it.exerciseSets : it.customerSets?.length ? it.customerSets : []) ?? [];
-      const series = setsRaw.map((s: Item) => ({
-        reps: String(s.reps ?? s.repetitions ?? s.targetReps ?? ""),
-        peso: String(s.weight ?? s.kg ?? s.targetWeight ?? ""),
-        ...(s.rir != null ? { rir: String(s.rir) } : {}),
-        ...(s.rest != null ? { descanso: String(s.rest) } : {}),
-      }));
+      const series = seriesDeSets(
+        it.exerciseSets?.length ? it.exerciseSets : it.customerSets
+      );
       if (ejId) {
         return {
           id,
@@ -135,14 +201,38 @@ function construir(wblocks: Wblock[], ejMap: Map<string, string>) {
       dia.descanso = true;
       continue;
     }
-    const elementos = (wb.items ?? [])
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      .map((it) => {
+    // Cada CIRCUIT de TS se convierte en su propio bloque (con sus ejercicios);
+    // los demás ítems se agrupan en bloques "normales" respetando el orden.
+    const items = (wb.items ?? []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    let pendientes: any[] = [];
+    const flush = () => {
+      if (pendientes.length) {
+        dia.bloques.push({ id: randomUUID(), titulo: wb.name ?? "Bloque", elementos: pendientes });
+        pendientes = [];
+      }
+    };
+    for (const it of items) {
+      if (it.type === "CIRCUIT") {
+        const elementos = (it.circuitExercises ?? []).map((ce: Item) => {
+          const el = ejercicioDeCircuito(ce, ejMap);
+          conteo[el.tipo] = (conteo[el.tipo] ?? 0) + 1;
+          return el;
+        });
+        if (elementos.length === 0) continue;
+        flush();
+        dia.bloques.push({
+          id: randomUUID(),
+          titulo: it.circuitName || "Circuito",
+          indicaciones: "Circuito — realiza los ejercicios en secuencia.",
+          elementos,
+        });
+      } else {
         const el = mapItem(it, ejMap);
         conteo[el.tipo] = (conteo[el.tipo] ?? 0) + 1;
-        return el;
-      });
-    dia.bloques.push({ id: randomUUID(), titulo: wb.name ?? "Bloque", elementos });
+        pendientes.push(el);
+      }
+    }
+    flush();
   }
   return { est, numSemanas, conteo };
 }
