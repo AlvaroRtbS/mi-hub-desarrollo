@@ -37,7 +37,7 @@ export default async function ProgramaClientaPage({
 
   if (!asignacion) {
     return (
-      <div className="p-8 max-w-3xl">
+      <div className="p-8 mx-auto max-w-3xl">
         <Link
           href={`/clientas/${clientaId}`}
           className="text-sm text-neutral-400 hover:text-neutral-200"
@@ -199,7 +199,7 @@ export default async function ProgramaClientaPage({
   }
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-8 mx-auto max-w-5xl">
       <Link
         href={`/clientas/${clientaId}`}
         className="text-sm text-neutral-400 hover:text-neutral-200"

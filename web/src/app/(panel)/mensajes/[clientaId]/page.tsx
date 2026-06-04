@@ -43,7 +43,7 @@ export default async function ConversacionPage({
   const datosPlantilla = await calcularDatosPlantilla(supabase, clientaId);
 
   return (
-    <div className="p-6 md:p-8 max-w-3xl">
+    <div className="p-6 md:p-8 mx-auto max-w-3xl">
       <MarcarLeidoAlMontar accion={marcarConversacionLeida.bind(null, clientaId)} />
       <Link
         href="/mensajes"

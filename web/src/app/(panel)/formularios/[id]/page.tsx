@@ -41,7 +41,7 @@ export default async function FormularioDetallePage({
     >();
 
   return (
-    <div className="max-w-3xl">
+    <div className="p-8 mx-auto max-w-3xl">
       <Link
         href="/formularios"
         className="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-neutral-200 mb-3"

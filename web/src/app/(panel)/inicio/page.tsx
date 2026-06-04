@@ -169,7 +169,7 @@ export default async function InicioPage() {
   });
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-8 mx-auto max-w-6xl">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold">
           {saludo}, {coach?.nombre?.split(" ")[0] ?? ""}

@@ -21,7 +21,7 @@ export default async function GruposPage() {
   const grupos = (gruposData ?? []) as unknown as Grupo[];
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 mx-auto max-w-3xl">
       <Link
         href="/clientas"
         className="text-sm text-neutral-400 hover:text-neutral-200"

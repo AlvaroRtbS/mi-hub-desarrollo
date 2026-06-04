@@ -206,7 +206,7 @@ export default async function ClientaPage({
   const tokenInvitacion = invitacionData?.token ?? null;
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-8 mx-auto max-w-5xl">
       <Link href="/clientas" className="text-sm text-neutral-400 hover:text-neutral-200">
         ← Volver
       </Link>

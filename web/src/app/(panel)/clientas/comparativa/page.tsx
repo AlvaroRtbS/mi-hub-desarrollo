@@ -72,7 +72,7 @@ export default async function ComparativaPage({
 
   if (clientas.length === 0) {
     return (
-      <div className="p-8 max-w-7xl">
+      <div className="p-8 mx-auto max-w-7xl">
         <Header grupos={grupos} grupoActualId={grupoFiltroId} />
         <div className="border border-dashed border-neutral-800 rounded-2xl p-12 text-center">
           <div className="text-neutral-400">
@@ -87,7 +87,7 @@ export default async function ComparativaPage({
 
   if (error) {
     return (
-      <div className="p-8 max-w-7xl">
+      <div className="p-8 mx-auto max-w-7xl">
         <Header grupos={grupos} grupoActualId={grupoFiltroId} />
         <div className="text-sm text-red-400">{error.message}</div>
       </div>
@@ -294,7 +294,7 @@ export default async function ComparativaPage({
   ).length;
 
   return (
-    <div className="p-8 max-w-7xl">
+    <div className="p-8 mx-auto max-w-7xl">
       <Header grupos={grupos} grupoActualId={grupoFiltroId} />
 
       {/* KPIs agregados */}

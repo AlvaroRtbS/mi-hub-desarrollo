@@ -25,7 +25,7 @@ export default async function AlimentosPage() {
   const lista = alimentos ?? [];
 
   return (
-    <div className="max-w-3xl">
+    <div className="p-8 mx-auto max-w-5xl">
       <Link
         href="/nutricion"
         className="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-neutral-200 mb-3"

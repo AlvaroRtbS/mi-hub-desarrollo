@@ -22,7 +22,7 @@ export default async function NuevoPlanPage() {
     .order("nombre");
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 mx-auto max-w-3xl">
       <h1 className="text-2xl font-semibold mb-1">Nuevo plan de nutrición</h1>
       <p className="text-sm text-neutral-400 mb-6">
         Sube un PDF y/o escribe el plan en texto. Puedes asignarlo a una clienta

@@ -56,7 +56,7 @@ export default async function NutricionPage() {
   const estructurados = (estructData ?? []) as unknown as PlanEstruct[];
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-8 mx-auto max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Nutrición</h1>

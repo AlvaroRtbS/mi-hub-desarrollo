@@ -34,7 +34,7 @@ export default async function CheckinsCoachPage({
   const checkins = (filas ?? []) as FilaCheckin[];
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 mx-auto max-w-2xl">
       <Link
         href={`/clientas/${clientaId}`}
         className="text-sm text-neutral-400 hover:text-neutral-200"

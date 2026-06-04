@@ -23,7 +23,7 @@ export default async function EditarClientaPage({
   const accion = actualizarClienta.bind(null, id);
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 mx-auto max-w-3xl">
       <h1 className="text-2xl font-semibold mb-1">Editar clienta</h1>
       <p className="text-sm text-neutral-400 mb-6">
         Actualiza los datos de {clienta.nombre}.

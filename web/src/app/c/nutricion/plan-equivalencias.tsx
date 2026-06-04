@@ -94,6 +94,17 @@ export function PlanEquivalencias({
                 );
               })}
             </div>
+
+            {t.menu && t.menu.length > 0 && (
+              <ul className="mt-3 space-y-1 border-t border-neutral-800 pt-3">
+                {t.menu.map((linea, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-neutral-200">
+                    <span className="text-neutral-600">·</span>
+                    <span>{linea}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

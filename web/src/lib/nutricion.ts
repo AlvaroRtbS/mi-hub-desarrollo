@@ -31,6 +31,9 @@ export type Toma = {
   p: number;
   g: number;
   v: number; // raciones de verdura (~200 g cada una)
+  // Menú concreto sugerido para esta toma (una línea por plato/alimento).
+  // Opcional: el plan funciona solo con raciones; el menú lo enriquece.
+  menu?: string[];
 };
 
 export type PlanEstructurado = {

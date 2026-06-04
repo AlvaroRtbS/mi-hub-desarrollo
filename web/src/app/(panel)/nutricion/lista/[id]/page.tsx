@@ -29,7 +29,7 @@ export default async function ListaDetallePage({
     | null;
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 mx-auto max-w-2xl">
       <Link
         href="/nutricion"
         className="text-sm text-neutral-400 hover:text-neutral-200"

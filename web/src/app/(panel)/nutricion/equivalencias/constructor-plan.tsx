@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Plus, Calculator, Save } from "lucide-react";
+import { Trash2, Plus, Calculator, Save, Sparkles } from "lucide-react";
 import {
   type Toma,
   calcularMacros,
@@ -47,6 +47,7 @@ export function ConstructorPlan({
   const router = useRouter();
   const toast = useToast();
   const [guardando, startGuardar] = useTransition();
+  const [sugiriendo, setSugiriendo] = useState(false);
 
   const [nombre, setNombre] = useState(inicial.nombre);
   const [clientaId, setClientaId] = useState<string | null>(inicial.clientaId);
@@ -117,6 +118,43 @@ export function ConstructorPlan({
     setTomas((ts) => ts.filter((_, i) => i !== idx));
   }
 
+  function setMenuToma(idx: number, texto: string) {
+    setTomas((ts) =>
+      ts.map((t, i) => (i === idx ? { ...t, menu: texto.split("\n") } : t))
+    );
+  }
+
+  async function sugerirMenu() {
+    if (tomas.length === 0) {
+      toast.error("Calcula primero el reparto por tomas.");
+      return;
+    }
+    setSugiriendo(true);
+    try {
+      const res = await fetch("/api/ia/sugerir-menu", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tomas, clientaId }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        toast.error(data.error || "No se pudo generar el menú.");
+        return;
+      }
+      const porId = new Map<string, string[]>(
+        (data.tomas as { id: string; menu: string[] }[]).map((t) => [t.id, t.menu])
+      );
+      setTomas((ts) =>
+        ts.map((t) => (porId.has(t.id) ? { ...t, menu: porId.get(t.id) } : t))
+      );
+      toast.success("Menú sugerido ✓ — revísalo y ajusta lo que quieras.");
+    } catch {
+      toast.error("Error llamando a la IA.");
+    } finally {
+      setSugiriendo(false);
+    }
+  }
+
   const totales = totalesDeTomas(tomas);
   const objetivo = {
     hc: macros.raciones_hc ?? 0,
@@ -129,12 +167,26 @@ export function ConstructorPlan({
       toast.error("El plan necesita un nombre.");
       return;
     }
+    // Limpia las líneas de menú vacías; quita `menu` si queda vacío.
+    const tomasLimpias = tomas.map((t) => {
+      const menu = (t.menu ?? []).map((l) => l.trim()).filter(Boolean);
+      const base = {
+        id: t.id,
+        nombre: t.nombre,
+        hora: t.hora,
+        hc: t.hc,
+        p: t.p,
+        g: t.g,
+        v: t.v,
+      };
+      return menu.length > 0 ? { ...base, menu } : base;
+    });
     const datos = {
       nombre,
       clientaId,
       calorias: calorias ? parseInt(calorias) : inicial.calorias,
       ...macros,
-      tomas,
+      tomas: tomasLimpias,
       notas: notas.trim() || null,
     };
     startGuardar(async () => {
@@ -169,7 +221,7 @@ export function ConstructorPlan({
   }
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="space-y-8">
       {/* Cabecera */}
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="block">
@@ -250,9 +302,21 @@ export function ConstructorPlan({
 
       {/* Reparto por tomas */}
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-          Reparto por tomas
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
+            Reparto por tomas
+          </h2>
+          {tomas.length > 0 && (
+            <button
+              onClick={sugerirMenu}
+              disabled={sugiriendo}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-700 bg-brand-950/40 px-3 py-1.5 text-sm font-medium text-brand-300 hover:bg-brand-950/70 disabled:opacity-50 transition"
+            >
+              <Sparkles className="size-4" />
+              {sugiriendo ? "Generando menú…" : "Sugerir menú con IA"}
+            </button>
+          )}
+        </div>
         {tomas.length === 0 ? (
           <p className="text-sm text-neutral-500">
             Usa la calculadora para generar el reparto, o añade tomas a mano.
@@ -287,6 +351,18 @@ export function ConstructorPlan({
                       onAjustar={(d) => ajustar(idx, campo, d)}
                     />
                   ))}
+                </div>
+                <div>
+                  <span className="block text-xs text-neutral-500 mb-1">
+                    Menú (una línea por plato) — lo rellena la IA o tú a mano
+                  </span>
+                  <textarea
+                    value={(t.menu ?? []).join("\n")}
+                    onChange={(e) => setMenuToma(idx, e.target.value)}
+                    rows={Math.max(2, (t.menu ?? []).length)}
+                    placeholder="Ej: 150 g pechuga de pollo a la plancha"
+                    className={`${claseInput} w-full resize-y`}
+                  />
                 </div>
               </div>
             ))}
