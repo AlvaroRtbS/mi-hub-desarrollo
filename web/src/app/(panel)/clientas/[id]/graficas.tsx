@@ -17,6 +17,7 @@ const CONFIG: Array<Omit<SerieMetrica, "puntos">> = [
   { tipo: "perimetro_brazo", label: "Brazo", unidad: "cm", color: "#f97316" },
   { tipo: "porcentaje_grasa", label: "% Grasa", unidad: "%", color: "#ef4444" },
   { tipo: "masa_muscular", label: "Masa musc.", unidad: "kg", color: "#06b6d4" },
+  { tipo: "pasos_medios_semanales", label: "Pasos (media sem.)", unidad: "", color: "#eab308" },
 ];
 
 export async function GraficasMetricas({ clientaId }: { clientaId: string }) {
