@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Toma } from "@/lib/nutricion";
 import { ALIMENTOS_POR_DEFECTO } from "@/lib/nutricion-equivalencias-default";
+import { generarMenuPlan, type AlimentoGen } from "@/lib/generar-menu";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
 export type ResultadoCrear = { ok: true; id: string } | { ok: false; error: string };
@@ -126,6 +127,55 @@ export async function actualizarPlanEstructurado(
   revalidatePath("/nutricion");
   revalidatePath(`/nutricion/equivalencias/${id}`);
   return { ok: true };
+}
+
+export type ResultadoMenu =
+  | { ok: true; tomas: { id: string; menu: string[] }[] }
+  | { ok: false; error: string };
+
+/**
+ * Genera un menú sugerido por toma (determinista, sin IA): cuadra las raciones
+ * con la tabla de alimentos del coach respetando las intolerancias de la clienta
+ * (de su Formulario Inicial). 0 € y sin enviar datos a terceros.
+ */
+export async function sugerirMenuLocal(
+  tomas: Toma[],
+  clientaId: string | null
+): Promise<ResultadoMenu> {
+  const { supabase, coachId } = await coachActual();
+  if (!coachId) return { ok: false, error: "No autorizado." };
+  if (!tomas || tomas.length === 0) {
+    return { ok: false, error: "Calcula primero el reparto por tomas." };
+  }
+
+  const { data: alimentos } = await supabase
+    .from("alimentos_equivalencias")
+    .select("categoria, subgrupo, alimento, cantidad, notas")
+    .eq("coach_id", coachId)
+    .order("orden", { ascending: true })
+    .returns<AlimentoGen[]>();
+
+  if (!alimentos || alimentos.length === 0) {
+    return {
+      ok: false,
+      error: "Carga primero la tabla de alimentos (Nutrición → Tabla de alimentos).",
+    };
+  }
+
+  // Intolerancias/preferencias del Formulario Inicial de la clienta (si la hay).
+  let intolerancias = "";
+  if (clientaId) {
+    const { data: fr } = await supabase
+      .from("formulario_respuestas")
+      .select("respuestas")
+      .eq("clienta_id", clientaId)
+      .eq("tipo", "inicial")
+      .maybeSingle<{ respuestas: Record<string, string> }>();
+    const r = fr?.respuestas ?? {};
+    intolerancias = [r.alimentacion, r.algo_mas].filter(Boolean).join(". ");
+  }
+
+  return { ok: true, tomas: generarMenuPlan(tomas, alimentos, intolerancias) };
 }
 
 export async function eliminarPlanEstructurado(id: string): Promise<ResultadoAccion> {

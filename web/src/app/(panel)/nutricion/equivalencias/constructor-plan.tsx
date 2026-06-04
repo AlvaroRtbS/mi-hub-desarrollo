@@ -14,6 +14,7 @@ import {
   crearPlanEstructurado,
   actualizarPlanEstructurado,
   eliminarPlanEstructurado,
+  sugerirMenuLocal,
 } from "./acciones";
 import { useToast } from "@/components/ui/toast";
 
@@ -131,25 +132,18 @@ export function ConstructorPlan({
     }
     setSugiriendo(true);
     try {
-      const res = await fetch("/api/ia/sugerir-menu", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tomas, clientaId }),
-      });
-      const data = await res.json();
+      const data = await sugerirMenuLocal(tomas, clientaId);
       if (!data.ok) {
         toast.error(data.error || "No se pudo generar el menú.");
         return;
       }
-      const porId = new Map<string, string[]>(
-        (data.tomas as { id: string; menu: string[] }[]).map((t) => [t.id, t.menu])
-      );
+      const porId = new Map<string, string[]>(data.tomas.map((t) => [t.id, t.menu]));
       setTomas((ts) =>
         ts.map((t) => (porId.has(t.id) ? { ...t, menu: porId.get(t.id) } : t))
       );
       toast.success("Menú sugerido ✓ — revísalo y ajusta lo que quieras.");
     } catch {
-      toast.error("Error llamando a la IA.");
+      toast.error("No se pudo generar el menú.");
     } finally {
       setSugiriendo(false);
     }
@@ -313,7 +307,7 @@ export function ConstructorPlan({
               className="inline-flex items-center gap-1.5 rounded-lg border border-brand-700 bg-brand-950/40 px-3 py-1.5 text-sm font-medium text-brand-300 hover:bg-brand-950/70 disabled:opacity-50 transition"
             >
               <Sparkles className="size-4" />
-              {sugiriendo ? "Generando menú…" : "Sugerir menú con IA"}
+              {sugiriendo ? "Generando menú…" : "Sugerir menú"}
             </button>
           )}
         </div>
@@ -354,7 +348,7 @@ export function ConstructorPlan({
                 </div>
                 <div>
                   <span className="block text-xs text-neutral-500 mb-1">
-                    Menú (una línea por plato) — lo rellena la IA o tú a mano
+                    Menú (una línea por plato) — lo rellena el generador o tú a mano
                   </span>
                   <textarea
                     value={(t.menu ?? []).join("\n")}
