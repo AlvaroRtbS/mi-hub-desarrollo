@@ -24,14 +24,13 @@ export default async function FormularioClientaCoachPage({
 
   const { data: fila } = await supabase
     .from("formulario_respuestas")
-    .select("respuestas, completado, completado_en, actualizado_en")
+    .select("respuestas, completado, completado_en")
     .eq("clienta_id", clientaId)
     .eq("tipo", FORMULARIO_INICIAL_TIPO)
     .maybeSingle<{
       respuestas: Record<string, string> | null;
       completado: boolean;
       completado_en: string | null;
-      actualizado_en: string;
     }>();
 
   const respuestas = fila?.respuestas ?? {};
