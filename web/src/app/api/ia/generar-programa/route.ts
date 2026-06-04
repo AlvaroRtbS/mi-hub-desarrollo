@@ -1,12 +1,12 @@
 // ============================================================================
 // Endpoint: POST /api/ia/generar-programa
 // ----------------------------------------------------------------------------
-// Genera un programa de entrenamiento completo usando Claude (Opus 4.7).
+// Genera un programa de entrenamiento completo usando Gemini (free tier).
 // Toma la ficha de la clienta + instrucciones libres del coach y devuelve
 // un programa con semanas/días/bloques/ejercicios listo para guardar.
 //
 // Variables de entorno requeridas (poner en Vercel cuando se active):
-//   ANTHROPIC_API_KEY   - clave de https://console.anthropic.com
+//   GEMINI_API_KEY   - clave de https://aistudio.google.com/apikey
 //
 // Body:
 //   { clientaId: string, instrucciones: string, numSemanas?: number,
@@ -17,7 +17,7 @@
 // ============================================================================
 
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { generarTextoGemini, extraerJSON } from "@/lib/gemini";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   EstructuraPrograma,
@@ -137,96 +137,6 @@ Debes devolver EXACTAMENTE un objeto JSON con esta forma:
 CADA semana debe tener LOS 7 días (dia_num del 1 al 7), incluidos los de descanso (con descanso=true y bloques=[]). No omitas ningún día.
 
 Devuelves solo el JSON, sin texto explicativo ni markdown alrededor. La salida será parseada directamente.`;
-
-// ----------------------------------------------------------------------------
-// JSON schema de respuesta (structured outputs)
-// ----------------------------------------------------------------------------
-
-const SCHEMA_RESPUESTA = {
-  type: "object",
-  properties: {
-    nombre: { type: "string" },
-    descripcion: { type: "string" },
-    num_semanas: { type: "integer" },
-    semanas: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          semana_num: { type: "integer" },
-          titulo: { type: "string" },
-          dias: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                dia_num: { type: "integer" },
-                titulo: { type: "string" },
-                descanso: { type: "boolean" },
-                bloques: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      titulo: { type: "string" },
-                      indicaciones: { type: "string" },
-                      elementos: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            tipo: {
-                              type: "string",
-                              enum: [
-                                "ejercicio",
-                                "contenido",
-                                "metrica_prompt",
-                                "foto_progreso_prompt",
-                                "pasos_prompt",
-                              ],
-                            },
-                            ejercicio_nombre: { type: "string" },
-                            series: {
-                              type: "array",
-                              items: {
-                                type: "object",
-                                properties: {
-                                  reps: { type: "string" },
-                                  peso: { type: "string" },
-                                  rir: { type: "string" },
-                                  descanso: { type: "string" },
-                                },
-                                required: ["reps", "peso"],
-                                additionalProperties: false,
-                              },
-                            },
-                            titulo: { type: "string" },
-                            markdown: { type: "string" },
-                            metrica_tipo: { type: "string" },
-                          },
-                          required: ["tipo"],
-                          additionalProperties: false,
-                        },
-                      },
-                    },
-                    required: ["titulo", "elementos"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ["dia_num", "titulo", "descanso", "bloques"],
-              additionalProperties: false,
-            },
-          },
-        },
-        required: ["semana_num", "dias"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["nombre", "descripcion", "num_semanas", "semanas"],
-  additionalProperties: false,
-} as const;
 
 // ----------------------------------------------------------------------------
 // Tipos parseados de la respuesta de Claude
@@ -413,12 +323,12 @@ function mapearRespuesta(
 // ----------------------------------------------------------------------------
 
 export async function POST(request: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          "Falta la variable de entorno ANTHROPIC_API_KEY. Añádela en Vercel → Settings → Environment Variables y redespliega.",
+          "Falta la variable de entorno GEMINI_API_KEY. Añádela en Vercel → Settings → Environment Variables y redespliega.",
       },
       { status: 500 }
     );
@@ -530,50 +440,20 @@ ${instrucciones}
 
 Devuelve el programa en el formato JSON exacto que se ha definido en las instrucciones del sistema. Solo el JSON, sin texto adicional.`;
 
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  });
-
   let respuestaClaude: RespuestaClaude;
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-opus-4-7",
-      max_tokens: 16000,
-      thinking: { type: "adaptive" },
-      output_config: {
-        format: { type: "json_schema", schema: SCHEMA_RESPUESTA },
-      },
-      system: [
-        {
-          type: "text",
-          text: SYSTEM_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages: [
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
+    const textoSalida = await generarTextoGemini({
+      system: SYSTEM_PROMPT,
+      user: userPrompt,
+      json: true,
+      maxTokens: 32000,
+      temperature: 0.6,
     });
-
-    // Localiza el primer bloque de texto y parsea
-    const textoSalida = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
-
-    respuestaClaude = JSON.parse(textoSalida) as RespuestaClaude;
+    respuestaClaude = JSON.parse(extraerJSON(textoSalida)) as RespuestaClaude;
   } catch (err) {
-    const mensaje =
-      err instanceof Anthropic.APIError
-        ? `${err.status ?? ""} ${err.message}`.trim()
-        : err instanceof Error
-        ? err.message
-        : "Error desconocido llamando a Claude.";
+    const mensaje = err instanceof Error ? err.message : "Error desconocido.";
     return NextResponse.json(
-      { ok: false, error: `Claude: ${mensaje}` },
+      { ok: false, error: `IA: ${mensaje}` },
       { status: 502 }
     );
   }

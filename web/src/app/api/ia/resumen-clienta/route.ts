@@ -11,7 +11,7 @@
 // ============================================================================
 
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { generarTextoGemini } from "@/lib/gemini";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { EstructuraPrograma } from "@/lib/supabase/tipos";
 import {
@@ -48,9 +48,9 @@ function fechaISO(d: Date): string {
 }
 
 export async function POST(request: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json(
-      { ok: false, error: "Falta ANTHROPIC_API_KEY en Vercel." },
+      { ok: false, error: "Falta GEMINI_API_KEY en Vercel." },
       { status: 500 }
     );
   }
@@ -204,29 +204,12 @@ ${notasResumen}
 
 Genera el resumen siguiendo las reglas del system prompt.`;
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-opus-4-7",
-      max_tokens: 1024,
-      thinking: { type: "adaptive" },
-      output_config: { effort: "medium" },
-      system: [
-        {
-          type: "text",
-          text: SYSTEM_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages: [{ role: "user", content: userPrompt }],
+    const texto = await generarTextoGemini({
+      system: SYSTEM_PROMPT,
+      user: userPrompt,
+      maxTokens: 1024,
     });
-
-    const texto = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
 
     return NextResponse.json({ ok: true, resumen: texto });
   } catch (err) {
