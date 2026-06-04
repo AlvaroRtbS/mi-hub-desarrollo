@@ -56,9 +56,14 @@ export function PlanEquivalencias({
             Al día: {plan.raciones_hc ?? 0} HC · {plan.raciones_p ?? 0} P · {plan.raciones_g ?? 0} G
           </p>
         )}
-        <p className="text-xs text-neutral-500 mt-2">
-          Toca cualquier grupo para ver con qué alimentos puedes cumplir esas raciones.
-        </p>
+        <div className="mt-3 rounded-xl bg-neutral-900/60 border border-neutral-800 p-3 text-xs text-neutral-300 leading-relaxed">
+          <div className="font-medium text-neutral-200 mb-1">¿Cómo funciona tu dieta? 🍽️</div>
+          Cada toma te dice cuántas <strong>raciones</strong> comer de cada grupo
+          (hidratos, proteína, grasa y verdura). Una ración es una porción —{" "}
+          <strong>toca cualquier grupo</strong> y verás con qué alimentos cumplirla y
+          en qué cantidad. ¿No te gusta algo? Cámbialo por otro del mismo grupo: comes
+          lo que te apetece sin salirte del plan.
+        </div>
       </div>
 
       {/* Tomas */}

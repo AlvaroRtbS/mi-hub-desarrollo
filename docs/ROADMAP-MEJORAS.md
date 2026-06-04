@@ -6,6 +6,29 @@
 > Ritmo: se carga más en **findes + martes/jueves** (sesiones dobles); lunes/miércoles/viernes más ligeros.
 > Flujo de trabajo: editar en local (`D:\Claude Code\mi-hub-desarrollo`) → push a GitHub (`AlvaroRtbS/mi-hub-desarrollo`) → Vercel redespliega.
 
+## Estado real (actualizado 4-jun-2026)
+
+Vamos **~1-1,5 semanas adelantados** sobre el plan original. Resumen por bloque:
+
+| Bloque | Estado | Nota |
+|---|---|---|
+| 1 — Cimientos | ✅ | Hecho |
+| 2 — Portal clienta + chat | ✅ | Esencial hecho + rediseño, PWA, loading states. Falta pulido Fase C |
+| 3 — Entrenamiento | 🟡 | Ejercicios/programas migrados; IA de programas **movida a Gemini free**. Falta pulir editor |
+| 4 — Nutrición + seguimiento | ✅ | **Superado**: equivalencias + tabla + generador + perfil dietético + métricas + comparador fotos |
+| 5 — Asistente IA web (chatbot) | 🔴 | No empezado; su premisa (API de pago) cambió → iría con Gemini free |
+| 6 — Datos reales + pulido pre-Pro | 🟡 | Datos migrados; **clientas SIN activar** (bloqueante), falta storage/cuota y branding/responsive |
+
+**Extras hechos (no estaban en el plan):** PWA instalable, constructor de formularios genérico, perfil dietético de la clienta, migración de toda la IA a Gemini free (la API de Anthropic de pago se quedó sin saldo), centrado/ancho del panel.
+
+**Lo que queda de verdad para el 27 (en orden de prioridad):**
+1. 🔴 **Activar a las clientas reales** (todas con `user_id=NULL` salvo Test Clienta) — bloqueante de adopción.
+2. 📋 Importar los 5 formularios de TrainerStudio como plantillas (necesita el conector).
+3. 🟡 Pulido Bloque 6: cuota de storage de fotos + branding/responsive + bugs finales.
+4. 🟡/🔴 Decidir Bloque 5 (chatbot del coach con Gemini) — opcional.
+5. 📋 Huecos menores de TS: circuitos/superseries en el editor, adjunto/comentario por-ejercicio de la clienta.
+6. 🎯 **Backlog de mejoras de UX/valor** (pool de 20, ver `docs/MEJORAS-PROPUESTAS.md`) — priorizar con el tiempo de colchón.
+
 ## Bloques
 
 ### Bloque 1 — Cimientos
@@ -82,8 +105,16 @@ realtime de UPDATE para "visto"; permitir a la clienta borrar su última métric
 ## Fuera de alcance (decidido)
 - Integración WhatsApp en mi-hub (la API oficial de Meta es compleja/cara; el bot local de WhatsApp ya cubre el archivado por separado).
 
-## Distribución orientativa (flexible)
+## Distribución orientativa (ORIGINAL — superada, ver "Estado real" arriba)
 - Sem. 1 (1-7 jun): Bloques 1 + 2
 - Sem. 2 (8-14 jun): Bloques 3 + 4
 - Sem. 3 (15-21 jun): Bloques 5 + 6
 - Sem. 4 (22-27 jun): colchón + pulido final → Pro el 27
+
+## Reparto real propuesto (al 4-jun, vamos adelantados)
+- **Sem. 1 restante (4-7 jun):** activar clientas reales (onboarding/invitaciones) + importar formularios de TS + mejoras rápidas de UX clienta (pool).
+- **Sem. 2 (8-14 jun):** mejoras de valor/visibilidad para la clienta + dashboard de atención del coach (pool) + pulido editor de programas.
+- **Sem. 3 (15-21 jun):** notificaciones/recordatorios + lista de compra/PDF de nutrición + (opcional) chatbot del coach con Gemini.
+- **Sem. 4 (22-27 jun):** colchón, branding/responsive, cuota de storage, bugs finales → Pro el 27.
+
+> El pool de 20 mejoras propuestas vive en `docs/MEJORAS-PROPUESTAS.md` (pendiente de priorizar contigo).

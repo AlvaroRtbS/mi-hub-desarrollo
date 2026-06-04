@@ -8,12 +8,13 @@ import {
   Ruler,
   MessageCircle,
   Sparkles,
+  Apple,
   ChevronLeft,
   ChevronRight,
   X,
 } from "lucide-react";
 
-const STORAGE_KEY = "mi-hub-c-tour-visto-v1";
+const STORAGE_KEY = "mi-hub-c-tour-visto-v2";
 
 type Paso = {
   icono: React.ReactNode;
@@ -33,6 +34,12 @@ const PASOS: Paso[] = [
     titulo: "Tu entreno cada día",
     texto:
       "Abre HOY en cualquier momento y verás lo que toca: ejercicios, series y pesos. Cuando termines, marca el entreno como completado. Tu entrenador lo verá al instante.",
+  },
+  {
+    icono: <Apple className="size-7" />,
+    titulo: "Tu dieta a tu medida",
+    texto:
+      "En DIETA tienes tu plan de comidas por raciones. ¿No te apetece lo que pone? Toca cualquier grupo (hidratos, proteína…) y verás otros alimentos equivalentes para cambiarlo. Comes lo que te gusta cumpliendo tu plan.",
   },
   {
     icono: <Ruler className="size-7" />,
