@@ -113,6 +113,9 @@ export default async function ClientasPage({
           <Boton variante="secundario" href="/clientas/grupos">
             Grupos
           </Boton>
+          <Boton variante="secundario" href="/clientas/onboarding">
+            Activación
+          </Boton>
           <Boton href="/clientas/nueva">+ Añadir clienta</Boton>
         </div>
       </div>
