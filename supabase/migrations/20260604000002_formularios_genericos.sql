@@ -10,9 +10,11 @@
 --   formulario_asignaciones-> 1 fila por (formulario, clienta) + sus respuestas
 --
 -- No toca `formulario_respuestas` (formulario inicial) ni `checkins`.
+-- IMPORTANTE: creamos AMBAS tablas antes de las políticas, porque la política
+-- `formularios_clienta_select` referencia `formulario_asignaciones`.
 -- ============================================================================
 
--- 1. Plantillas de formulario -----------------------------------------------
+-- 1. Tablas ------------------------------------------------------------------
 create table if not exists public.formularios (
   id uuid primary key default gen_random_uuid(),
   coach_id uuid not null references public.coaches(id) on delete cascade,
@@ -25,10 +27,30 @@ create table if not exists public.formularios (
   actualizado_en timestamptz not null default now()
 );
 
+create table if not exists public.formulario_asignaciones (
+  id uuid primary key default gen_random_uuid(),
+  formulario_id uuid not null references public.formularios(id) on delete cascade,
+  coach_id uuid not null references public.coaches(id) on delete cascade,
+  clienta_id uuid not null references public.clientas(id) on delete cascade,
+  respuestas jsonb not null default '{}'::jsonb,
+  completado boolean not null default false,
+  completado_en timestamptz,
+  creado_en timestamptz not null default now(),
+  actualizado_en timestamptz not null default now(),
+  unique (formulario_id, clienta_id)
+);
+
+-- 2. Índices -----------------------------------------------------------------
 create index if not exists formularios_coach_idx
   on public.formularios (coach_id);
+create index if not exists formulario_asignaciones_clienta_idx
+  on public.formulario_asignaciones (clienta_id);
+create index if not exists formulario_asignaciones_formulario_idx
+  on public.formulario_asignaciones (formulario_id);
 
+-- 3. RLS ---------------------------------------------------------------------
 alter table public.formularios enable row level security;
+alter table public.formulario_asignaciones enable row level security;
 
 -- La entrenadora gestiona SUS plantillas.
 drop policy if exists formularios_coach_all on public.formularios;
@@ -49,29 +71,7 @@ create policy formularios_clienta_select on public.formularios
     )
   );
 
--- 2. Asignaciones + respuestas ----------------------------------------------
-create table if not exists public.formulario_asignaciones (
-  id uuid primary key default gen_random_uuid(),
-  formulario_id uuid not null references public.formularios(id) on delete cascade,
-  coach_id uuid not null references public.coaches(id) on delete cascade,
-  clienta_id uuid not null references public.clientas(id) on delete cascade,
-  respuestas jsonb not null default '{}'::jsonb,
-  completado boolean not null default false,
-  completado_en timestamptz,
-  creado_en timestamptz not null default now(),
-  actualizado_en timestamptz not null default now(),
-  unique (formulario_id, clienta_id)
-);
-
-create index if not exists formulario_asignaciones_clienta_idx
-  on public.formulario_asignaciones (clienta_id);
-create index if not exists formulario_asignaciones_formulario_idx
-  on public.formulario_asignaciones (formulario_id);
-
-alter table public.formulario_asignaciones enable row level security;
-
--- La entrenadora ve/gestiona las asignaciones de SUS clientas (asignar,
--- desasignar y leer respuestas).
+-- La entrenadora ve/gestiona las asignaciones de SUS clientas.
 drop policy if exists formulario_asig_coach_all on public.formulario_asignaciones;
 create policy formulario_asig_coach_all on public.formulario_asignaciones
   for all
