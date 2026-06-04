@@ -75,6 +75,17 @@ export default async function HoyPage() {
     .maybeSingle<{ tomas: Toma[] }>();
   const tomasHoy = planNutri?.tomas ?? [];
 
+  // Peso reciente (para el cambio "esta semana")
+  const { data: pesoData } = await supabase
+    .from("metricas")
+    .select("valor, unidad, fecha")
+    .eq("clienta_id", clienta.id)
+    .eq("tipo", "peso")
+    .order("fecha", { ascending: false })
+    .limit(8)
+    .returns<{ valor: number; unidad: string; fecha: string }[]>();
+  const pesos = pesoData ?? [];
+
   // Asignación activa
   const { data: asignacion } = await supabase
     .from("asignaciones")
@@ -308,6 +319,23 @@ export default async function HoyPage() {
   );
   const adherencia = calcularAdherencia(programados, sesiones);
 
+  // ----- Resumen de "esta semana" -----
+  const lunes = lunesDeEstaSemana();
+  const entrenosSemana = sesiones.filter(
+    (s) => s.completada && s.fecha >= lunes
+  ).length;
+  const programadosSemana = programados.filter(
+    (d) => d.fecha >= lunes && d.fecha <= hoy
+  ).length;
+  // Cambio de peso: último de esta semana vs último anterior a esta semana.
+  const pesoActualSemana = pesos.find((p) => p.fecha >= lunes) ?? null;
+  const pesoPrevio = pesos.find((p) => p.fecha < lunes) ?? null;
+  const pesoDeltaSemana =
+    pesoActualSemana && pesoPrevio
+      ? Number(pesoActualSemana.valor) - Number(pesoPrevio.valor)
+      : null;
+  const pesoUnidadSemana = pesoActualSemana?.unidad ?? "kg";
+
   return (
     <div>
       <Saludo nombre={clienta.nombre} nivel={nivel} xp={xp} />
@@ -347,6 +375,40 @@ export default async function HoyPage() {
           label="Sesiones"
           valor={`${adherencia.sesionesCompletadas}/${adherencia.sesionesProgramadas}`}
         />
+      </div>
+
+      {/* Tu semana */}
+      <div className="mt-4 border border-neutral-800 rounded-2xl p-4">
+        <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
+          🗓️ Tu semana
+        </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm">
+          <span className="text-neutral-300">
+            <strong className="text-neutral-100">
+              {entrenosSemana}
+              {programadosSemana > 0 ? `/${programadosSemana}` : ""}
+            </strong>{" "}
+            {entrenosSemana === 1 ? "entreno" : "entrenos"}
+          </span>
+          {pesoDeltaSemana !== null && (
+            <span className="text-neutral-300">
+              Peso{" "}
+              <strong className={pesoDeltaSemana < 0 ? "text-green-400" : pesoDeltaSemana > 0 ? "text-amber-400" : "text-neutral-200"}>
+                {pesoDeltaSemana > 0 ? "+" : ""}
+                {pesoDeltaSemana.toFixed(1)} {pesoUnidadSemana}
+              </strong>
+            </span>
+          )}
+          <span className={checkinPendiente ? "text-amber-400" : "text-green-400"}>
+            {checkinPendiente ? (
+              <Link href="/c/checkins" className="underline">
+                Te falta el check-in
+              </Link>
+            ) : (
+              "✓ Check-in hecho"
+            )}
+          </span>
+        </div>
       </div>
 
       {/* Hoy */}
