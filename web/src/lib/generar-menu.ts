@@ -46,6 +46,16 @@ const REGLAS_EXCLUSION: {
     claves: ["cerdo"],
     excluye: ["cerdo", "jamon", "iberico", "serrano", "panceta", "butifarra", "lomo", "cecina"],
   },
+  // Vegetariana: sin carnes, pescados, marisco ni embutido (mantiene huevo y lácteos).
+  {
+    claves: ["vegetarian"],
+    subgrupos: ["carne", "pescado", "marisco", "embutido"],
+  },
+  // Vegana: lo de vegetariana + sin huevo ni lácteos.
+  {
+    claves: ["vegan"],
+    subgrupos: ["carne", "pescado", "marisco", "embutido", "huevo", "lacteo"],
+  },
 ];
 
 function construirExcluido(intolerancias: string): (a: AlimentoGen) => boolean {

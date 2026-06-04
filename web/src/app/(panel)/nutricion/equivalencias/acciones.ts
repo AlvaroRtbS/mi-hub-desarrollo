@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Toma } from "@/lib/nutricion";
 import { ALIMENTOS_POR_DEFECTO } from "@/lib/nutricion-equivalencias-default";
 import { generarMenuPlan, type AlimentoGen } from "@/lib/generar-menu";
+import { restriccionesATexto, type DietaRestricciones } from "@/lib/dieta";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
 export type ResultadoCrear = { ok: true; id: string } | { ok: false; error: string };
@@ -163,8 +164,10 @@ export async function sugerirMenuLocal(
     };
   }
 
-  // Intolerancias/preferencias del Formulario Inicial de la clienta (si la hay).
+  // Restricciones de la clienta (si la hay): perfil dietético (checks + nota
+  // libre) + Formulario Inicial.
   let intolerancias = "";
+  let perfilDieta = "";
   if (clientaId) {
     const { data: fr } = await supabase
       .from("formulario_respuestas")
@@ -174,11 +177,19 @@ export async function sugerirMenuLocal(
       .maybeSingle<{ respuestas: Record<string, string> }>();
     const r = fr?.respuestas ?? {};
     intolerancias = [r.alimentacion, r.algo_mas].filter(Boolean).join(". ");
+
+    const { data: cl } = await supabase
+      .from("clientas")
+      .select("dieta_restricciones")
+      .eq("id", clientaId)
+      .maybeSingle<{ dieta_restricciones: DietaRestricciones }>();
+    perfilDieta = restriccionesATexto(cl?.dieta_restricciones);
   }
 
-  // Las notas del plan también cuentan: el coach suele escribir ahí las
-  // intolerancias/restricciones de esta clienta concreta.
-  const textoRestricciones = [intolerancias, notas].filter(Boolean).join(". ");
+  // Combina perfil dietético + formulario + notas del plan como restricciones.
+  const textoRestricciones = [perfilDieta, intolerancias, notas]
+    .filter(Boolean)
+    .join(". ");
 
   return { ok: true, tomas: generarMenuPlan(tomas, alimentos, textoRestricciones) };
 }

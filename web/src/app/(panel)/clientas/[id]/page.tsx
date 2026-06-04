@@ -15,6 +15,8 @@ import { BotonGenerarIA } from "./boton-generar-ia";
 import { BotonCompartirPrograma } from "./boton-compartir";
 import { BotonInvitar } from "./boton-invitar";
 import { NotasInternas } from "./notas-internas";
+import { PerfilDietetico } from "./perfil-dietetico";
+import type { DietaRestricciones } from "@/lib/dieta";
 import { BotonResumenIA } from "./boton-resumen-ia";
 import { PanelLogros } from "./panel-logros";
 import { HeatmapAdherencia } from "./heatmap-adherencia";
@@ -775,6 +777,14 @@ async function SeccionProyecto({
     creada_en: string;
   }>;
 
+  // Perfil dietético (restricciones para el generador de menús)
+  const { data: clientaDieta } = await supabase
+    .from("clientas")
+    .select("dieta_restricciones")
+    .eq("id", clientaId)
+    .maybeSingle<{ dieta_restricciones: DietaRestricciones }>();
+  const dietaRestricciones = clientaDieta?.dieta_restricciones ?? {};
+
   // Objetivos
   const { data: objetivosData } = await supabase
     .from("objetivos")
@@ -879,6 +889,17 @@ async function SeccionProyecto({
           </span>
         </div>
         <NotasInternas clientaId={clientaId} notasIniciales={notas} />
+      </div>
+
+      {/* Perfil dietético (alimenta al generador de menús) */}
+      <div className="border border-neutral-800 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium">🥗 Perfil dietético</h3>
+          <span className="text-[10px] text-neutral-500 uppercase tracking-wide bg-neutral-900 px-2 py-1 rounded">
+            Para los menús
+          </span>
+        </div>
+        <PerfilDietetico clientaId={clientaId} inicial={dietaRestricciones} />
       </div>
 
       {/* Resumen IA */}
