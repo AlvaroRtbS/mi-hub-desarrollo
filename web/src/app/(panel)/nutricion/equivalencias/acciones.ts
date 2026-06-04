@@ -1,0 +1,142 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { Toma } from "@/lib/nutricion";
+import { ALIMENTOS_POR_DEFECTO } from "@/lib/nutricion-equivalencias-default";
+
+export type ResultadoAccion = { ok: true } | { ok: false; error: string };
+export type ResultadoCrear = { ok: true; id: string } | { ok: false; error: string };
+
+async function coachActual() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { supabase, coachId: null as string | null };
+  const { data: coach } = await supabase
+    .from("coaches")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string }>();
+  return { supabase, coachId: coach?.id ?? null };
+}
+
+/** Siembra la tabla de alimentos por defecto si el coach aún no tiene ninguno. */
+export async function cargarTablaAlimentosPorDefecto(): Promise<ResultadoAccion> {
+  const { supabase, coachId } = await coachActual();
+  if (!coachId) return { ok: false, error: "No autorizado." };
+
+  const { count } = await supabase
+    .from("alimentos_equivalencias")
+    .select("id", { count: "exact", head: true })
+    .eq("coach_id", coachId);
+
+  if ((count ?? 0) > 0) {
+    return { ok: false, error: "Ya tienes una tabla de alimentos cargada." };
+  }
+
+  const filas = ALIMENTOS_POR_DEFECTO.map((a, i) => ({
+    coach_id: coachId,
+    categoria: a.categoria,
+    subgrupo: a.subgrupo,
+    alimento: a.alimento,
+    cantidad: a.cantidad,
+    notas: a.notas ?? null,
+    orden: i,
+  }));
+
+  const { error } = await supabase.from("alimentos_equivalencias").insert(filas);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/nutricion/alimentos");
+  return { ok: true };
+}
+
+type DatosPlan = {
+  nombre: string;
+  clientaId: string | null;
+  calorias: number | null;
+  proteina_g: number | null;
+  grasa_g: number | null;
+  hc_g: number | null;
+  raciones_hc: number | null;
+  raciones_p: number | null;
+  raciones_g: number | null;
+  tomas: Toma[];
+  notas: string | null;
+};
+
+export async function crearPlanEstructurado(datos: DatosPlan): Promise<ResultadoCrear> {
+  const { supabase, coachId } = await coachActual();
+  if (!coachId) return { ok: false, error: "No autorizado." };
+  if (!datos.nombre.trim()) return { ok: false, error: "El plan necesita un nombre." };
+
+  const { data, error } = await supabase
+    .from("nutricion_planes_estructurados")
+    .insert({
+      coach_id: coachId,
+      clienta_id: datos.clientaId,
+      nombre: datos.nombre.trim(),
+      calorias: datos.calorias,
+      proteina_g: datos.proteina_g,
+      grasa_g: datos.grasa_g,
+      hc_g: datos.hc_g,
+      raciones_hc: datos.raciones_hc,
+      raciones_p: datos.raciones_p,
+      raciones_g: datos.raciones_g,
+      tomas: datos.tomas,
+      notas: datos.notas,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/nutricion");
+  return { ok: true, id: data.id };
+}
+
+export async function actualizarPlanEstructurado(
+  id: string,
+  datos: DatosPlan
+): Promise<ResultadoAccion> {
+  const { supabase, coachId } = await coachActual();
+  if (!coachId) return { ok: false, error: "No autorizado." };
+  if (!datos.nombre.trim()) return { ok: false, error: "El plan necesita un nombre." };
+
+  const { error } = await supabase
+    .from("nutricion_planes_estructurados")
+    .update({
+      clienta_id: datos.clientaId,
+      nombre: datos.nombre.trim(),
+      calorias: datos.calorias,
+      proteina_g: datos.proteina_g,
+      grasa_g: datos.grasa_g,
+      hc_g: datos.hc_g,
+      raciones_hc: datos.raciones_hc,
+      raciones_p: datos.raciones_p,
+      raciones_g: datos.raciones_g,
+      tomas: datos.tomas,
+      notas: datos.notas,
+      actualizado_en: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/nutricion");
+  revalidatePath(`/nutricion/equivalencias/${id}`);
+  return { ok: true };
+}
+
+export async function eliminarPlanEstructurado(id: string): Promise<ResultadoAccion> {
+  const { supabase, coachId } = await coachActual();
+  if (!coachId) return { ok: false, error: "No autorizado." };
+
+  const { error } = await supabase
+    .from("nutricion_planes_estructurados")
+    .delete()
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/nutricion");
+  return { ok: true };
+}

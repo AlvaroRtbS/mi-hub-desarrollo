@@ -22,26 +22,38 @@ type Lista = {
   clientas: { id: string; nombre: string; apellidos: string | null } | null;
 };
 
+type PlanEstruct = {
+  id: string;
+  nombre: string;
+  calorias: number | null;
+  clienta_id: string | null;
+  clientas: { nombre: string; apellidos: string | null } | null;
+};
+
 export default async function NutricionPage() {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: planesData }, { data: listasData }] = await Promise.all([
-    supabase
-      .from("nutricion_planes")
-      .select(
-        "id, nombre, descripcion, pdf_url, contenido_markdown, clienta_id, creado_en, clientas(nombre, apellidos)"
-      )
-      .order("creado_en", { ascending: false }),
-    supabase
-      .from("listas_compra")
-      .select(
-        "id, nombre, items, creada_en, clientas(id, nombre, apellidos)"
-      )
-      .order("creada_en", { ascending: false }),
-  ]);
+  const [{ data: planesData }, { data: listasData }, { data: estructData }] =
+    await Promise.all([
+      supabase
+        .from("nutricion_planes")
+        .select(
+          "id, nombre, descripcion, pdf_url, contenido_markdown, clienta_id, creado_en, clientas(nombre, apellidos)"
+        )
+        .order("creado_en", { ascending: false }),
+      supabase
+        .from("listas_compra")
+        .select("id, nombre, items, creada_en, clientas(id, nombre, apellidos)")
+        .order("creada_en", { ascending: false }),
+      supabase
+        .from("nutricion_planes_estructurados")
+        .select("id, nombre, calorias, clienta_id, clientas(nombre, apellidos)")
+        .order("actualizado_en", { ascending: false }),
+    ]);
 
   const planes = (planesData ?? []) as unknown as Plan[];
   const listas = (listasData ?? []) as unknown as Lista[];
+  const estructurados = (estructData ?? []) as unknown as PlanEstruct[];
 
   return (
     <div className="p-8 max-w-6xl">
@@ -53,16 +65,52 @@ export default async function NutricionPage() {
             compra.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+          <Boton variante="secundario" href="/nutricion/alimentos">
+            Tabla de alimentos
+          </Boton>
           <Boton variante="secundario" href="/nutricion/lista/nueva">
             + Lista de compra
           </Boton>
-          <Boton href="/nutricion/plan/nuevo">+ Plan</Boton>
+          <Boton variante="secundario" href="/nutricion/plan/nuevo">
+            + Plan (documento)
+          </Boton>
+          <Boton href="/nutricion/equivalencias/nuevo">+ Plan por equivalencias</Boton>
         </div>
       </div>
 
       <h2 className="text-sm uppercase tracking-wide text-neutral-500 mb-3">
-        Planes ({planes.length})
+        Planes por equivalencias ({estructurados.length})
+      </h2>
+      {estructurados.length === 0 ? (
+        <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center mb-8">
+          <div className="text-sm text-neutral-500">
+            Crea un plan estructurado por raciones. La clienta verá su reparto por tomas y
+            podrá intercambiar alimentos.
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+          {estructurados.map((p) => (
+            <Link
+              key={p.id}
+              href={`/nutricion/equivalencias/${p.id}`}
+              className="block border border-neutral-800 rounded-2xl p-4 hover:border-neutral-700 hover:bg-neutral-900/50"
+            >
+              <div className="font-medium truncate">{p.nombre}</div>
+              <div className="text-xs text-neutral-500 mt-1">
+                {p.clientas
+                  ? `${p.clientas.nombre} ${p.clientas.apellidos ?? ""}`
+                  : "Plantilla (sin asignar)"}
+                {p.calorias ? ` · ${p.calorias} kcal` : ""}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <h2 className="text-sm uppercase tracking-wide text-neutral-500 mb-3">
+        Planes documento ({planes.length})
       </h2>
       {planes.length === 0 ? (
         <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center mb-8">

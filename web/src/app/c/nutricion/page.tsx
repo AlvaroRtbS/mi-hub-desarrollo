@@ -3,6 +3,11 @@ import { obtenerUrlFirmada } from "@/lib/supabase/archivos";
 import { formatearFecha } from "@/lib/utilidades";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckListaCliente } from "./check-lista";
+import { PlanEquivalencias } from "./plan-equivalencias";
+import type {
+  AlimentoEquivalencia,
+  PlanEstructurado,
+} from "@/lib/nutricion";
 
 type Plan = {
   id: string;
@@ -42,6 +47,29 @@ export default async function NutricionClientaPage() {
     .maybeSingle();
   if (!clienta) return null;
 
+  // Plan estructurado por equivalencias (el más reciente activo)
+  const { data: planEstruct } = await supabase
+    .from("nutricion_planes_estructurados")
+    .select(
+      "id, nombre, calorias, proteina_g, grasa_g, hc_g, raciones_hc, raciones_p, raciones_g, tomas, notas"
+    )
+    .eq("clienta_id", clienta.id)
+    .eq("activo", true)
+    .order("actualizado_en", { ascending: false })
+    .limit(1)
+    .maybeSingle<PlanEstructurado>();
+
+  // Tabla de alimentos del coach (para los intercambios del plan)
+  const alimentos: AlimentoEquivalencia[] = planEstruct
+    ? ((
+        await supabase
+          .from("alimentos_equivalencias")
+          .select("id, categoria, subgrupo, alimento, cantidad, notas")
+          .order("categoria", { ascending: true })
+          .order("orden", { ascending: true })
+      ).data ?? [])
+    : [];
+
   // Planes de nutrición asignados a esta clienta
   const { data: planesData } = await supabase
     .from("nutricion_planes")
@@ -68,7 +96,8 @@ export default async function NutricionClientaPage() {
     .order("actualizada_en", { ascending: false });
   const listas = (listasData ?? []) as Lista[];
 
-  const sinNada = planesConUrl.length === 0 && listas.length === 0;
+  const sinNada =
+    !planEstruct && planesConUrl.length === 0 && listas.length === 0;
 
   return (
     <div>
@@ -85,7 +114,14 @@ export default async function NutricionClientaPage() {
         />
       )}
 
-      {/* Planes de nutrición */}
+      {/* Plan estructurado por equivalencias */}
+      {planEstruct && (
+        <div className="mb-6">
+          <PlanEquivalencias plan={planEstruct} alimentos={alimentos} />
+        </div>
+      )}
+
+      {/* Planes de nutrición (documento) */}
       {planesConUrl.length > 0 && (
         <section className="space-y-4">
           {planesConUrl.map((p) => (

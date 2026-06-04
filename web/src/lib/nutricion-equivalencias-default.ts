@@ -1,0 +1,126 @@
+// Tabla maestra de alimentos por ración (método europeo, 1 ración = 10 g del
+// macro principal). Se siembra en `alimentos_equivalencias` para el coach con
+// el botón "Cargar tabla por defecto". El coach puede editarla después.
+// Fuente: skill dietas-equivalencias (references/tabla-alimentos.md).
+
+import type { CategoriaRacion } from "./nutricion";
+
+export type AlimentoDefault = {
+  categoria: CategoriaRacion;
+  subgrupo: string;
+  alimento: string;
+  cantidad: string;
+  notas?: string;
+};
+
+export const ALIMENTOS_POR_DEFECTO: AlimentoDefault[] = [
+  // ===== HIDRATOS DE CARBONO =====
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Pan integral 100%", cantidad: "50 g (1 rebanada media)", notas: "Priorizar masa madre" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Pan blanco/multicereal", cantidad: "40 g" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Pan de centeno", cantidad: "45 g", notas: "Saciante" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Tortita de maíz/arroz", cantidad: "12 g (≈2 unidades)", notas: "Snack puntual" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Avena en copos", cantidad: "15 g (crudo)" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Muesli sin azúcar", cantidad: "15 g", notas: "Revisar etiqueta" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Cereales hinchados sin azúcar", cantidad: "13 g", notas: "Puntual" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Pasta integral", cantidad: "15 g crudo (45 g cocida)" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Arroz integral / basmati", cantidad: "15 g crudo (45 g cocido)" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Quinoa", cantidad: "17 g crudo (50 g cocida)", notas: "Aporta también proteína" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Cuscús integral", cantidad: "15 g crudo" },
+  { categoria: "HC", subgrupo: "Cereales", alimento: "Trigo sarraceno", cantidad: "17 g crudo", notas: "Sin gluten" },
+  { categoria: "HC", subgrupo: "Tubérculos", alimento: "Patata cocida/asada", cantidad: "50 g", notas: "Sin aceite añadido" },
+  { categoria: "HC", subgrupo: "Tubérculos", alimento: "Boniato", cantidad: "40 g", notas: "Más denso que la patata" },
+  { categoria: "HC", subgrupo: "Tubérculos", alimento: "Yuca", cantidad: "40 g", notas: "Puntual" },
+  { categoria: "HC", subgrupo: "Legumbres", alimento: "Lenteja cocida", cantidad: "50 g", notas: "+0.5 P por ración" },
+  { categoria: "HC", subgrupo: "Legumbres", alimento: "Garbanzo cocido", cantidad: "50 g", notas: "+0.5 P por ración" },
+  { categoria: "HC", subgrupo: "Legumbres", alimento: "Alubia/judía blanca cocida", cantidad: "55 g", notas: "+0.5 P" },
+  { categoria: "HC", subgrupo: "Legumbres", alimento: "Soja cocida", cantidad: "60 g", notas: "+1 P (rica en proteína)" },
+  { categoria: "HC", subgrupo: "Legumbres", alimento: "Hummus casero", cantidad: "40 g", notas: "+0.3 P, +0.3 G" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Manzana, pera, naranja, mandarina", cantidad: "100 g (≈1 pieza pequeña-media)" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Kiwi, melocotón, ciruela, albaricoque", cantidad: "100 g" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Fresas, frambuesas, arándanos, moras", cantidad: "150 g", notas: "Baja densidad — saciante" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Sandía, melón", cantidad: "200 g", notas: "Muy hidratante" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Plátano", cantidad: "60 g (≈½ pieza)", notas: "Alta densidad" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Uva", cantidad: "60 g", notas: "Alta densidad" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Cereza", cantidad: "60 g", notas: "Alta densidad" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Higo fresco", cantidad: "70 g", notas: "Alta densidad" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Caqui", cantidad: "70 g", notas: "Alta densidad" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Mango", cantidad: "80 g" },
+  { categoria: "HC", subgrupo: "Fruta", alimento: "Piña", cantidad: "110 g" },
+  { categoria: "HC", subgrupo: "Lácteos", alimento: "Leche entera/semi", cantidad: "200 ml (1 vaso)", notas: "+0.6 P" },
+  { categoria: "HC", subgrupo: "Lácteos", alimento: "Yogur natural sin azúcar", cantidad: "200 g (2 unidades)", notas: "+0.6 P" },
+  { categoria: "HC", subgrupo: "Lácteos", alimento: "Yogur griego natural", cantidad: "150 g", notas: "+0.7 P, +1 G" },
+  { categoria: "HC", subgrupo: "Lácteos", alimento: "Kéfir natural", cantidad: "200 ml", notas: "+0.6 P" },
+  { categoria: "HC", subgrupo: "Lácteos", alimento: "Bebida vegetal sin azúcar (avena, soja)", cantidad: "200 ml", notas: "Leer etiqueta" },
+  { categoria: "HC", subgrupo: "Dulces y extras", alimento: "Chocolate ≥85%", cantidad: "15 g (1.5 onzas)", notas: "Diario si lo necesita" },
+  { categoria: "HC", subgrupo: "Dulces y extras", alimento: "Mermelada sin azúcar", cantidad: "30 g", notas: "Puntual" },
+  { categoria: "HC", subgrupo: "Dulces y extras", alimento: "Miel", cantidad: "12 g", notas: "Puntual" },
+  { categoria: "HC", subgrupo: "Dulces y extras", alimento: "Galleta integral sin azúcar", cantidad: "15 g", notas: "Puntual" },
+
+  // ===== PROTEÍNA =====
+  { categoria: "P", subgrupo: "Carnes magras", alimento: "Pechuga de pollo / pavo", cantidad: "50 g (crudo)" },
+  { categoria: "P", subgrupo: "Carnes magras", alimento: "Solomillo de cerdo", cantidad: "50 g (crudo)", notas: "0.3 G" },
+  { categoria: "P", subgrupo: "Carnes magras", alimento: "Solomillo de ternera", cantidad: "50 g (crudo)", notas: "0.3 G" },
+  { categoria: "P", subgrupo: "Carnes magras", alimento: "Conejo", cantidad: "50 g (crudo)" },
+  { categoria: "P", subgrupo: "Carnes magras", alimento: "Lomo de cerdo magro", cantidad: "50 g (crudo)", notas: "0.5 G" },
+  { categoria: "P", subgrupo: "Carnes magras", alimento: "Carne picada 5% MG (ternera o pavo)", cantidad: "55 g (crudo)", notas: "0.5 G" },
+  { categoria: "P", subgrupo: "Carnes (más grasa)", alimento: "Muslo de pollo sin piel", cantidad: "55 g (crudo)", notas: "0.5 G" },
+  { categoria: "P", subgrupo: "Carnes (más grasa)", alimento: "Hamburguesa casera 10% MG", cantidad: "60 g (crudo)", notas: "1 G" },
+  { categoria: "P", subgrupo: "Pescados", alimento: "Merluza, lubina, dorada, bacalao", cantidad: "50 g (crudo)" },
+  { categoria: "P", subgrupo: "Pescados", alimento: "Rape, lenguado, gallo, pescadilla", cantidad: "50 g (crudo)" },
+  { categoria: "P", subgrupo: "Pescados", alimento: "Salmón fresco", cantidad: "50 g (crudo)", notas: "1 G" },
+  { categoria: "P", subgrupo: "Pescados", alimento: "Atún fresco", cantidad: "50 g (crudo)", notas: "0.5 G" },
+  { categoria: "P", subgrupo: "Pescados", alimento: "Caballa, sardina, boquerón fresco", cantidad: "50 g (crudo)", notas: "1 G" },
+  { categoria: "P", subgrupo: "Pescados", alimento: "Atún en lata al natural escurrido", cantidad: "50 g" },
+  { categoria: "P", subgrupo: "Pescados", alimento: "Sardinas en lata escurridas", cantidad: "50 g", notas: "1 G" },
+  { categoria: "P", subgrupo: "Marisco", alimento: "Gambas, langostinos, cigalas", cantidad: "60 g (pelados)" },
+  { categoria: "P", subgrupo: "Marisco", alimento: "Mejillones, almejas", cantidad: "100 g (sin concha)" },
+  { categoria: "P", subgrupo: "Marisco", alimento: "Calamar, sepia, pulpo", cantidad: "60 g (limpio)" },
+  { categoria: "P", subgrupo: "Huevos", alimento: "Huevo M", cantidad: "1.5 unidades (75 g)", notas: "1 G" },
+  { categoria: "P", subgrupo: "Huevos", alimento: "Clara de huevo", cantidad: "100 g (≈3 claras)" },
+  { categoria: "P", subgrupo: "Lácteos proteicos", alimento: "Queso fresco batido 0%", cantidad: "60 g", notas: "0.3 HC" },
+  { categoria: "P", subgrupo: "Lácteos proteicos", alimento: "Skyr / yogur proteico natural", cantidad: "100 g", notas: "0.5 HC" },
+  { categoria: "P", subgrupo: "Lácteos proteicos", alimento: "Requesón", cantidad: "60 g", notas: "0.2 HC" },
+  { categoria: "P", subgrupo: "Lácteos proteicos", alimento: "Queso fresco tipo Burgos 0-2% MG", cantidad: "70 g", notas: "0.2 HC" },
+  { categoria: "P", subgrupo: "Lácteos proteicos", alimento: "Queso curado / semicurado", cantidad: "35 g", notas: "+1 G" },
+  { categoria: "P", subgrupo: "Lácteos proteicos", alimento: "Mozzarella light", cantidad: "50 g", notas: "+0.5 G" },
+  { categoria: "P", subgrupo: "Embutido magro", alimento: "Jamón serrano magro", cantidad: "35 g", notas: "Quitar tocino" },
+  { categoria: "P", subgrupo: "Embutido magro", alimento: "Jamón ibérico magro", cantidad: "30 g" },
+  { categoria: "P", subgrupo: "Embutido magro", alimento: "Jamón cocido extra (>90% carne)", cantidad: "50 g", notas: "Leer etiqueta" },
+  { categoria: "P", subgrupo: "Embutido magro", alimento: "Pavo cocido extra (>90% carne)", cantidad: "50 g", notas: "Puntual" },
+  { categoria: "P", subgrupo: "Embutido magro", alimento: "Cecina", cantidad: "30 g" },
+  { categoria: "P", subgrupo: "Proteína vegetal", alimento: "Tofu firme", cantidad: "100 g", notas: "0.5 G" },
+  { categoria: "P", subgrupo: "Proteína vegetal", alimento: "Tempeh", cantidad: "60 g", notas: "0.3 HC, 0.5 G" },
+  { categoria: "P", subgrupo: "Proteína vegetal", alimento: "Soja texturizada (seca)", cantidad: "30 g", notas: "0.5 HC" },
+  { categoria: "P", subgrupo: "Proteína vegetal", alimento: "Seitán", cantidad: "35 g", notas: "Cuidado: gluten" },
+  { categoria: "P", subgrupo: "Proteína vegetal", alimento: "Edamame (pelado)", cantidad: "70 g", notas: "0.4 HC, 0.5 G" },
+  { categoria: "P", subgrupo: "Proteína vegetal", alimento: "Heura / proteína vegetal preparada", cantidad: "50 g", notas: "Leer etiqueta" },
+
+  // ===== GRASAS =====
+  { categoria: "G", subgrupo: "Aceites", alimento: "AOVE", cantidad: "10 ml (1 cda sopera)", notas: "Grasa principal del plan" },
+  { categoria: "G", subgrupo: "Aceites", alimento: "Aceite de coco", cantidad: "10 ml", notas: "Puntual" },
+  { categoria: "G", subgrupo: "Aceites", alimento: "Aceite de lino", cantidad: "10 ml", notas: "Para crudo, omega 3" },
+  { categoria: "G", subgrupo: "Frutos secos", alimento: "Almendra", cantidad: "15 g (≈12 unidades)" },
+  { categoria: "G", subgrupo: "Frutos secos", alimento: "Nuez", cantidad: "15 g (≈4 unidades)", notas: "Omega 3" },
+  { categoria: "G", subgrupo: "Frutos secos", alimento: "Avellana", cantidad: "15 g" },
+  { categoria: "G", subgrupo: "Frutos secos", alimento: "Pistacho pelado", cantidad: "15 g" },
+  { categoria: "G", subgrupo: "Frutos secos", alimento: "Anacardo", cantidad: "15 g", notas: "+0.5 HC por ración" },
+  { categoria: "G", subgrupo: "Frutos secos", alimento: "Cacahuete", cantidad: "15 g", notas: "+0.4 P por ración" },
+  { categoria: "G", subgrupo: "Frutos secos", alimento: "Mantequilla de frutos secos 100%", cantidad: "15 g (1 cda)" },
+  { categoria: "G", subgrupo: "Semillas", alimento: "Chía", cantidad: "15 g", notas: "Omega 3, fibra" },
+  { categoria: "G", subgrupo: "Semillas", alimento: "Lino molido", cantidad: "15 g", notas: "Mejor molido" },
+  { categoria: "G", subgrupo: "Semillas", alimento: "Sésamo", cantidad: "15 g" },
+  { categoria: "G", subgrupo: "Semillas", alimento: "Calabaza (pipas)", cantidad: "15 g" },
+  { categoria: "G", subgrupo: "Semillas", alimento: "Girasol (pipas)", cantidad: "15 g" },
+  { categoria: "G", subgrupo: "Aguacate y aceitunas", alimento: "Aguacate", cantidad: "50 g (≈¼ unidad)" },
+  { categoria: "G", subgrupo: "Aguacate y aceitunas", alimento: "Aceitunas", cantidad: "20 g (≈8 unidades)", notas: "Vigilar sodio" },
+  { categoria: "G", subgrupo: "Otras grasas", alimento: "Mantequilla", cantidad: "15 g", notas: "Puntual" },
+  { categoria: "G", subgrupo: "Otras grasas", alimento: "Nata para cocinar 18% MG", cantidad: "55 g", notas: "Puntual" },
+
+  // ===== VERDURAS (libre, ≥400 g/día; 1 ración ≈ 200 g) =====
+  { categoria: "V", subgrupo: "Hojas verdes", alimento: "Lechuga, espinaca, rúcula, canónigos, kale, acelga", cantidad: "libre (≈200 g/ración)" },
+  { categoria: "V", subgrupo: "Crucíferas", alimento: "Brócoli, coliflor, col, repollo, coles de Bruselas", cantidad: "libre (≈200 g/ración)" },
+  { categoria: "V", subgrupo: "Solanáceas", alimento: "Tomate, pimiento, berenjena, calabacín", cantidad: "libre (≈200 g/ración)" },
+  { categoria: "V", subgrupo: "Bulbos", alimento: "Cebolla, cebolleta, puerro, ajo, chalota", cantidad: "libre (≈200 g/ración)" },
+  { categoria: "V", subgrupo: "Otras", alimento: "Espárragos, alcachofa, judía verde, champiñones, pepino, apio", cantidad: "libre (≈200 g/ración)" },
+  { categoria: "V", subgrupo: "Más densas (controlar)", alimento: "Zanahoria, calabaza, remolacha", cantidad: "como guarnición", notas: "Remolacha 100 g ≈ 0.5 HC" },
+];
