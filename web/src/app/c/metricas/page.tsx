@@ -1,9 +1,11 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import { formatearFecha } from "@/lib/utilidades";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormularioMiMetrica } from "./formulario";
 import { MiniGrafica } from "./grafica";
 import { PasosDiarios } from "./pasos-diarios";
+import { ResumenEvolucion } from "./resumen-evolucion";
 
 type MetricaFila = {
   id: string;
@@ -65,12 +67,66 @@ export default async function MetricasClientaPage() {
     porTipo.set(m.tipo, lista);
   });
 
+  // ----- Datos para "Tu evolución" -----
+  // metricas viene ordenado por fecha DESC (más reciente primero).
+  function deltaDesdeInicio(tipo: string): { delta: number | null; unidad: string } {
+    const lista = porTipo.get(tipo);
+    if (!lista || lista.length < 2) return { delta: null, unidad: lista?.[0]?.unidad ?? "" };
+    const actual = Number(lista[0]!.valor);
+    const inicial = Number(lista[lista.length - 1]!.valor);
+    return { delta: actual - inicial, unidad: lista[0]!.unidad };
+  }
+  const peso = deltaDesdeInicio("peso");
+  const cintura = deltaDesdeInicio("perimetro_cintura");
+
+  const { count: entrenosCount } = await supabase
+    .from("sesiones")
+    .select("id", { count: "exact", head: true })
+    .eq("clienta_id", clienta.id)
+    .eq("completada", true);
+
+  // Foto más antigua y más reciente para "antes / ahora"
+  const { data: fotosEvol } = await supabase
+    .from("fotos_progreso")
+    .select("url, fecha")
+    .eq("clienta_id", clienta.id)
+    .order("fecha", { ascending: true })
+    .returns<{ url: string; fecha: string }[]>();
+  const listaFotos = fotosEvol ?? [];
+  let fotoAntes: { url: string; fecha: string } | null = null;
+  let fotoAhora: { url: string; fecha: string } | null = null;
+  if (listaFotos.length >= 2) {
+    const prim = listaFotos[0]!;
+    const ult = listaFotos[listaFotos.length - 1]!;
+    const firmadas = await obtenerUrlsFirmadas(
+      "fotos-progreso",
+      [prim.url, ult.url],
+      3600
+    );
+    const uA = firmadas.get(prim.url);
+    const uB = firmadas.get(ult.url);
+    if (uA && uB) {
+      fotoAntes = { url: uA, fecha: prim.fecha };
+      fotoAhora = { url: uB, fecha: ult.fecha };
+    }
+  }
+
   return (
     <div>
       <h1 className="text-xl font-semibold mb-1">Mis métricas</h1>
       <p className="text-sm text-neutral-400 mb-4">
         Registra tu evolución para que tu entrenador la vea.
       </p>
+
+      <ResumenEvolucion
+        pesoDelta={peso.delta}
+        pesoUnidad={peso.unidad}
+        cinturaDelta={cintura.delta}
+        cinturaUnidad={cintura.unidad}
+        entrenos={entrenosCount ?? 0}
+        fotoAntes={fotoAntes}
+        fotoAhora={fotoAhora}
+      />
 
       <PasosDiarios token={clienta.pasos_ingest_token} recientes={pasosRecientes} />
 
