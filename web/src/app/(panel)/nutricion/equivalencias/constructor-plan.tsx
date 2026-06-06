@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Plus, Calculator, Save, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Trash2, Plus, Calculator, Save, Sparkles, ShoppingCart, Printer } from "lucide-react";
 import {
   type Toma,
   calcularMacros,
@@ -15,6 +16,7 @@ import {
   actualizarPlanEstructurado,
   eliminarPlanEstructurado,
   sugerirMenuLocal,
+  generarListaDesdeMenu,
 } from "./acciones";
 import { useToast } from "@/components/ui/toast";
 
@@ -49,6 +51,7 @@ export function ConstructorPlan({
   const toast = useToast();
   const [guardando, startGuardar] = useTransition();
   const [sugiriendo, setSugiriendo] = useState(false);
+  const [generandoLista, setGenerandoLista] = useState(false);
 
   const [nombre, setNombre] = useState(inicial.nombre);
   const [clientaId, setClientaId] = useState<string | null>(inicial.clientaId);
@@ -155,6 +158,26 @@ export function ConstructorPlan({
     p: macros.raciones_p ?? 0,
     g: macros.raciones_g ?? 0,
   };
+
+  async function generarLista() {
+    if (!clientaId) {
+      toast.error("Asigna el plan a una clienta primero.");
+      return;
+    }
+    setGenerandoLista(true);
+    try {
+      const r = await generarListaDesdeMenu(tomas, clientaId, nombre || "Plan");
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success("Lista de la compra creada ✓ (la verá la clienta en su Dieta).");
+    } catch {
+      toast.error("No se pudo generar la lista.");
+    } finally {
+      setGenerandoLista(false);
+    }
+  }
 
   function guardar() {
     if (!nombre.trim()) {
@@ -403,6 +426,30 @@ export function ConstructorPlan({
             <Trash2 className="size-4" /> Borrar
           </button>
         )}
+      </div>
+
+      {/* Acciones secundarias: lista de compra + PDF */}
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={generarLista}
+          disabled={generandoLista}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+        >
+          <ShoppingCart className="size-4" />
+          {generandoLista ? "Generando…" : "Generar lista de compra"}
+        </button>
+        {inicial.id && (
+          <Link
+            href={`/imprimir/nutricion/${inicial.id}`}
+            target="_blank"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
+          >
+            <Printer className="size-4" /> Imprimir / PDF
+          </Link>
+        )}
+        <span className="text-xs text-neutral-500">
+          La lista se crea desde el menú; el PDF usa el plan guardado.
+        </span>
       </div>
     </div>
   );

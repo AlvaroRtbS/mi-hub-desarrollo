@@ -194,6 +194,82 @@ export async function sugerirMenuLocal(
   return { ok: true, tomas: generarMenuPlan(tomas, alimentos, textoRestricciones) };
 }
 
+type ItemCompra = { id: string; nombre: string; cantidad?: string; comprado: boolean };
+
+/** Parte una línea de menú en {nombre, cantidad}. Soporta "Alimento: 150 g" y "150 g de alimento". */
+function parsearLineaMenu(linea: string): { nombre: string; cantidad: string } {
+  const l = linea.trim();
+  // Verdura libre → ingrediente genérico
+  if (/verdura/i.test(l)) return { nombre: "Verdura variada", cantidad: "" };
+  // Formato "Alimento: cantidad"
+  const conDosPuntos = l.match(/^(.+?):\s*(.+)$/);
+  if (conDosPuntos) return { nombre: conDosPuntos[1].trim(), cantidad: conDosPuntos[2].trim() };
+  // Formato "150 g de alimento" / "150 g alimento"
+  const conNumero = l.match(/^([\d.,]+\s*(?:g|ml|uds?|unidad(?:es)?|cda)?)\s*(?:de\s+)?(.+)$/i);
+  if (conNumero) return { nombre: conNumero[2].trim(), cantidad: conNumero[1].trim() };
+  return { nombre: l, cantidad: "" };
+}
+
+/** Genera una lista de la compra (tabla listas_compra) a partir del menú del plan. */
+export async function generarListaDesdeMenu(
+  tomas: Toma[],
+  clientaId: string | null,
+  nombrePlan: string
+): Promise<ResultadoCrear> {
+  const { supabase, coachId } = await coachActual();
+  if (!coachId) return { ok: false, error: "No autorizado." };
+  if (!clientaId) return { ok: false, error: "Asigna el plan a una clienta primero." };
+
+  // Reúne todas las líneas de menú y agrega por ingrediente (junta cantidades).
+  const porNombre = new Map<string, string[]>();
+  for (const t of tomas) {
+    for (const linea of t.menu ?? []) {
+      if (!linea.trim()) continue;
+      const { nombre, cantidad } = parsearLineaMenu(linea);
+      const clave = nombre.toLowerCase();
+      const lista = porNombre.get(clave) ?? [];
+      if (cantidad) lista.push(cantidad);
+      porNombre.set(clave, lista);
+      // Guardamos el nombre con su capitalización original la primera vez
+      if (!porNombre.has(clave + "__label")) {
+        porNombre.set(clave + "__label", [nombre]);
+      }
+    }
+  }
+
+  const items: ItemCompra[] = [];
+  for (const [clave, cantidades] of porNombre) {
+    if (clave.endsWith("__label")) continue;
+    const label = porNombre.get(clave + "__label")?.[0] ?? clave;
+    items.push({
+      id: crypto.randomUUID(),
+      nombre: label,
+      cantidad: cantidades.length ? cantidades.join(" + ") : undefined,
+      comprado: false,
+    });
+  }
+
+  if (items.length === 0) {
+    return { ok: false, error: "El plan no tiene menú. Genera el menú primero." };
+  }
+
+  const { data, error } = await supabase
+    .from("listas_compra")
+    .insert({
+      coach_id: coachId,
+      clienta_id: clientaId,
+      nombre: `Compra · ${nombrePlan}`.slice(0, 120),
+      items,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/nutricion");
+  revalidatePath(`/clientas/${clientaId}`);
+  return { ok: true, id: data.id };
+}
+
 export async function eliminarPlanEstructurado(id: string): Promise<ResultadoAccion> {
   const { supabase, coachId } = await coachActual();
   if (!coachId) return { ok: false, error: "No autorizado." };
