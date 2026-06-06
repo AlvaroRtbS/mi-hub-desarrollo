@@ -22,13 +22,13 @@ Vamos **~1,5-2 semanas adelantados** sobre el plan original. Resumen por bloque:
 **Extras hechos (no estaban en el plan):** PWA instalable, constructor de formularios genérico, perfil dietético, IA migrada a Gemini free, centrado/ancho del panel. **Migración TS completada:** métricas normalizadas, circuitos del programa, 40 fotos de progreso, pasos. **Pool hecho:** A#1-4,6,7 · B#8,9(push),11 · C#16.
 
 **Lo que queda de verdad para el 27 (en orden de prioridad):**
-1. 🔌 **Cabos de config que desbloquean features YA construidas:** allowlist Redirect URLs en Supabase (#3 enlace mágico) + claves VAPID en Vercel (#9 push) + confirmar migraciones "pendientes de aplicar".
+1. 🔌 **Cabos de config:** ✅ enlace mágico (#3, Redirect URLs `…/**` en Supabase) y push (#9, VAPID en Vercel) configurados — falta solo el test final (email + móvil). Migraciones recientes todas aplicadas ✅. Crons 📋 **diferidos a Pro** (no hay `vercel.json`, Hobby limita crons, y el middleware redirige `/api/cron`). ⚠️ Supabase Free marca **"EXCEEDING USAGE LIMITS"** → revisar cuota de storage antes del 27.
 2. 🎯 **Activar a las clientas reales** — panel #16 hecho y flujo verificado; *ejecutar* en el lanzamiento (finales jun). Diferido por decisión.
 3. 📋 Importar los 5 formularios de TrainerStudio como plantillas (en curso en otra sesión).
 4. 🟡 Pulido Bloque 6: cuota de storage de fotos + branding/responsive + bugs finales.
 5. 📋 Huecos de TS restantes: **circuitos/superseries en el EDITOR** (el import ya los expande), adjunto/comentario por-ejercicio de la clienta, cuestionarios mensuales de TS.
 6. 🟡/🔴 Bloque 5 (chatbot del coach con Gemini) — opcional.
-7. 🎯 **Pool restante:** A#5 · B#10,12,13 · C#14,15,17,18,19,20 (ver `docs/MEJORAS-PROPUESTAS.md`).
+7. 🎯 **Pool restante:** A#5 · B#10,12,13 · C#14(🔄 en curso: triage "necesitan tu atención"),15,17,18,19,20 (ver `docs/MEJORAS-PROPUESTAS.md`).
 
 ## Bloques
 

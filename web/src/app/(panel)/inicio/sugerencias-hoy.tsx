@@ -7,6 +7,8 @@ import {
   Calendar,
   TrendingUp,
   Sparkles,
+  Reply,
+  ClipboardCheck,
 } from "lucide-react";
 
 type Sesion = {
@@ -17,7 +19,14 @@ type Sesion = {
 
 type Sugerencia = {
   id: string;
-  tipo: "felicitar" | "contactar" | "pedir_foto" | "celebrar_metricas" | "resumen";
+  tipo:
+    | "responder"
+    | "checkin_pendiente"
+    | "felicitar"
+    | "contactar"
+    | "pedir_foto"
+    | "celebrar_metricas"
+    | "resumen";
   icono: React.ReactNode;
   iconoColor: string;
   titulo: string;
@@ -55,10 +64,17 @@ export async function SugerenciasHoy() {
   const hace7 = new Date();
   hace7.setDate(hace7.getDate() - 7);
 
+  // Lunes de la semana actual (UTC), para el check-in semanal.
+  const ahora = new Date();
+  const offsetLunes = (ahora.getUTCDay() + 6) % 7; // 0=lunes … 6=domingo
+  const lunes = new Date(ahora);
+  lunes.setUTCDate(ahora.getUTCDate() - offsetLunes);
+  const lunesISO = fechaISO(lunes);
+
   // Clientas activas con sus últimas actividades
   const { data: clientasData } = await supabase
     .from("clientas")
-    .select("id, nombre, apellidos, estado")
+    .select("id, nombre, apellidos, estado, user_id")
     .eq("estado", "activa")
     .order("nombre");
 
@@ -66,11 +82,12 @@ export async function SugerenciasHoy() {
     id: string;
     nombre: string;
     apellidos: string | null;
+    user_id: string | null;
   }>;
   if (clientas.length === 0) return null;
   const ids = clientas.map((c) => c.id);
 
-  const [sesionesRes, fotosRes, mensajesRes, pesosRes] = await Promise.all([
+  const [sesionesRes, fotosRes, mensajesRes, pesosRes, checkinsRes] = await Promise.all([
     supabase
       .from("sesiones")
       .select("clienta_id, fecha, completada")
@@ -93,7 +110,19 @@ export async function SugerenciasHoy() {
       .in("clienta_id", ids)
       .eq("tipo", "peso")
       .order("fecha", { ascending: true }),
+    supabase
+      .from("checkins")
+      .select("clienta_id")
+      .in("clienta_id", ids)
+      .eq("semana", lunesISO),
   ]);
+
+  // Clientas que YA hicieron el check-in de esta semana.
+  const checkinsEstaSemana = new Set(
+    ((checkinsRes.data ?? []) as Array<{ clienta_id: string }>).map(
+      (c) => c.clienta_id
+    )
+  );
 
   const sesiones = (sesionesRes.data ?? []) as Sesion[];
   const fotos = (fotosRes.data ?? []) as Array<{
@@ -220,6 +249,42 @@ export async function SugerenciasHoy() {
     const diasUltimoMensajeClienta = ultimoClienta
       ? diasEntre(ultimoClienta.enviado_en.slice(0, 10), hoy)
       : 999;
+
+    // 0) Mensaje sin responder: la clienta escribió y su mensaje es el último
+    //    (= está esperando respuesta). Lo más urgente para la retención.
+    if (
+      ultimoClienta &&
+      (!ultimoCoach || ultimoClienta.enviado_en > ultimoCoach.enviado_en)
+    ) {
+      agregar(c.id, {
+        tipo: "responder",
+        icono: <Reply className="size-4" />,
+        iconoColor: "text-rose-400",
+        titulo: `${c.nombre} espera tu respuesta`,
+        detalle:
+          diasUltimoMensajeClienta === 0
+            ? "Te escribió hoy y sigue sin respuesta."
+            : `Te escribió hace ${diasUltimoMensajeClienta} día(s) y sigue sin respuesta.`,
+        href: `/mensajes/${c.id}`,
+      });
+    }
+
+    // 6) Sin check-in esta semana (solo clientas que usan la app de verdad)
+    if (
+      c.user_id &&
+      completadas.length >= 3 &&
+      !checkinsEstaSemana.has(c.id)
+    ) {
+      agregar(c.id, {
+        tipo: "checkin_pendiente",
+        icono: <ClipboardCheck className="size-4" />,
+        iconoColor: "text-cyan-400",
+        titulo: `${c.nombre} no ha hecho el check-in de esta semana`,
+        detalle: "Recuérdaselo para no perder el seguimiento semanal.",
+        href: `/mensajes/${c.id}?plantilla=check_in_dia`,
+      });
+    }
+
     if (
       diasUltimoMensajeCoach >= 7 &&
       diasUltimoMensajeClienta >= 7 &&
@@ -238,11 +303,13 @@ export async function SugerenciasHoy() {
 
   // Limita y prioriza: felicitar > contactar > celebrar > resumen > foto
   const prioridad: Record<Sugerencia["tipo"], number> = {
-    felicitar: 0,
+    responder: 0,
     contactar: 1,
-    celebrar_metricas: 2,
-    resumen: 3,
-    pedir_foto: 4,
+    checkin_pendiente: 2,
+    felicitar: 3,
+    celebrar_metricas: 4,
+    resumen: 5,
+    pedir_foto: 6,
   };
   sugerencias.sort((a, b) => prioridad[a.tipo] - prioridad[b.tipo]);
   const top = sugerencias.slice(0, 6);
