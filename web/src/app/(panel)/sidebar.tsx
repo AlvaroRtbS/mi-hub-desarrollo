@@ -13,6 +13,7 @@ import {
   LineChart,
   MessageSquare,
   FileText,
+  Sparkles,
   Settings,
   Menu,
   X,
@@ -26,7 +27,10 @@ const GRUPOS: {
 }[] = [
   {
     titulo: null,
-    enlaces: [{ href: "/inicio", label: "Inicio", Icon: Home }],
+    enlaces: [
+      { href: "/inicio", label: "Inicio", Icon: Home },
+      { href: "/asistente", label: "Asistente", Icon: Sparkles },
+    ],
   },
   {
     titulo: "Gestión",
