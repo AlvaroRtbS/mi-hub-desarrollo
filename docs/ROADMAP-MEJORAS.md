@@ -28,7 +28,7 @@ Vamos **~1,5-2 semanas adelantados** sobre el plan original. Resumen por bloque:
 4. 🟡 Pulido Bloque 6: cuota de storage de fotos + branding/responsive + bugs finales.
 5. 📋 Huecos de TS restantes: **circuitos/superseries en el EDITOR** (el import ya los expande), adjunto/comentario por-ejercicio de la clienta, cuestionarios mensuales de TS.
 6. 🟡/🔴 Bloque 5 (chatbot del coach con Gemini) — opcional.
-7. 🎯 **Pool restante:** A#5 · B#12,13 (#10 ✅) · C#15,17,18 — hechos: **#14 ✅** (triage "necesitan tu atención"), **#19 ✅** (informe semanal con Gemini), #20 ✅, #16 ✅. **Bloque 5 (chatbot coach) ✅** (otra sesión). Ver `docs/MEJORAS-PROPUESTAS.md`.
+7. 🎯 **Pool restante:** A#5 · B#12 · C#15,17 — hechos: **#13 ✅** (feedback del coach por sesión), **#14 ✅** (triage atención), **#18 ✅** (progresión automática en editor), **#19 ✅** (informe semanal Gemini), #10 ✅, #16 ✅, #20 ✅, **Bloque 5 (chatbot) ✅**. Ver `docs/MEJORAS-PROPUESTAS.md`.
 
 ## Bloques
 
