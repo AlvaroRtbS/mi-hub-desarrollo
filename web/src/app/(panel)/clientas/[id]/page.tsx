@@ -31,6 +31,7 @@ import { TabsNav, type TabClienta } from "./tabs-nav";
 import { FichasEstructuradas } from "./fichas-estructuradas";
 import { TodosClienta } from "./todos-clienta";
 import { PestanaActividad } from "./pestana-actividad";
+import { ComentariosSesiones } from "./comentarios-sesiones";
 import type { TipoFicha } from "./fichas-tipos";
 import { Tooltip } from "@/components/ui/tooltip";
 
@@ -358,7 +359,12 @@ export default async function ClientaPage({
           />
         )}
 
-        {tab === "actividad" && <PestanaActividad clientaId={clienta.id} />}
+        {tab === "actividad" && (
+          <div className="space-y-6">
+            <ComentariosSesiones clientaId={clienta.id} />
+            <PestanaActividad clientaId={clienta.id} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -597,7 +603,7 @@ function SeccionResumen({
             href={`/clientas/${clienta.id}/formulario`}
             className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 text-sm text-neutral-200 transition"
           >
-            📋 <span className="truncate">Formulario inicial</span>
+            📋 <span className="truncate">Valoración inicial</span>
           </Link>
           <Link
             href={`/clientas/${clienta.id}/checkins`}

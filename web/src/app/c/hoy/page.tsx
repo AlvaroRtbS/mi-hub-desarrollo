@@ -46,14 +46,28 @@ export default async function HoyPage() {
 
   if (!clienta) return null;
 
-  // ¿Tiene el formulario inicial pendiente? (para avisarle en Hoy)
-  const { data: formInicial } = await supabase
-    .from("formulario_respuestas")
-    .select("completado")
-    .eq("clienta_id", clienta.id)
-    .eq("tipo", "inicial")
-    .maybeSingle<{ completado: boolean }>();
-  const formularioPendiente = !formInicial?.completado;
+  // ¿Tiene el formulario de onboarding pendiente? (para avisarle en Hoy)
+  // El onboarding es una asignación genérica de una plantilla marcada es_onboarding.
+  const { data: onboardingForm } = await supabase
+    .from("formularios")
+    .select("id")
+    .eq("es_onboarding", true)
+    .maybeSingle<{ id: string }>();
+  let formularioPendiente = false;
+  let onboardingAsigId: string | null = null;
+  if (onboardingForm) {
+    const { data: asig } = await supabase
+      .from("formulario_asignaciones")
+      .select("id, completado, disponible_desde")
+      .eq("clienta_id", clienta.id)
+      .eq("formulario_id", onboardingForm.id)
+      .maybeSingle<{ id: string; completado: boolean; disponible_desde: string | null }>();
+    const disponible = !asig?.disponible_desde || asig.disponible_desde <= hoyISO();
+    if (asig && disponible) {
+      onboardingAsigId = asig.id;
+      formularioPendiente = !asig.completado;
+    }
+  }
 
   // ¿Tiene el check-in de esta semana pendiente?
   const { data: checkinFila } = await supabase
@@ -145,9 +159,9 @@ export default async function HoyPage() {
         <p className="text-sm text-neutral-400 mb-6">
           Tu entrenador aún no te ha asignado un programa.
         </p>
-        {formularioPendiente && (
+        {formularioPendiente && onboardingAsigId && (
           <div className="mb-6">
-            <AvisoFormularioInicial />
+            <AvisoFormularioInicial href={`/c/formularios/${onboardingAsigId}`} />
           </div>
         )}
         <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
@@ -239,7 +253,7 @@ export default async function HoyPage() {
   // Sesión de hoy (si ya existe)
   const { data: sesionHoy } = await supabase
     .from("sesiones")
-    .select("id, completada, registros, porcentaje_completado, notas_clienta")
+    .select("id, completada, registros, porcentaje_completado, notas_clienta, comentario_coach")
     .eq("clienta_id", clienta.id)
     .eq("fecha", hoy)
     .maybeSingle<{
@@ -248,6 +262,7 @@ export default async function HoyPage() {
       registros: RegistrosSesion | null;
       porcentaje_completado: number;
       notas_clienta: string | null;
+      comentario_coach: string | null;
     }>();
 
   const registrosHoy: RegistrosSesion = sesionHoy?.registros ?? {};
@@ -355,7 +370,9 @@ export default async function HoyPage() {
     <div>
       <Saludo nombre={clienta.nombre} nivel={nivel} xp={xp} />
 
-      {formularioPendiente && <AvisoFormularioInicial />}
+      {formularioPendiente && onboardingAsigId && (
+        <AvisoFormularioInicial href={`/c/formularios/${onboardingAsigId}`} />
+      )}
       {!formularioPendiente && checkinPendiente && <AvisoCheckin />}
 
       {/* Banner de racha — solo si tiene racha ≥3 para no saturar */}
@@ -483,6 +500,26 @@ export default async function HoyPage() {
               sesionId={sesionHoy?.id ?? null}
             />
 
+            {sesionHoy?.comentario_coach && (
+              <div
+                className="rounded-xl p-3 border"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--brand) 40%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--brand) 12%, transparent)",
+                }}
+              >
+                <div
+                  className="text-xs font-medium mb-1"
+                  style={{ color: "var(--brand)" }}
+                >
+                  💬 Mensaje de tu entrenador
+                </div>
+                <p className="text-sm text-neutral-100 whitespace-pre-wrap">
+                  {sesionHoy.comentario_coach}
+                </p>
+              </div>
+            )}
+
             {sesionHoy?.completada && (
               <FeedbackSesion
                 fecha={hoy}
@@ -580,10 +617,10 @@ function AvisoCheckin() {
   );
 }
 
-function AvisoFormularioInicial() {
+function AvisoFormularioInicial({ href }: { href: string }) {
   return (
     <Link
-      href="/c/formularios/inicial"
+      href={href}
       className="flex items-center gap-3 border border-amber-900/50 bg-amber-950/20 rounded-2xl p-4 mt-4 hover:bg-amber-950/30 transition"
     >
       <div className="text-2xl">📋</div>
