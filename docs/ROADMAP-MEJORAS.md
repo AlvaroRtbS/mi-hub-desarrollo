@@ -6,28 +6,29 @@
 > Ritmo: se carga más en **findes + martes/jueves** (sesiones dobles); lunes/miércoles/viernes más ligeros.
 > Flujo de trabajo: editar en local (`D:\Claude Code\mi-hub-desarrollo`) → push a GitHub (`AlvaroRtbS/mi-hub-desarrollo`) → Vercel redespliega.
 
-## Estado real (actualizado 4-jun-2026)
+## Estado real (actualizado 6-jun-2026)
 
-Vamos **~1-1,5 semanas adelantados** sobre el plan original. Resumen por bloque:
+Vamos **~1,5-2 semanas adelantados** sobre el plan original. Resumen por bloque:
 
 | Bloque | Estado | Nota |
 |---|---|---|
 | 1 — Cimientos | ✅ | Hecho |
-| 2 — Portal clienta + chat | ✅ | Esencial hecho + rediseño, PWA, loading states. Falta pulido Fase C |
-| 3 — Entrenamiento | 🟡 | Ejercicios/programas migrados; IA de programas **movida a Gemini free**. Falta pulir editor |
-| 4 — Nutrición + seguimiento | ✅ | **Superado**: equivalencias + tabla + generador + perfil dietético + métricas + comparador fotos |
-| 5 — Asistente IA web (chatbot) | 🔴 | No empezado; su premisa (API de pago) cambió → iría con Gemini free |
-| 6 — Datos reales + pulido pre-Pro | 🟡 | Datos migrados; **clientas SIN activar** (bloqueante), falta storage/cuota y branding/responsive |
+| 2 — Portal clienta + chat | ✅ | Esencial + rediseño, PWA, loading states. Falta pulido Fase C |
+| 3 — Entrenamiento | 🟡 | Ejercicios/programas migrados; **circuitos de TS expandidos a ejercicios reales** (import); IA a Gemini free. Falta: circuitos en el EDITOR + pulir editor |
+| 4 — Nutrición + seguimiento | ✅ | **Superado**: equivalencias + tabla + generador + perfil dietético + métricas + comparador fotos + **pasos diarios** (manual + atajo iPhone) |
+| 5 — Asistente IA web (chatbot) | 🔴 | No empezado; iría con Gemini free |
+| 6 — Datos reales + pulido pre-Pro | 🟡 | Datos migrados (incl. **fotos** y **métricas normalizadas**); **panel de activación de clientas construido (#16)** pero clientas aún sin invitar (diferido al lanzamiento). Falta storage/cuota y branding/responsive |
 
-**Extras hechos (no estaban en el plan):** PWA instalable, constructor de formularios genérico, perfil dietético de la clienta, migración de toda la IA a Gemini free (la API de Anthropic de pago se quedó sin saldo), centrado/ancho del panel.
+**Extras hechos (no estaban en el plan):** PWA instalable, constructor de formularios genérico, perfil dietético, IA migrada a Gemini free, centrado/ancho del panel. **Migración TS completada:** métricas normalizadas, circuitos del programa, 40 fotos de progreso, pasos. **Pool hecho:** A#1-4,6,7 · B#8,9(push),11 · C#16.
 
 **Lo que queda de verdad para el 27 (en orden de prioridad):**
-1. 🔴 **Activar a las clientas reales** (todas con `user_id=NULL` salvo Test Clienta) — bloqueante de adopción.
-2. 📋 Importar los 5 formularios de TrainerStudio como plantillas (necesita el conector).
-3. 🟡 Pulido Bloque 6: cuota de storage de fotos + branding/responsive + bugs finales.
-4. 🟡/🔴 Decidir Bloque 5 (chatbot del coach con Gemini) — opcional.
-5. 📋 Huecos menores de TS: circuitos/superseries en el editor, adjunto/comentario por-ejercicio de la clienta.
-6. 🎯 **Backlog de mejoras de UX/valor** (pool de 20, ver `docs/MEJORAS-PROPUESTAS.md`) — priorizar con el tiempo de colchón.
+1. 🔌 **Cabos de config que desbloquean features YA construidas:** allowlist Redirect URLs en Supabase (#3 enlace mágico) + claves VAPID en Vercel (#9 push) + confirmar migraciones "pendientes de aplicar".
+2. 🎯 **Activar a las clientas reales** — panel #16 hecho y flujo verificado; *ejecutar* en el lanzamiento (finales jun). Diferido por decisión.
+3. 📋 Importar los 5 formularios de TrainerStudio como plantillas (en curso en otra sesión).
+4. 🟡 Pulido Bloque 6: cuota de storage de fotos + branding/responsive + bugs finales.
+5. 📋 Huecos de TS restantes: **circuitos/superseries en el EDITOR** (el import ya los expande), adjunto/comentario por-ejercicio de la clienta, cuestionarios mensuales de TS.
+6. 🟡/🔴 Bloque 5 (chatbot del coach con Gemini) — opcional.
+7. 🎯 **Pool restante:** A#5 · B#10,12,13 · C#14,15,17,18,19,20 (ver `docs/MEJORAS-PROPUESTAS.md`).
 
 ## Bloques
 
