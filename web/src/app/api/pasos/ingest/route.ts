@@ -7,20 +7,27 @@
 //   GET/POST /api/pasos/ingest?t=<token>&pasos=<n>&fecha=YYYY-MM-DD
 //   (fecha opcional; por defecto, hoy en UTC)
 //
-// Escribe con service_role (salta RLS) tras validar el token.
+// Escribe vía la RPC `ingerir_pasos` (SECURITY DEFINER, validada por token),
+// con la clave anon pública. No necesita la service_role key.
 // ============================================================================
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-function servicio() {
+function cliente() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+const ESTADO: Record<string, number> = {
+  sin_token: 401,
+  token_no_valido: 401,
+  pasos_invalidos: 400,
+};
 
 async function ingerir(
   token: string | null,
@@ -36,7 +43,7 @@ async function ingerir(
     return NextResponse.json({ ok: false, error: "Pasos inválidos." }, { status: 400 });
   }
 
-  const sb = servicio();
+  const sb = cliente();
   if (!sb) {
     return NextResponse.json(
       { ok: false, error: "Servidor mal configurado." },
@@ -44,35 +51,34 @@ async function ingerir(
     );
   }
 
-  const { data: clienta } = await sb
-    .from("clientas")
-    .select("id, coach_id")
-    .eq("pasos_ingest_token", token)
-    .maybeSingle<{ id: string; coach_id: string }>();
-  if (!clienta) {
-    return NextResponse.json({ ok: false, error: "Token no válido." }, { status: 401 });
-  }
-
   const fecha =
-    fechaRaw && /^\d{4}-\d{2}-\d{2}$/.test(fechaRaw)
-      ? fechaRaw
-      : new Date().toISOString().slice(0, 10);
+    fechaRaw && /^\d{4}-\d{2}-\d{2}$/.test(fechaRaw) ? fechaRaw : null;
 
-  const { error } = await sb.from("pasos_diarios").upsert(
-    {
-      coach_id: clienta.coach_id,
-      clienta_id: clienta.id,
-      fecha,
-      pasos,
-      fuente: "apple_health",
-    },
-    { onConflict: "clienta_id,fecha" }
-  );
+  const { data, error } = await sb.rpc("ingerir_pasos", {
+    t: token,
+    p: pasos,
+    f: fecha,
+  });
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, pasos, fecha });
+  const r = (Array.isArray(data) ? data[0] : data) as
+    | { ok: boolean; error: string | null }
+    | undefined;
+  if (!r?.ok) {
+    const motivo = r?.error ?? "desconocido";
+    return NextResponse.json(
+      { ok: false, error: motivo },
+      { status: ESTADO[motivo] ?? 400 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    pasos,
+    fecha: fecha ?? new Date().toISOString().slice(0, 10),
+  });
 }
 
 export async function GET(request: Request) {
