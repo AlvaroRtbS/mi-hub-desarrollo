@@ -92,6 +92,29 @@ function semanasVaciasSiHaceFalta(
   ];
 }
 
+/** Suma `n` a unas reps: "10"→"11", "8-10"→"9-11", "30s"→"31s". No toca lo no numérico. */
+function incrementarReps(reps: string, n: number): string {
+  if (!n) return reps;
+  const r = (reps ?? "").trim();
+  const rango = r.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (rango)
+    return `${Math.max(0, parseInt(rango[1]!) + n)}-${Math.max(0, parseInt(rango[2]!) + n)}`;
+  const simple = r.match(/^(\d+)(\s*\D.*)?$/);
+  if (simple) return `${Math.max(0, parseInt(simple[1]!) + n)}${simple[2] ?? ""}`;
+  return reps;
+}
+
+/** Suma `n` kg a un peso conservando la unidad: "20 kg"→"22.5 kg". Peso corporal ("" o "0") no cambia. */
+function incrementarPeso(peso: string, n: number): string {
+  if (!n) return peso;
+  const p = (peso ?? "").trim();
+  if (p === "" || p === "0") return peso;
+  const m = p.match(/^(\d+(?:[.,]\d+)?)(.*)$/);
+  if (!m) return peso;
+  const val = Math.max(0, parseFloat(m[1]!.replace(",", ".")) + n);
+  return `${Number.isInteger(val) ? val : val.toFixed(1)}${m[2] ?? ""}`;
+}
+
 export function EditorPrograma({
   programaId,
   coachId,
@@ -109,6 +132,9 @@ export function EditorPrograma({
   const [descripcion, setDescripcion] = useState(descripcionInicial ?? "");
   const [editandoMeta, setEditandoMeta] = useState(false);
   const [semanaIdx, setSemanaIdx] = useState(0);
+  // Progresión automática (#18): incrementos a aplicar al duplicar la semana.
+  const [progReps, setProgReps] = useState(1);
+  const [progPeso, setProgPeso] = useState(0);
   const [diaIdx, setDiaIdx] = useState(0);
   const [sucio, setSucio] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
@@ -231,6 +257,43 @@ export function EditorPrograma({
         });
       });
       est.push(copia);
+    });
+  };
+
+  // #18 — Progresión automática: duplica la semana aplicando +reps y/o +kg a
+  // cada serie de ejercicio. La forma del programa se mantiene; solo cambian
+  // las cargas. Ideal para generar la sobrecarga progresiva semana a semana.
+  const duplicarSemanaConProgresion = (idx: number) => {
+    if (!progReps && !progPeso) {
+      setMensaje({ tipo: "error", texto: "Indica un incremento de reps o de kg." });
+      return;
+    }
+    actualizarEstructura((est) => {
+      const orig = est[idx];
+      if (!orig) return;
+      const copia: Semana = clonar(orig);
+      copia.semana = est.length + 1;
+      copia.dias.forEach((d) => {
+        d.bloques.forEach((b) => {
+          b.id = uuid();
+          b.elementos.forEach((e) => {
+            e.id = uuid();
+            if (e.tipo === "ejercicio") {
+              e.series = e.series.map((s) => ({
+                ...s,
+                reps: incrementarReps(s.reps, progReps),
+                peso: incrementarPeso(s.peso, progPeso),
+              }));
+            }
+          });
+        });
+      });
+      est.push(copia);
+    });
+    setSemanaIdx(estructura.length);
+    setMensaje({
+      tipo: "ok",
+      texto: `Semana creada con progresión${progReps ? ` +${progReps} rep` : ""}${progPeso ? ` +${progPeso} kg` : ""}.`,
     });
   };
 
@@ -785,6 +848,35 @@ export function EditorPrograma({
             >
               Duplicar semana actual
             </button>
+            <span className="text-neutral-700 mx-1">|</span>
+            <span
+              className="text-xs text-neutral-500 inline-flex items-center gap-1"
+              title="Crea una semana nueva copiando la actual y sumando estos incrementos a cada serie"
+            >
+              Progresión:
+              <input
+                type="number"
+                value={progReps}
+                onChange={(e) => setProgReps(Math.trunc(Number(e.target.value) || 0))}
+                className="w-11 bg-neutral-900 border border-neutral-800 rounded px-1 py-0.5 text-center text-neutral-200"
+              />
+              rep
+              <input
+                type="number"
+                step="0.5"
+                value={progPeso}
+                onChange={(e) => setProgPeso(Number(e.target.value) || 0)}
+                className="w-12 bg-neutral-900 border border-neutral-800 rounded px-1 py-0.5 text-center text-neutral-200"
+              />
+              kg
+              <button
+                onClick={() => duplicarSemanaConProgresion(semanaIdx)}
+                className="text-brand-500 hover:text-brand-400 px-1.5 py-0.5 rounded hover:bg-neutral-900"
+              >
+                + Semana con progresión
+              </button>
+            </span>
+            <span className="text-neutral-700 mx-1">|</span>
             <button
               onClick={() => eliminarSemanaLocal(semanaIdx)}
               className="text-xs text-neutral-500 hover:text-red-400 px-2"
