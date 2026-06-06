@@ -5,6 +5,7 @@ import type { EstructuraPrograma, Dia } from "@/lib/supabase/tipos";
 import { inicialesNombre, formatearFecha } from "@/lib/utilidades";
 import { BotonCargarDemo } from "./boton-demo";
 import { SugerenciasHoy } from "./sugerencias-hoy";
+import { BotonInformeSemanal } from "./boton-informe-semanal";
 import { ResumenSemana } from "./resumen-semana";
 
 type AsignacionConSnapshot = {
@@ -206,6 +207,10 @@ export default async function InicioPage() {
 
       <div className="mb-4">
         <SugerenciasHoy />
+      </div>
+
+      <div className="mb-4">
+        <BotonInformeSemanal />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
