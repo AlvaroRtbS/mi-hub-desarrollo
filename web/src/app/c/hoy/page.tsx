@@ -86,6 +86,21 @@ export default async function HoyPage() {
     .returns<{ valor: number; unidad: string; fecha: string }[]>();
   const pesos = pesoData ?? [];
 
+  // Hito de peso (celebración): peso inicial vs actual
+  const { data: pesoInicialData } = await supabase
+    .from("metricas")
+    .select("valor")
+    .eq("clienta_id", clienta.id)
+    .eq("tipo", "peso")
+    .order("fecha", { ascending: true })
+    .limit(1)
+    .maybeSingle<{ valor: number }>();
+  const perdidaTotal =
+    pesoInicialData && pesos[0]
+      ? Number(pesoInicialData.valor) - Number(pesos[0].valor)
+      : 0;
+  const hitoKg = perdidaTotal >= 3 ? Math.floor(perdidaTotal) : 0;
+
   // Asignación activa
   const { data: asignacion } = await supabase
     .from("asignaciones")
@@ -364,6 +379,23 @@ export default async function HoyPage() {
             <strong>{adherencia.rachaActual} días seguidos</strong>{" "}
             entrenando. ¡Sigue así!
           </div>
+        </div>
+      )}
+
+      {/* Hito de peso */}
+      {hitoKg >= 3 && (
+        <div
+          className="mt-3 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2"
+          style={{
+            background:
+              "linear-gradient(90deg, color-mix(in srgb, #22c55e 25%, transparent), color-mix(in srgb, #22c55e 8%, transparent))",
+            borderLeft: "3px solid #22c55e",
+          }}
+        >
+          <span>🎉</span>
+          <span>
+            ¡Llevas <strong>{hitoKg} kg menos</strong> desde que empezaste! Gran trabajo.
+          </span>
         </div>
       )}
 
