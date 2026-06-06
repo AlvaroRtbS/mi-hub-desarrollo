@@ -25,6 +25,8 @@ retenga clientas. Esfuerzo orientativo: S (pequeño), M (medio), L (grande).
 12. **Antes/después compartible** (M) — imagen bonita con foto + cifras que pueda guardar/compartir (opcional). Orgullo + marketing orgánico para ti.
 13. **Feedback del coach que se sienta personal** (S) — ampliar el feedback post-sesión y los mensajes proactivos.
 
+> Estado 6-jun: ✅ #10 (banner de hito de peso en Hoy) · ✅ #20 (sprint 3 nutrición: lista de compra desde el menú + PDF imprimible). Pendientes/opcionales: #12 (compartible), #13 (feedback más personal). Además fuera de la lista: ✅ asistente IA del coach (chatbot, Bloque 5) y ✅ panel de Activación (#16).
+
 ## C) Coach / Admin — eficiencia y retención
 
 14. **Dashboard "Hoy necesitan tu atención"** (M) — clientas que no entrenaron, sin check-in, mensaje sin responder, peso estancado. Enfoca tu tiempo donde importa.
