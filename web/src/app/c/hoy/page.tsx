@@ -13,6 +13,8 @@ import { BotonCompletarSesion } from "./boton-completar";
 import { FeedbackSesion } from "./feedback-sesion";
 import { RegistroEjercicio } from "./registro-ejercicio";
 import { RegistroPasos } from "./registro-pasos";
+import { ChecklistHoy, type ItemChecklist } from "./checklist-hoy";
+import { Glosario } from "@/components/ui/glosario";
 
 type SerieRealizada = {
   peso: string;
@@ -280,6 +282,67 @@ export default async function HoyPage() {
     }>();
   if (fbRow?.feedback) feedbackPrevio = fbRow.feedback;
 
+  // #6 — Checklist "qué hago hoy": solo las tareas que aplican al día.
+  const entrenaHoy =
+    !dia.descanso &&
+    dia.bloques.some((b) => b.elementos.some((e) => e.tipo === "ejercicio"));
+  const tieneFotoPrompt = dia.bloques.some((b) =>
+    b.elementos.some((e) => e.tipo === "foto_progreso_prompt")
+  );
+  const tienePasosPrompt = dia.bloques.some((b) =>
+    b.elementos.some((e) => e.tipo === "pasos_prompt")
+  );
+  let pasosHoyHecho = false;
+  let fotoHoyHecho = false;
+  if (tienePasosPrompt) {
+    const { count } = await supabase
+      .from("pasos_diarios")
+      .select("id", { count: "exact", head: true })
+      .eq("clienta_id", clienta.id)
+      .eq("fecha", hoy);
+    pasosHoyHecho = (count ?? 0) > 0;
+  }
+  if (tieneFotoPrompt) {
+    const { count } = await supabase
+      .from("fotos_progreso")
+      .select("id", { count: "exact", head: true })
+      .eq("clienta_id", clienta.id)
+      .eq("fecha", hoy);
+    fotoHoyHecho = (count ?? 0) > 0;
+  }
+  const checklistItems: ItemChecklist[] = [];
+  if (entrenaHoy)
+    checklistItems.push({
+      clave: "entreno",
+      label: "Entrenar",
+      icono: "🏋️",
+      hecho: !!sesionHoy?.completada,
+    });
+  if (tienePasosPrompt)
+    checklistItems.push({
+      clave: "pasos",
+      label: "Registrar tus pasos",
+      icono: "👣",
+      hecho: pasosHoyHecho,
+      href: "/c/metricas",
+    });
+  if (tieneFotoPrompt)
+    checklistItems.push({
+      clave: "foto",
+      label: "Subir foto de progreso",
+      icono: "📸",
+      hecho: fotoHoyHecho,
+      href: "/c/fotos",
+    });
+  if (tomasHoy.length > 0)
+    checklistItems.push({
+      clave: "comidas",
+      label: "Revisar tus comidas",
+      icono: "🍎",
+      hecho: null,
+      href: "#comidas-hoy",
+    });
+
   // Para cada ejercicio del día, buscar el último registro previo
   // (mejor peso de la última sesión anterior con datos de ese elemento).
   const elementoIdsHoy: string[] = [];
@@ -448,7 +511,7 @@ export default async function HoyPage() {
               </strong>
             </span>
           )}
-          <span className={checkinPendiente ? "text-amber-400" : "text-green-400"}>
+          <span className={"inline-flex items-center gap-1 " + (checkinPendiente ? "text-amber-400" : "text-green-400")}>
             {checkinPendiente ? (
               <Link href="/c/checkins" className="underline">
                 Te falta el check-in
@@ -456,12 +519,17 @@ export default async function HoyPage() {
             ) : (
               "✓ Check-in hecho"
             )}
+            <Glosario termino="checkin" />
           </span>
         </div>
       </div>
 
+      <div className="mt-6">
+        <ChecklistHoy items={checklistItems} />
+      </div>
+
       {/* Hoy */}
-      <div className="mt-6 bg-gradient-to-br from-brand-950/40 to-neutral-900 border border-brand-900/30 rounded-2xl p-5">
+      <div className="bg-gradient-to-br from-brand-950/40 to-neutral-900 border border-brand-900/30 rounded-2xl p-5">
         <div className="text-xs uppercase tracking-wide text-brand-400 mb-1">
           HOY · Semana {semanaIdx + 1}
         </div>
@@ -536,7 +604,7 @@ export default async function HoyPage() {
 
       {/* Tus comidas de hoy */}
       {tomasHoy.length > 0 && (
-        <div className="mt-6 border border-neutral-800 rounded-2xl p-4">
+        <div id="comidas-hoy" className="mt-6 border border-neutral-800 rounded-2xl p-4 scroll-mt-4">
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm font-medium">🍽️ Tus comidas de hoy</div>
             <Link href="/c/nutricion" className="text-xs text-brand-500">

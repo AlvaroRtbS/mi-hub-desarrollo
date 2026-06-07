@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { guardarFeedbackSesion } from "./acciones";
 import { useToast } from "@/components/ui/toast";
+import { Glosario } from "@/components/ui/glosario";
 
 function Escala({
   valor,
@@ -87,7 +88,9 @@ export function FeedbackSesion({
     <div className="mt-3 border border-neutral-800 rounded-2xl p-4 bg-neutral-900/30 space-y-3">
       <div className="text-sm font-medium">¿Cómo te has sentido hoy?</div>
       <div>
-        <div className="text-xs text-neutral-400 mb-1">Esfuerzo del entreno</div>
+        <div className="text-xs text-neutral-400 mb-1 inline-flex items-center gap-1">
+          Esfuerzo del entreno <Glosario termino="esfuerzo" />
+        </div>
         <Escala
           valor={esfuerzo}
           onChange={setEsfuerzo}
@@ -96,7 +99,9 @@ export function FeedbackSesion({
         />
       </div>
       <div>
-        <div className="text-xs text-neutral-400 mb-1">Tu energía</div>
+        <div className="text-xs text-neutral-400 mb-1 inline-flex items-center gap-1">
+          Tu energía <Glosario termino="energia" />
+        </div>
         <Escala
           valor={energia}
           onChange={setEnergia}
