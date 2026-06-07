@@ -12,7 +12,6 @@ import { ChevronRight } from "lucide-react";
 import { BotonCompletarSesion } from "./boton-completar";
 import { FeedbackSesion } from "./feedback-sesion";
 import { RegistroEjercicio } from "./registro-ejercicio";
-import { RegistroPasos } from "./registro-pasos";
 import { ChecklistHoy, type ItemChecklist } from "./checklist-hoy";
 
 type SerieRealizada = {
@@ -883,25 +882,23 @@ function BloqueClienta({
             )}
             {el.tipo === "pasos_prompt" && (
               <div className="flex-1">
-                <RegistroPasos
-                  clientaId={clientaId}
-                  coachId={coachId}
-                  fecha={fecha}
-                  semana={semana}
-                  dia={dia}
-                  elementoId={el.id}
-                  periodo={el.periodo}
-                  instrucciones={el.instrucciones}
-                  permitirCapturas={el.permitir_capturas !== false}
-                  pasosIniciales={
-                    (registros[el.id] as { pasos?: number | null } | undefined)
-                      ?.pasos ?? null
-                  }
-                  capturasIniciales={
-                    (registros[el.id] as { capturas?: string[] } | undefined)
-                      ?.capturas ?? []
-                  }
-                />
+                <Link
+                  href="/c/metricas"
+                  className="block rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2.5 hover:border-neutral-700 transition"
+                >
+                  <div className="text-sm font-medium text-neutral-100">
+                    👣 Registra tus pasos
+                  </div>
+                  {el.instrucciones ? (
+                    <div className="text-xs text-neutral-500 mt-0.5 whitespace-pre-line">
+                      {el.instrucciones}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-neutral-500 mt-0.5">
+                      Apúntalos en Progreso →
+                    </div>
+                  )}
+                </Link>
               </div>
             )}
             {el.tipo === "recordatorio" && (

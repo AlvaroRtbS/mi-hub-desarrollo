@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
-import { formatearFecha } from "@/lib/utilidades";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormularioMiMetrica } from "./formulario";
 import { MiniGrafica } from "./grafica";
 import { PasosDiarios } from "./pasos-diarios";
 import { ResumenEvolucion } from "./resumen-evolucion";
 import { CompartirProgreso } from "./compartir-progreso";
+import { RegistrosMetrica } from "./registros-metrica";
 
 type MetricaFila = {
   id: string;
@@ -211,10 +211,14 @@ export default async function MetricasClientaPage() {
                 <div className="mt-3">
                   <MiniGrafica puntos={puntos} />
                 </div>
-                <div className="text-[10px] text-neutral-600 mt-2">
-                  {lista.length} {lista.length === 1 ? "medida" : "medidas"} ·
-                  última {formatearFecha(ultimo.fecha)}
-                </div>
+                <RegistrosMetrica
+                  unidad={ultimo.unidad}
+                  entries={lista.map((m) => ({
+                    id: m.id,
+                    valor: Number(m.valor),
+                    fecha: m.fecha,
+                  }))}
+                />
               </div>
             );
           })}
