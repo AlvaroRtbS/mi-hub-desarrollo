@@ -19,6 +19,14 @@ export type Coach = {
 
 export type EstadoClienta = "invitada" | "activa" | "archivada";
 
+// Funnel comercial (CRM) — independiente de `estado` (operativo del portal).
+export type EtapaClienta =
+  | "lead"
+  | "activa"
+  | "pausada"
+  | "baja"
+  | "recuperable";
+
 export type Clienta = {
   id: string;
   coach_id: string;
@@ -34,6 +42,18 @@ export type Clienta = {
   notas_publicas: string | null;
   invitada_en: string | null;
   creada_en: string;
+  // --- CRM Fase 1 (capa comercial) ---
+  etapa: EtapaClienta | null;
+  lead_source: string | null;
+  whatsapp_phone: string | null;
+  es_avatar_objetivo: boolean | null;
+  objetivo_principal: string | null;
+  ciudad: string | null;
+  condiciones_medicas: string | null;
+  lesiones_limitaciones: string | null;
+  material: string | null;
+  notas_contexto: string | null;
+  stripe_customer_id: string | null;
 };
 
 export type Ejercicio = {

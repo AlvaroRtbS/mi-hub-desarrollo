@@ -209,6 +209,9 @@ export default async function ClientaPage({
     .maybeSingle();
   const tokenInvitacion = invitacionData?.token ?? null;
 
+  // WhatsApp-lite: enlace wa.me a partir de whatsapp_phone (o el teléfono).
+  const waHref = enlaceWhatsapp(clienta.whatsapp_phone ?? clienta.telefono);
+
   return (
     <div className="p-8 mx-auto max-w-5xl">
       <Link href="/clientas" className="text-sm text-neutral-400 hover:text-neutral-200">
@@ -244,6 +247,17 @@ export default async function ClientaPage({
           </div>
         </div>
         <div className="flex gap-2">
+          {waHref && (
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 font-medium rounded-lg transition text-sm px-4 py-2 bg-[#25D366] hover:bg-[#1da851] text-white"
+              title="Abrir chat de WhatsApp con esta clienta"
+            >
+              <span aria-hidden>💬</span> WhatsApp
+            </a>
+          )}
           <Boton variante="secundario" href={`/clientas/${clienta.id}/editar`}>
             Editar
           </Boton>
@@ -368,6 +382,16 @@ export default async function ClientaPage({
       </div>
     </div>
   );
+}
+
+// WhatsApp-lite: normaliza el número a formato wa.me (solo dígitos, con prefijo
+// internacional). Si llega un móvil español de 9 dígitos sin prefijo, antepone 34.
+function enlaceWhatsapp(numero: string | null | undefined): string | null {
+  if (!numero) return null;
+  let d = numero.replace(/\D/g, "");
+  if (!d) return null;
+  if (d.length === 9) d = "34" + d; // móvil ES sin prefijo
+  return `https://wa.me/${d}`;
 }
 
 function diasDesde(iso: string): number {

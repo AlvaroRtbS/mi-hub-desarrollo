@@ -119,3 +119,48 @@ realtime de UPDATE para "visto"; permitir a la clienta borrar su última métric
 - **Sem. 4 (22-27 jun):** colchón, branding/responsive, cuota de storage, bugs finales → Pro el 27.
 
 > El pool de 20 mejoras propuestas vive en `docs/MEJORAS-PROPUESTAS.md` (pendiente de priorizar contigo).
+
+---
+
+## CRM — capa comercial sobre mi-hub (iniciado 7-jun-2026)
+
+> Objetivo: seguimiento comercial de clientas (funnel, pagos, contrato/RGPD) sin
+> reconstruir nada. Se integra encima del esquema existente en **español + RLS por
+> coach**. La mayoría del CRM "clásico" ya existía en mi-hub (clientas, métricas,
+> checkins, fotos, notas, todos) — solo se añade lo que faltaba.
+
+**Decisión de plataforma de pago:** Stripe, cobrando por **SEPA Direct Debit**
+(domiciliación) las cuotas recurrentes (0,8% + 0,30 € vs ~1,5% tarjeta), con
+tarjeta/Bizum de respaldo. Las suscripciones se gestionan en mi-hub (tabla propia),
+**no con Stripe Billing**, para esquivar el +0,7%.
+
+- ✅ **Fase 1 — Capa comercial sobre `clientas` (7-jun, APLICADA en Supabase):**
+  migración `20260607000001_crm_fase1_clientas_comercial.sql`. Columnas nuevas
+  (nullable, aditivas): `etapa` (funnel: lead/activa/pausada/baja/recuperable,
+  **independiente de `estado`**), `lead_source`, `whatsapp_phone`,
+  `es_avatar_objetivo`, `objetivo_principal`, `ciudad`, `condiciones_medicas`,
+  `lesiones_limitaciones`, `material`, `notas_contexto`, `stripe_customer_id`.
+  Trigger `clientas_proteger_columnas()` endurecido (congela campos comerciales
+  frente a auto-edición de la clienta). Tipo `Clienta` ampliado + **WhatsApp-lite**
+  (botón `wa.me/…` en la cabecera de la ficha). Typecheck OK.
+- 🟡 **Fase 2 — Consentimientos / contrato RGPD (7-jun, fontanería lista):**
+  Contrato = Google Form "Peso a Paso" (forms.gle/AdFfX7yMc2TF6Grs9). Detección
+  de firma **por email** (la clienta lo escribe en el form).
+  - ✅ Migración `20260607000002_crm_fase2_consentimientos.sql` (tabla
+    `consentimientos`: contrato_servicios / datos_salud / imagen, RLS por coach).
+  - ✅ Endpoint `POST /api/consentimientos/firma` (secreto en cabecera +
+    service_role; casa por email y marca firmado/rechazado).
+  - ✅ Apps Script `docs/contrato-apps-script.gs` (onFormSubmit → endpoint).
+  - 📋 PENDIENTE Álvaro: aplicar migración en Supabase; añadir env en Vercel
+    (`CONTRATO_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`); instalar el Apps
+    Script + activador en el formulario.
+  - 📋 PENDIENTE wiring: badge de estado del contrato + botón "enviar contrato"
+    por el chat en la ficha; gate "no activar hasta contrato firmado".
+- 📋 **Fase 3 — Inscripciones + pagos (registro manual) + dashboard:** tablas
+  `inscripciones` (con `renewal_date`) + `pagos` (multi-origen: stripe/sepa/bizum/
+  transferencia). Dashboard de pagos: estado por clienta + próximas renovaciones +
+  clientas en riesgo.
+- 📋 **Fase 4 — Stripe webhook:** aplazada hasta tener volumen recurrente real.
+
+> Brief original (de Claude chat): `E:\RTBS\RTBS 2.0\Claude\crm-rtbs-brief-claude-code.md`.
+> Adaptado a la realidad de mi-hub (español, RLS por coach, sin duplicar tablas).
