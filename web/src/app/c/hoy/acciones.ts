@@ -18,6 +18,8 @@ type RegistroElemento = {
   capturas?: string[];
   /** Comentario libre de la clienta sobre ESTE ejercicio (#2 huecos TS). */
   comentario?: string;
+  /** Fotos adjuntas al ejercicio (paths en bucket fotos-progreso). */
+  adjuntos?: string[];
 };
 
 type RegistrosSesion = Record<string, RegistroElemento>;
@@ -172,6 +174,7 @@ export async function guardarComentarioEjercicio(input: {
   dia: number;
   elementoId: string;
   comentario: string;
+  adjuntos?: string[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createSupabaseServerClient();
   const {
@@ -195,9 +198,11 @@ export async function guardarComentarioEjercicio(input: {
 
   const registros: RegistrosSesion = existente?.registros ?? {};
   const limpio = input.comentario.trim();
+  const adjuntos = (input.adjuntos ?? []).filter(Boolean);
   registros[input.elementoId] = {
     ...(registros[input.elementoId] ?? {}),
     comentario: limpio || undefined,
+    adjuntos: adjuntos.length ? adjuntos : undefined,
   };
 
   if (existente) {

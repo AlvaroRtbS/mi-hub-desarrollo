@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { guardarRegistroSerie, guardarComentarioEjercicio } from "./acciones";
 import type { ElementoEjercicio } from "@/lib/supabase/tipos";
-import { MessageSquarePlus, Check } from "lucide-react";
+import { MessageSquarePlus, Check, Camera } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type SerieRealizada = {
   peso: string;
@@ -30,6 +31,8 @@ export function RegistroEjercicio({
   registroExistente,
   ultimoRegistro,
   comentarioExistente,
+  adjuntosExistentes,
+  coachId,
 }: {
   clientaId: string;
   fecha: string;
@@ -39,17 +42,84 @@ export function RegistroEjercicio({
   registroExistente: SerieRealizada[] | null;
   ultimoRegistro: { fecha: string; peso: string; reps: string } | null;
   comentarioExistente: string | null;
+  adjuntosExistentes: string[];
+  coachId: string;
 }) {
   const router = useRouter();
   const [enviando, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Comentario de la clienta sobre este ejercicio (#2 huecos TS)
+  // Comentario + fotos de la clienta sobre este ejercicio (#2 huecos TS)
   const [comentario, setComentario] = useState(comentarioExistente ?? "");
+  const [adjuntos, setAdjuntos] = useState<string[]>(adjuntosExistentes);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [subiendo, setSubiendo] = useState(false);
   const [mostrandoComentario, setMostrandoComentario] = useState(
-    !!comentarioExistente
+    !!comentarioExistente || adjuntosExistentes.length > 0
   );
   const [comentarioGuardado, setComentarioGuardado] = useState(false);
+
+  // URLs firmadas para previsualizar las fotos ya subidas.
+  useEffect(() => {
+    if (adjuntos.length === 0) {
+      setUrls({});
+      return;
+    }
+    let cancelado = false;
+    (async () => {
+      const supabase = createSupabaseBrowserClient();
+      const nuevo: Record<string, string> = {};
+      for (const path of adjuntos) {
+        const { data } = await supabase.storage
+          .from("fotos-progreso")
+          .createSignedUrl(path, 3600);
+        if (data?.signedUrl) nuevo[path] = data.signedUrl;
+      }
+      if (!cancelado) setUrls(nuevo);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [adjuntos]);
+
+  async function subirAdjuntos(files: FileList) {
+    if (files.length === 0) return;
+    setSubiendo(true);
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const nuevas: string[] = [];
+      for (const archivo of Array.from(files)) {
+        const ext = archivo.name.split(".").pop() ?? "jpg";
+        // Ruta unificada coachId/clientaId/archivo: la clienta puede escribir
+        // (seg2 = su id) y el coach puede leerla (seg1 = su id) en su panel.
+        const ruta = `${coachId}/${clientaId}/ej-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 6)}.${ext}`;
+        const { error: errUp } = await supabase.storage
+          .from("fotos-progreso")
+          .upload(ruta, archivo, { cacheControl: "3600", upsert: false });
+        if (errUp) {
+          setError(errUp.message);
+          continue;
+        }
+        nuevas.push(ruta);
+      }
+      if (nuevas.length) setAdjuntos((prev) => [...prev, ...nuevas]);
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
+  function quitarAdjunto(path: string) {
+    setAdjuntos((prev) => prev.filter((p) => p !== path));
+  }
+
+  const comentarioCambiado =
+    comentario.trim() !== (comentarioExistente ?? "").trim();
+  const adjuntosCambiados =
+    adjuntos.join(",") !== adjuntosExistentes.join(",");
+  const hayCambios = comentarioCambiado || adjuntosCambiados;
 
   function guardarComentario() {
     setError(null);
@@ -61,6 +131,7 @@ export function RegistroEjercicio({
         dia,
         elementoId: elemento.id,
         comentario,
+        adjuntos,
       });
       if (!r.ok) {
         setError(r.error);
@@ -239,21 +310,71 @@ export function RegistroEjercicio({
           <MessageSquarePlus className="size-3.5" /> Añadir comentario
         </button>
       ) : (
-        <div className="mt-2 flex gap-2 items-stretch">
+        <div className="mt-2 space-y-2">
           <textarea
             value={comentario}
             onChange={(e) => setComentario(e.target.value)}
             rows={2}
             placeholder="¿Cómo te fue este ejercicio? (molestias, sensaciones…)"
-            className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none"
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none"
           />
+          {/* Fotos adjuntas (ej. para que el coach revise la técnica) */}
+          <div className="flex flex-wrap gap-2">
+            {adjuntos.map((path) => (
+              <div
+                key={path}
+                className="relative size-14 rounded overflow-hidden bg-neutral-900 border border-neutral-800 group"
+              >
+                {urls[path] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={urls[path]} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full grid place-items-center text-[10px] text-neutral-600">…</div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => quitarAdjunto(path)}
+                  className="absolute top-0 right-0 size-4 grid place-items-center bg-black/80 text-white text-[10px]"
+                  aria-label="Quitar foto"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <label
+              className={
+                "size-14 rounded border border-dashed grid place-items-center cursor-pointer " +
+                (subiendo ? "border-neutral-700 text-neutral-600" : "border-neutral-700 text-neutral-400 hover:border-neutral-500")
+              }
+              title="Adjuntar foto"
+            >
+              {subiendo ? <span className="text-xs">…</span> : <Camera className="size-4" />}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                disabled={subiendo}
+                onChange={(e) => {
+                  if (e.target.files) subirAdjuntos(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </div>
           <button
             onClick={guardarComentario}
-            disabled={enviando || comentario.trim() === (comentarioExistente ?? "").trim()}
-            className="px-3 text-xs font-medium text-white rounded-lg disabled:opacity-40"
+            disabled={enviando || subiendo || !hayCambios}
+            className="text-xs font-medium text-white rounded-lg px-4 py-1.5 disabled:opacity-40"
             style={{ backgroundColor: "var(--brand)" }}
           >
-            {comentarioGuardado ? <Check className="size-4" /> : "Enviar"}
+            {comentarioGuardado ? (
+              <span className="inline-flex items-center gap-1">
+                <Check className="size-4" /> Guardado
+              </span>
+            ) : (
+              "Enviar"
+            )}
           </button>
         </div>
       )}

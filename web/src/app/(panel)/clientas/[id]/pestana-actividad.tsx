@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import { LOGROS, type TipoLogro } from "@/lib/gamificacion";
 
 type Evento = {
@@ -20,6 +21,8 @@ type Evento = {
   detalle?: string;
   icono: string;
   color: "verde" | "azul" | "amarillo" | "morado" | "naranja" | "gris";
+  /** Miniaturas (URLs firmadas) — p.ej. fotos adjuntas a un comentario. */
+  imagenes?: string[];
 };
 
 export async function PestanaActividad({ clientaId }: { clientaId: string }) {
@@ -133,6 +136,18 @@ export async function PestanaActividad({ clientaId }: { clientaId: string }) {
               nombreEjercicio.set(el.id, el.ejercicio_nombre ?? "Ejercicio");
   }
 
+  // Firmar las fotos adjuntas a comentarios de ejercicio para previsualizarlas.
+  const pathsAdjuntos: string[] = [];
+  for (const s of sesiones ?? []) {
+    const regs =
+      (s as { registros?: Record<string, { adjuntos?: string[] }> | null })
+        .registros ?? {};
+    for (const r of Object.values(regs)) for (const p of r?.adjuntos ?? []) pathsAdjuntos.push(p);
+  }
+  const urlsAdjuntos = pathsAdjuntos.length
+    ? await obtenerUrlsFirmadas("fotos-progreso", pathsAdjuntos, 3600)
+    : new Map<string, string>();
+
   const eventos: Evento[] = [];
 
   for (const s of sesiones ?? []) {
@@ -164,18 +179,26 @@ export async function PestanaActividad({ clientaId }: { clientaId: string }) {
 
     // Comentarios por-ejercicio que dejó la clienta en esta sesión (#2 huecos TS)
     const regs =
-      (s as { registros?: Record<string, { comentario?: string }> | null })
-        .registros ?? {};
+      (s as {
+        registros?: Record<
+          string,
+          { comentario?: string; adjuntos?: string[] }
+        > | null;
+      }).registros ?? {};
     for (const [elId, r] of Object.entries(regs)) {
-      if (!r?.comentario) continue;
+      const imgs = (r?.adjuntos ?? [])
+        .map((p) => urlsAdjuntos.get(p))
+        .filter((u): u is string => !!u);
+      if (!r?.comentario && imgs.length === 0) continue;
       eventos.push({
         id: `comej-${(s as { id: string }).id}-${elId}`,
         fecha: fechaUsada,
         tipo: "comentario_ejercicio",
         titulo: `💬 ${nombreEjercicio.get(elId) ?? "Comentario en un ejercicio"}`,
-        detalle: r.comentario,
+        detalle: r?.comentario ?? (imgs.length ? "Adjuntó una foto" : undefined),
         icono: "💬",
         color: "amarillo",
+        imagenes: imgs.length ? imgs : undefined,
       });
     }
   }
@@ -330,7 +353,32 @@ function FilaEvento({ evento }: { evento: Evento }) {
       <div className="flex-1 min-w-0">
         <div className="text-sm text-neutral-100">{evento.titulo}</div>
         {evento.detalle && (
-          <div className="text-xs text-neutral-500 truncate">{evento.detalle}</div>
+          <div
+            className={
+              "text-xs text-neutral-500 " +
+              (evento.tipo === "comentario_ejercicio"
+                ? "whitespace-pre-wrap break-words"
+                : "truncate")
+            }
+          >
+            {evento.detalle}
+          </div>
+        )}
+        {evento.imagenes && evento.imagenes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {evento.imagenes.map((u, i) => (
+              <a
+                key={i}
+                href={u}
+                target="_blank"
+                rel="noreferrer"
+                className="block size-14 rounded overflow-hidden border border-neutral-800"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={u} alt="" className="w-full h-full object-cover" />
+              </a>
+            ))}
+          </div>
         )}
       </div>
       <div className="text-[10px] text-neutral-600 flex-shrink-0">

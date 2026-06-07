@@ -24,7 +24,7 @@ type SerieRealizada = {
 
 type RegistrosSesion = Record<
   string,
-  { series_realizadas?: SerieRealizada[]; comentario?: string }
+  { series_realizadas?: SerieRealizada[]; comentario?: string; adjuntos?: string[] }
 >;
 
 function diasEntre(a: string, b: string): number {
@@ -42,11 +42,12 @@ export default async function HoyPage() {
 
   const { data: clienta } = await supabase
     .from("clientas")
-    .select("id, nombre")
+    .select("id, nombre, coach_id")
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (!clienta) return null;
+  const coachId = (clienta as { coach_id: string }).coach_id;
 
   // ¿Tiene el formulario de onboarding pendiente? (para avisarle en Hoy)
   // El onboarding es una asignación genérica de una plantilla marcada es_onboarding.
@@ -553,6 +554,7 @@ export default async function HoyPage() {
                 registros={registrosHoy}
                 ultimoPorElemento={ultimoPorElemento}
                 clientaId={clienta.id}
+                coachId={coachId}
                 fecha={hoy}
                 semana={semanaIdx + 1}
                 dia={diaIdx + 1}
@@ -766,6 +768,7 @@ function BloqueClienta({
   registros,
   ultimoPorElemento,
   clientaId,
+  coachId,
   fecha,
   semana,
   dia,
@@ -783,6 +786,7 @@ function BloqueClienta({
     { fecha: string; peso: string; reps: string }
   >;
   clientaId: string;
+  coachId: string;
   fecha: string;
   semana: number;
   dia: number;
@@ -838,6 +842,8 @@ function BloqueClienta({
                   }
                   ultimoRegistro={ultimoPorElemento.get(el.id) ?? null}
                   comentarioExistente={registros[el.id]?.comentario ?? null}
+                  adjuntosExistentes={registros[el.id]?.adjuntos ?? []}
+                  coachId={coachId}
                 />
               </div>
             )}
