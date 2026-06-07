@@ -77,7 +77,7 @@ export default async function MetricasPage() {
           <div className="text-neutral-400">No hay clientas activas.</div>
         </div>
       ) : (
-        <div className="border border-neutral-800 rounded-2xl overflow-hidden">
+        <div className="border border-neutral-800 rounded-2xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-neutral-900 text-neutral-400">
               <tr>

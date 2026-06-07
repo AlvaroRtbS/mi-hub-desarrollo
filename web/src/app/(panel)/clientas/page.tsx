@@ -177,7 +177,7 @@ export default async function ClientasPage({
           }
         />
       ) : (
-        <div className="border border-neutral-800 rounded-2xl overflow-hidden">
+        <div className="border border-neutral-800 rounded-2xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-neutral-900 text-neutral-400">
               <tr>
