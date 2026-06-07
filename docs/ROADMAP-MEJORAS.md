@@ -154,8 +154,13 @@ tarjeta/Bizum de respaldo. Las suscripciones se gestionan en mi-hub (tabla propi
   - 📋 PENDIENTE Álvaro: aplicar migración en Supabase; añadir env en Vercel
     (`CONTRATO_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`); instalar el Apps
     Script + activador en el formulario.
-  - 📋 PENDIENTE wiring: badge de estado del contrato + botón "enviar contrato"
-    por el chat en la ficha; gate "no activar hasta contrato firmado".
+  - ✅ Apps Script instalado + autorizado + activador "Al enviarse el formulario"
+    activo (8-jun). Probado end-to-end (firma de prueba → `firmado` en BD).
+  - ✅ Wiring UI (8-jun): badge de estado en la ficha + panel "Contrato de
+    servicios" (botones "Enviar contrato" por el chat y "Marcar firmado a mano")
+    + gate RGPD en `cambiarEstadoClienta` (no activa sin contrato firmado).
+  - ⚠️ Detección por email: si la clienta usa un email distinto al de su ficha,
+    la firma llega pero no casa → usar "Marcar firmado a mano".
 - 📋 **Fase 3 — Inscripciones + pagos (registro manual) + dashboard:** tablas
   `inscripciones` (con `renewal_date`) + `pagos` (multi-origen: stripe/sepa/bizum/
   transferencia). Dashboard de pagos: estado por clienta + próximas renovaciones +
