@@ -25,8 +25,8 @@ Vamos **~1,5-2 semanas adelantados** sobre el plan original. Resumen por bloque:
 1. 🔌 **Cabos de config:** ✅ enlace mágico (#3, Redirect URLs `…/**` en Supabase) y push (#9, VAPID en Vercel) configurados — falta solo el test final (email + móvil). Migraciones recientes todas aplicadas ✅. Crons 📋 **diferidos a Pro** (no hay `vercel.json`, Hobby limita crons, y el middleware redirige `/api/cron`). ⚠️ Supabase Free marca **"EXCEEDING USAGE LIMITS"** → revisar cuota de storage antes del 27.
 2. 🎯 **Activar a las clientas reales** — panel #16 hecho y flujo verificado; *ejecutar* en el lanzamiento (finales jun). Diferido por decisión.
 3. 📋 Importar los 5 formularios de TrainerStudio como plantillas (en curso en otra sesión).
-4. 🟡 Pulido Bloque 6: cuota de storage de fotos + branding/responsive + bugs finales.
-5. 📋 Huecos de TS restantes: **circuitos/superseries en el EDITOR** (el import ya los expande), adjunto/comentario por-ejercicio de la clienta, cuestionarios mensuales de TS.
+4. 🟡 Pulido Bloque 6: branding ✅ + responsive ✅ hechos (7-jun); queda cuota de storage (→ Pro) y bugs finales.
+5. ✅ Huecos de TS (7-jun): **circuitos en el EDITOR con rondas** ✅, **comentario + foto por-ejercicio de la clienta** ✅. Quedan opcionales menores: vídeo adjunto (bucket nuevo), cuestionarios mensuales de TS, conjuntos de métricas auto-asignables.
 6. 🟡/🔴 Bloque 5 (chatbot del coach con Gemini) — opcional.
 7. ✅ **Pool de 20 COMPLETO** (7-jun: #12 antes/después compartible, #15 alerta de abandono hechos; #17 respuestas rápidas ya existía en el chat). Quedan solo tareas de FECHA: pasar a Pro + activar clientas (lanzamiento), y opcionales: huecos de TS (circuitos en el editor, adjunto por-ejercicio). Ver `docs/MEJORAS-PROPUESTAS.md`.
 
