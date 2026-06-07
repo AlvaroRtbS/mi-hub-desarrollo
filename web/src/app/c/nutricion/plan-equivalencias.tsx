@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
+import { Glosario } from "@/components/ui/glosario";
 import {
   type AlimentoEquivalencia,
   type CategoriaRacion,
@@ -58,7 +59,8 @@ export function PlanEquivalencias({
         )}
         <div className="mt-3 rounded-xl bg-neutral-900/60 border border-neutral-800 p-3 text-xs text-neutral-300 leading-relaxed">
           <div className="font-medium text-neutral-200 mb-1">¿Cómo funciona tu dieta? 🍽️</div>
-          Cada toma te dice cuántas <strong>raciones</strong> comer de cada grupo
+          Cada toma te dice cuántas <strong>raciones</strong>{" "}
+          <Glosario termino="racion" /> comer de cada grupo
           (hidratos, proteína, grasa y verdura). Una ración es una porción —{" "}
           <strong>toca cualquier grupo</strong> y verás con qué alimentos cumplirla y
           en qué cantidad. ¿No te gusta algo? Cámbialo por otro del mismo grupo: comes

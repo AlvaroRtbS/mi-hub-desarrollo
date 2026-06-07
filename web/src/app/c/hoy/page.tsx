@@ -577,7 +577,7 @@ export default async function HoyPage() {
               </div>
             )}
 
-            {sesionHoy?.completada && (
+            {sesionHoy && (
               <FeedbackSesion
                 fecha={hoy}
                 inicial={{

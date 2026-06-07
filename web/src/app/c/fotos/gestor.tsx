@@ -43,6 +43,7 @@ export function GestorMisFotos({
   const [error, setError] = useState<string | null>(null);
   const [celebrar, setCelebrar] = useState(false);
   const [enviando, startTransition] = useTransition();
+  const [verFoto, setVerFoto] = useState<FotoCliente | null>(null);
 
   function guardar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -183,7 +184,13 @@ export function GestorMisFotos({
               key={f.id}
               className="border border-neutral-800 rounded-xl overflow-hidden bg-neutral-950"
             >
-              <div className="aspect-[3/4] bg-neutral-900">
+              <button
+                type="button"
+                onClick={() => f.urlFirmada && setVerFoto(f)}
+                disabled={!f.urlFirmada}
+                className="aspect-[3/4] bg-neutral-900 block w-full"
+                aria-label="Ver foto a pantalla completa"
+              >
                 {f.urlFirmada ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -196,7 +203,7 @@ export function GestorMisFotos({
                     Sin imagen
                   </div>
                 )}
-              </div>
+              </button>
               <div className="p-2 text-xs">
                 <div className="text-neutral-300">
                   {formatearFecha(f.fecha)}
@@ -215,6 +222,32 @@ export function GestorMisFotos({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {verFoto?.urlFirmada && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
+          onClick={() => setVerFoto(null)}
+        >
+          <button
+            onClick={() => setVerFoto(null)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl leading-none"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={verFoto.urlFirmada}
+            alt=""
+            className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="text-xs text-neutral-400 mt-3">
+            {formatearFecha(verFoto.fecha)}
+            {verFoto.tipo && <span className="capitalize"> · {verFoto.tipo}</span>}
+          </div>
         </div>
       )}
     </div>
