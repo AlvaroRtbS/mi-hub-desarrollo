@@ -76,6 +76,21 @@ export async function crearClienta(formData: FormData): Promise<ResultadoAccion>
     return { ok: false, error: error.message };
   }
 
+  // Auto-asignar el formulario de onboarding del coach (si lo tiene marcado).
+  const { data: onboarding } = await supabase
+    .from("formularios")
+    .select("id")
+    .eq("coach_id", coachId)
+    .eq("es_onboarding", true)
+    .maybeSingle<{ id: string }>();
+  if (onboarding) {
+    await supabase.from("formulario_asignaciones").insert({
+      formulario_id: onboarding.id,
+      coach_id: coachId,
+      clienta_id: data.id,
+    });
+  }
+
   revalidatePath("/clientas");
   return { ok: true, id: data.id };
 }

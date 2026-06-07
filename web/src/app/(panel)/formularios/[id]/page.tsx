@@ -34,10 +34,16 @@ export default async function FormularioDetallePage({
 
   const { data: asignaciones } = await supabase
     .from("formulario_asignaciones")
-    .select("id, clienta_id, completado, completado_en")
+    .select("id, clienta_id, completado, completado_en, disponible_desde")
     .eq("formulario_id", id)
     .returns<
-      { id: string; clienta_id: string; completado: boolean; completado_en: string | null }[]
+      {
+        id: string;
+        clienta_id: string;
+        completado: boolean;
+        completado_en: string | null;
+        disponible_desde: string | null;
+      }[]
     >();
 
   return (

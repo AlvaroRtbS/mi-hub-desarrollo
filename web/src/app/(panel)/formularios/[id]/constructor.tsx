@@ -24,6 +24,7 @@ import {
   eliminarFormulario,
   asignarFormulario,
   desasignarFormulario,
+  programarFormulario,
 } from "../acciones";
 import { useToast } from "@/components/ui/toast";
 
@@ -33,6 +34,7 @@ type Asignacion = {
   clienta_id: string;
   completado: boolean;
   completado_en: string | null;
+  disponible_desde: string | null;
 };
 
 export function Constructor({
@@ -152,6 +154,17 @@ export function Constructor({
     });
   }
 
+  function programar(asignacionId: string, fecha: string) {
+    startAsignar(async () => {
+      const r = await programarFormulario(formularioId, asignacionId, fecha || null);
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <div className="space-y-8">
       {/* Cabecera editable */}
@@ -249,6 +262,16 @@ export function Constructor({
                   </label>
                   {asignada && (
                     <>
+                      <label className="flex items-center gap-1.5 text-xs text-neutral-500 shrink-0">
+                        <span className="hidden sm:inline">Disponible</span>
+                        <input
+                          type="date"
+                          defaultValue={asig!.disponible_desde ?? ""}
+                          onChange={(e) => programar(asig!.id, e.target.value)}
+                          title="Fecha desde la que la clienta puede rellenarlo (vacío = ya)"
+                          className="bg-neutral-950 border border-neutral-800 rounded-md px-2 py-1 text-xs focus:outline-none focus:border-brand-500"
+                        />
+                      </label>
                       <span className="text-xs shrink-0">
                         {asig!.completado ? (
                           <span className="text-emerald-400">✓ Completado</span>

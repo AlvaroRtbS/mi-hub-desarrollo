@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { FORMULARIO_INICIAL, FORMULARIO_INICIAL_TIPO } from "@/lib/formulario-inicial";
-import { formatearFecha } from "@/lib/utilidades";
+import { formatearFecha, hoyISO } from "@/lib/utilidades";
 
 export default async function FormulariosPage() {
   const supabase = await createSupabaseServerClient();
@@ -18,19 +17,13 @@ export default async function FormulariosPage() {
     .maybeSingle();
   if (!clienta) return null;
 
-  const { data: fila } = await supabase
-    .from("formulario_respuestas")
-    .select("completado, completado_en")
-    .eq("clienta_id", clienta.id)
-    .eq("tipo", FORMULARIO_INICIAL_TIPO)
-    .maybeSingle<{ completado: boolean; completado_en: string | null }>();
-
-  const completado = fila?.completado ?? false;
-
-  // Formularios genéricos asignados por el coach (RLS limita a los suyos).
-  const { data: asignaciones } = await supabase
+  // Formularios asignados por el coach (RLS limita a los suyos). El onboarding
+  // es uno más (plantilla es_onboarding), lo mostramos el primero.
+  const { data: asignacionesRaw } = await supabase
     .from("formulario_asignaciones")
-    .select("id, completado, completado_en, formularios(titulo)")
+    .select(
+      "id, completado, completado_en, disponible_desde, formularios(titulo, es_onboarding)"
+    )
     .eq("clienta_id", clienta.id)
     .order("creado_en", { ascending: false })
     .returns<
@@ -38,9 +31,17 @@ export default async function FormulariosPage() {
         id: string;
         completado: boolean;
         completado_en: string | null;
-        formularios: { titulo: string } | null;
+        disponible_desde: string | null;
+        formularios: { titulo: string; es_onboarding: boolean } | null;
       }[]
     >();
+
+  const hoy = hoyISO();
+  const asignaciones = [...(asignacionesRaw ?? [])].sort(
+    (a, b) =>
+      Number(b.formularios?.es_onboarding ?? false) -
+      Number(a.formularios?.es_onboarding ?? false)
+  );
 
   return (
     <div>
@@ -50,50 +51,59 @@ export default async function FormulariosPage() {
       </p>
 
       <div className="space-y-3">
-        <Link
-          href="/c/formularios/inicial"
-          className="flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 hover:bg-neutral-900/50 transition"
-        >
-          <div className="text-2xl">📋</div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium">{FORMULARIO_INICIAL.titulo}</div>
-            <div className="text-xs mt-0.5">
-              {completado ? (
-                <span className="text-emerald-400">
-                  ✓ Completado{fila?.completado_en ? ` · ${formatearFecha(fila.completado_en)}` : ""}
-                </span>
-              ) : (
-                <span className="text-amber-400">Pendiente de rellenar</span>
-              )}
-            </div>
+        {asignaciones.length === 0 && (
+          <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
+            Tu entrenador aún no te ha asignado ningún formulario.
           </div>
-          <ChevronRight className="size-5 text-neutral-600 shrink-0" />
-        </Link>
+        )}
 
-        {(asignaciones ?? []).map((a) => (
-          <Link
-            key={a.id}
-            href={`/c/formularios/${a.id}`}
-            className="flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 hover:bg-neutral-900/50 transition"
-          >
-            <div className="text-2xl">📝</div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">
-                {a.formularios?.titulo ?? "Formulario"}
+        {asignaciones.map((a) => {
+          const bloqueado =
+            !a.completado && !!a.disponible_desde && a.disponible_desde > hoy;
+          const icono = a.formularios?.es_onboarding ? "📋" : "📝";
+          const cuerpo = (
+            <>
+              <div className="text-2xl">{bloqueado ? "🔒" : icono}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">
+                  {a.formularios?.titulo ?? "Formulario"}
+                </div>
+                <div className="text-xs mt-0.5">
+                  {a.completado ? (
+                    <span className="text-emerald-400">
+                      ✓ Completado{a.completado_en ? ` · ${formatearFecha(a.completado_en)}` : ""}
+                    </span>
+                  ) : bloqueado ? (
+                    <span className="text-neutral-500">
+                      Disponible el {formatearFecha(a.disponible_desde!)}
+                    </span>
+                  ) : (
+                    <span className="text-amber-400">Pendiente de rellenar</span>
+                  )}
+                </div>
               </div>
-              <div className="text-xs mt-0.5">
-                {a.completado ? (
-                  <span className="text-emerald-400">
-                    ✓ Completado{a.completado_en ? ` · ${formatearFecha(a.completado_en)}` : ""}
-                  </span>
-                ) : (
-                  <span className="text-amber-400">Pendiente de rellenar</span>
-                )}
-              </div>
+              {!bloqueado && (
+                <ChevronRight className="size-5 text-neutral-600 shrink-0" />
+              )}
+            </>
+          );
+          return bloqueado ? (
+            <div
+              key={a.id}
+              className="flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 opacity-60"
+            >
+              {cuerpo}
             </div>
-            <ChevronRight className="size-5 text-neutral-600 shrink-0" />
-          </Link>
-        ))}
+          ) : (
+            <Link
+              key={a.id}
+              href={`/c/formularios/${a.id}`}
+              className="flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 hover:bg-neutral-900/50 transition"
+            >
+              {cuerpo}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

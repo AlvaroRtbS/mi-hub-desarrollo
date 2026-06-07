@@ -96,6 +96,32 @@ export async function asignarFormulario(
   return { ok: true };
 }
 
+/**
+ * Programa (o limpia) la fecha en que una asignación queda disponible para la
+ * clienta. `disponibleDesde` en formato YYYY-MM-DD, o null para "disponible ya".
+ */
+export async function programarFormulario(
+  formularioId: string,
+  asignacionId: string,
+  disponibleDesde: string | null
+): Promise<ResultadoAccion> {
+  const { supabase, coachId } = await coachActual();
+  if (!coachId) return { ok: false, error: "No autorizado." };
+
+  const { error } = await supabase
+    .from("formulario_asignaciones")
+    .update({
+      disponible_desde: disponibleDesde || null,
+      actualizado_en: new Date().toISOString(),
+    })
+    .eq("id", asignacionId)
+    .eq("coach_id", coachId);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/formularios/${formularioId}`);
+  return { ok: true };
+}
+
 /** Quita la asignación de una clienta (borra también sus respuestas). */
 export async function desasignarFormulario(
   formularioId: string,
