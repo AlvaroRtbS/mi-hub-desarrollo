@@ -17,7 +17,7 @@ retenga clientas. Esfuerzo orientativo: S (pequeño), M (medio), L (grande).
 7. **Formulario inicial tipo conversación** (M) — una pregunta por pantalla con barra de progreso, en vez de un formulario largo que intimida.
 
 ## B) Clienta — ver el VALOR (motivación y resultados)
-> Estado 4-jun: ✅ #8 (tarjeta "Tu evolución" en Medidas) · ✅ #11 ("Tu semana" en Hoy) · ✅ #9 (push — VAPID en Vercel, probar en móvil) · ✅ #10 (banner de hito de peso) · ✅ **#13** (feedback del coach por sesión, 7-jun). Pendiente/opcional: #12 (antes/después compartible).
+> Estado 4-jun: ✅ #8 (tarjeta "Tu evolución" en Medidas) · ✅ #11 ("Tu semana" en Hoy) · ✅ #9 (push — VAPID en Vercel, probar en móvil) · ✅ #10 (banner de hito de peso) · ✅ #13 (feedback del coach por sesión, 7-jun) · ✅ **#12** (antes/después compartible con marca, 7-jun). **Bloque B completo.**
 
 8. **Pantalla "Tu evolución"** (M) — peso + medidas + foto antes/después + adherencia juntos, visual y motivador. (Ya hay comparador; falta la vista unificada de resultados.)
 9. **Notificaciones push (PWA)** (L) — "tu entreno de hoy", "nuevo plan", "te toca check-in", "mensaje de Álvaro". Clave para uso recurrente y retención.
@@ -29,6 +29,7 @@ retenga clientas. Esfuerzo orientativo: S (pequeño), M (medio), L (grande).
 > Estado 6-jun: ✅ #10 (banner de hito de peso en Hoy) · ✅ #20 (sprint 3 nutrición: lista de compra desde el menú + PDF imprimible). Pendientes/opcionales: #12 (compartible), #13 (feedback más personal). Además fuera de la lista: ✅ asistente IA del coach (chatbot, Bloque 5) y ✅ panel de Activación (#16).
 
 ## C) Coach / Admin — eficiencia y retención
+> Estado 7-jun: **Bloque C completo.** ✅ #14 (triage en SugerenciasHoy) · ✅ #15 (alerta de riesgo de abandono ≥10d) · ✅ #16 (panel de activación) · ✅ #17 (respuestas rápidas: selector de plantillas en el chat, ya existía) · ✅ #18 (progresión automática en el editor) · ✅ #19 (informe semanal con Gemini) · ✅ #20 (lista de compra + PDF). **→ Pool de 20 completo.**
 
 14. **Dashboard "Hoy necesitan tu atención"** (M) — clientas que no entrenaron, sin check-in, mensaje sin responder, peso estancado. Enfoca tu tiempo donde importa.
 15. **Alertas de riesgo de abandono** (M) — adherencia < X% o sin actividad N días → aviso. Retención proactiva.
