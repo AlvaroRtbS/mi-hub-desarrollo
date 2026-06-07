@@ -11,6 +11,7 @@ type Evento = {
     | "metrica"
     | "mensaje_clienta"
     | "mensaje_coach"
+    | "comentario_ejercicio"
     | "logro"
     | "objetivo_conseguido"
     | "nota_interna"
@@ -38,7 +39,7 @@ export async function PestanaActividad({ clientaId }: { clientaId: string }) {
   ] = await Promise.all([
     supabase
       .from("sesiones")
-      .select("id, fecha, completada, porcentaje_completado, notas_clienta, actualizada_en")
+      .select("id, fecha, completada, porcentaje_completado, notas_clienta, registros, actualizada_en")
       .eq("clienta_id", clientaId)
       .order("fecha", { ascending: false })
       .limit(30),
@@ -110,6 +111,28 @@ export async function PestanaActividad({ clientaId }: { clientaId: string }) {
     }
   }
 
+  // Mapa elemento_id → nombre del ejercicio (snapshot activo) para etiquetar
+  // los comentarios por-ejercicio de la clienta (#2 huecos TS).
+  type SnapEl = { id?: string; tipo?: string; ejercicio_nombre?: string };
+  type SnapSem = { dias?: { bloques?: { elementos?: SnapEl[] }[] }[] };
+  const nombreEjercicio = new Map<string, string>();
+  {
+    const { data: asig } = await supabase
+      .from("asignaciones")
+      .select("estructura_snapshot")
+      .eq("clienta_id", clientaId)
+      .eq("activa", true)
+      .order("creada_en", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ estructura_snapshot: SnapSem[] | null }>();
+    for (const sem of asig?.estructura_snapshot ?? [])
+      for (const d of sem.dias ?? [])
+        for (const b of d.bloques ?? [])
+          for (const el of b.elementos ?? [])
+            if (el.tipo === "ejercicio" && el.id)
+              nombreEjercicio.set(el.id, el.ejercicio_nombre ?? "Ejercicio");
+  }
+
   const eventos: Evento[] = [];
 
   for (const s of sesiones ?? []) {
@@ -138,6 +161,23 @@ export async function PestanaActividad({ clientaId }: { clientaId: string }) {
       icono: completada ? "✓" : "○",
       color: completada ? "verde" : "gris",
     });
+
+    // Comentarios por-ejercicio que dejó la clienta en esta sesión (#2 huecos TS)
+    const regs =
+      (s as { registros?: Record<string, { comentario?: string }> | null })
+        .registros ?? {};
+    for (const [elId, r] of Object.entries(regs)) {
+      if (!r?.comentario) continue;
+      eventos.push({
+        id: `comej-${(s as { id: string }).id}-${elId}`,
+        fecha: fechaUsada,
+        tipo: "comentario_ejercicio",
+        titulo: `💬 ${nombreEjercicio.get(elId) ?? "Comentario en un ejercicio"}`,
+        detalle: r.comentario,
+        icono: "💬",
+        color: "amarillo",
+      });
+    }
   }
 
   for (const f of fotos ?? []) {

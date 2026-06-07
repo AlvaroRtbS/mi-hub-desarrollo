@@ -16,6 +16,8 @@ type RegistroElemento = {
   pasos?: number | null;
   /** Para elementos tipo pasos_prompt: paths de capturas subidas por la clienta. */
   capturas?: string[];
+  /** Comentario libre de la clienta sobre ESTE ejercicio (#2 huecos TS). */
+  comentario?: string;
 };
 
 type RegistrosSesion = Record<string, RegistroElemento>;
@@ -115,7 +117,8 @@ export async function guardarRegistroSerie(input: {
     ...series[input.serieIdx]!,
     ...input.parche,
   };
-  registros[input.elementoId] = { series_realizadas: series };
+  // Preserva otros campos del elemento (p.ej. comentario) al actualizar series.
+  registros[input.elementoId] = { ...elementoReg, series_realizadas: series };
 
   // Recalcular porcentaje a partir del snapshot del día
   const semanaIdx = input.semana - 1;
@@ -152,6 +155,68 @@ export async function guardarRegistroSerie(input: {
     })
     .eq("id", sesionId);
   if (errUpd) return { ok: false, error: errUpd.message };
+
+  revalidatePath("/c/hoy");
+  return { ok: true };
+}
+
+/**
+ * Guarda el comentario de la clienta sobre UN ejercicio concreto del día
+ * (#2 huecos TS). Se almacena en sesiones.registros[elementoId].comentario.
+ * Crea la sesión del día si aún no existe.
+ */
+export async function guardarComentarioEjercicio(input: {
+  clientaId: string;
+  fecha: string;
+  semana: number;
+  dia: number;
+  elementoId: string;
+  comentario: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticada." };
+
+  const { data: clienta } = await supabase
+    .from("clientas")
+    .select("coach_id")
+    .eq("id", input.clientaId)
+    .maybeSingle<{ coach_id: string }>();
+  if (!clienta) return { ok: false, error: "Clienta no encontrada." };
+
+  const { data: existente } = await supabase
+    .from("sesiones")
+    .select("id, registros")
+    .eq("clienta_id", input.clientaId)
+    .eq("fecha", input.fecha)
+    .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
+
+  const registros: RegistrosSesion = existente?.registros ?? {};
+  const limpio = input.comentario.trim();
+  registros[input.elementoId] = {
+    ...(registros[input.elementoId] ?? {}),
+    comentario: limpio || undefined,
+  };
+
+  if (existente) {
+    const { error } = await supabase
+      .from("sesiones")
+      .update({ registros })
+      .eq("id", existente.id);
+    if (error) return { ok: false, error: error.message };
+  } else {
+    const { error } = await supabase.from("sesiones").insert({
+      coach_id: clienta.coach_id,
+      clienta_id: input.clientaId,
+      fecha: input.fecha,
+      semana: input.semana,
+      dia: input.dia,
+      registros,
+    });
+    if (error) return { ok: false, error: error.message };
+  }
 
   revalidatePath("/c/hoy");
   return { ok: true };

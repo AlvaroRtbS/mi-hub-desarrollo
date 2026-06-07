@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { guardarRegistroSerie } from "./acciones";
+import { guardarRegistroSerie, guardarComentarioEjercicio } from "./acciones";
 import type { ElementoEjercicio } from "@/lib/supabase/tipos";
+import { MessageSquarePlus, Check } from "lucide-react";
 
 type SerieRealizada = {
   peso: string;
@@ -28,6 +29,7 @@ export function RegistroEjercicio({
   elemento,
   registroExistente,
   ultimoRegistro,
+  comentarioExistente,
 }: {
   clientaId: string;
   fecha: string;
@@ -36,10 +38,39 @@ export function RegistroEjercicio({
   elemento: ElementoEjercicio;
   registroExistente: SerieRealizada[] | null;
   ultimoRegistro: { fecha: string; peso: string; reps: string } | null;
+  comentarioExistente: string | null;
 }) {
   const router = useRouter();
   const [enviando, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  // Comentario de la clienta sobre este ejercicio (#2 huecos TS)
+  const [comentario, setComentario] = useState(comentarioExistente ?? "");
+  const [mostrandoComentario, setMostrandoComentario] = useState(
+    !!comentarioExistente
+  );
+  const [comentarioGuardado, setComentarioGuardado] = useState(false);
+
+  function guardarComentario() {
+    setError(null);
+    startTransition(async () => {
+      const r = await guardarComentarioEjercicio({
+        clientaId,
+        fecha,
+        semana,
+        dia,
+        elementoId: elemento.id,
+        comentario,
+      });
+      if (!r.ok) {
+        setError(r.error);
+        return;
+      }
+      setComentarioGuardado(true);
+      setTimeout(() => setComentarioGuardado(false), 2000);
+      router.refresh();
+    });
+  }
 
   // Estado local con los registros. Arranca con lo registrado (si existe),
   // si no con los valores planificados (peso/reps) pero sin marcar completado.
@@ -199,6 +230,34 @@ export function RegistroEjercicio({
           );
         })}
       </ul>
+      {/* Comentario por ejercicio (#2): la clienta cuenta cómo le fue */}
+      {!mostrandoComentario ? (
+        <button
+          onClick={() => setMostrandoComentario(true)}
+          className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-neutral-500 hover:text-neutral-300"
+        >
+          <MessageSquarePlus className="size-3.5" /> Añadir comentario
+        </button>
+      ) : (
+        <div className="mt-2 flex gap-2 items-stretch">
+          <textarea
+            value={comentario}
+            onChange={(e) => setComentario(e.target.value)}
+            rows={2}
+            placeholder="¿Cómo te fue este ejercicio? (molestias, sensaciones…)"
+            className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none"
+          />
+          <button
+            onClick={guardarComentario}
+            disabled={enviando || comentario.trim() === (comentarioExistente ?? "").trim()}
+            className="px-3 text-xs font-medium text-white rounded-lg disabled:opacity-40"
+            style={{ backgroundColor: "var(--brand)" }}
+          >
+            {comentarioGuardado ? <Check className="size-4" /> : "Enviar"}
+          </button>
+        </div>
+      )}
+
       {error && (
         <div className="text-xs text-red-400 mt-2">{error}</div>
       )}

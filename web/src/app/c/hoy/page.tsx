@@ -24,7 +24,7 @@ type SerieRealizada = {
 
 type RegistrosSesion = Record<
   string,
-  { series_realizadas?: SerieRealizada[] }
+  { series_realizadas?: SerieRealizada[]; comentario?: string }
 >;
 
 function diasEntre(a: string, b: string): number {
@@ -837,6 +837,7 @@ function BloqueClienta({
                     registros[el.id]?.series_realizadas ?? null
                   }
                   ultimoRegistro={ultimoPorElemento.get(el.id) ?? null}
+                  comentarioExistente={registros[el.id]?.comentario ?? null}
                 />
               </div>
             )}
