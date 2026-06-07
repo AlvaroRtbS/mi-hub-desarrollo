@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import { formatearFecha } from "@/lib/utilidades";
@@ -120,9 +121,14 @@ export default async function MetricasClientaPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold mb-1">Mis métricas</h1>
+      <div className="flex items-baseline justify-between mb-1 gap-2">
+        <h1 className="text-xl font-semibold">Mi progreso</h1>
+        <Link href="/c/fotos" className="text-xs text-brand-500 shrink-0">
+          📸 Fotos →
+        </Link>
+      </div>
       <p className="text-sm text-neutral-400 mb-4">
-        Registra tu evolución para que tu entrenador la vea.
+        Peso, medidas y fotos. Tu entrenador lo revisa para ajustar tu plan.
       </p>
 
       <ResumenEvolucion

@@ -25,7 +25,26 @@ export function ResumenEvolucion({
 }: Props) {
   const hayFotos = !!(fotoAntes && fotoAhora && fotoAntes.url !== fotoAhora.url);
   const hayAlgo = pesoDelta !== null || cinturaDelta !== null || entrenos > 0 || hayFotos;
-  if (!hayAlgo) return null;
+  if (!hayAlgo) {
+    return (
+      <div
+        className="rounded-2xl border border-brand-900/40 p-4 mb-5"
+        style={{
+          backgroundImage:
+            "radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--brand) 18%, transparent) 0%, transparent 60%)",
+          backgroundColor: "#0a0a0a",
+        }}
+      >
+        <div className="text-xs uppercase tracking-wide text-brand-400 mb-1">
+          Tu evolución 📈
+        </div>
+        <p className="text-sm text-neutral-400">
+          Registra tu peso o sube una foto y aquí verás tu progreso: cuánto has
+          avanzado desde que empezaste. 💜
+        </p>
+      </div>
+    );
+  }
 
   const bajoPeso = pesoDelta !== null && pesoDelta < 0;
 

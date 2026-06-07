@@ -8,6 +8,7 @@ import { Camera, Check } from "lucide-react";
 
 type Props = {
   clientaId: string;
+  coachId: string;
   fecha: string;
   semana: number;
   dia: number;
@@ -28,6 +29,7 @@ function etiquetaPeriodo(p?: "dia" | "semana" | "media_semanal"): string {
 
 export function RegistroPasos({
   clientaId,
+  coachId,
   fecha,
   semana,
   dia,
@@ -82,8 +84,9 @@ export function RegistroPasos({
       const nuevas: string[] = [];
       for (const archivo of Array.from(files)) {
         const ext = archivo.name.split(".").pop() ?? "jpg";
-        // Path debe empezar por clientaId (RLS de fotos-progreso para clientas)
-        const ruta = `${clientaId}/pasos-${Date.now()}-${Math.random()
+        // Ruta unificada coachId/clientaId/: la clienta escribe (seg2) y el
+        // coach puede ver la captura en su panel (seg1).
+        const ruta = `${coachId}/${clientaId}/pasos-${Date.now()}-${Math.random()
           .toString(36)
           .slice(2, 6)}.${ext}`;
         const { error: errUp } = await supabase.storage

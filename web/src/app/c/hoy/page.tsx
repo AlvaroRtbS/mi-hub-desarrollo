@@ -14,7 +14,6 @@ import { FeedbackSesion } from "./feedback-sesion";
 import { RegistroEjercicio } from "./registro-ejercicio";
 import { RegistroPasos } from "./registro-pasos";
 import { ChecklistHoy, type ItemChecklist } from "./checklist-hoy";
-import { Glosario } from "@/components/ui/glosario";
 
 type SerieRealizada = {
   peso: string;
@@ -480,10 +479,9 @@ export default async function HoyPage() {
         </div>
       )}
 
-      {/* Stats rápidas */}
-      <div className="grid grid-cols-3 gap-2 mt-4">
-        <Stat label="Racha" valor={adherencia.rachaActual} extra={adherencia.rachaActual >= 7 ? "🔥" : adherencia.rachaActual >= 3 ? "💪" : ""} />
-        <Stat label="Adherencia" valor={`${adherencia.porcentajeAdherencia}%`} />
+      {/* Stats rápidas (la racha vive en su banner; aquí, lo persistente) */}
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        <Stat label="Constancia" valor={`${adherencia.porcentajeAdherencia}%`} />
         <Stat
           label="Sesiones"
           valor={`${adherencia.sesionesCompletadas}/${adherencia.sesionesProgramadas}`}
@@ -512,16 +510,6 @@ export default async function HoyPage() {
               </strong>
             </span>
           )}
-          <span className={"inline-flex items-center gap-1 " + (checkinPendiente ? "text-amber-400" : "text-green-400")}>
-            {checkinPendiente ? (
-              <Link href="/c/checkins" className="underline">
-                Te falta el check-in
-              </Link>
-            ) : (
-              "✓ Check-in hecho"
-            )}
-            <Glosario termino="checkin" />
-          </span>
         </div>
       </div>
 
@@ -602,6 +590,15 @@ export default async function HoyPage() {
             )}
           </div>
         )}
+      </div>
+
+      <div className="mt-3 text-center">
+        <Link
+          href="/c/programa"
+          className="text-xs text-neutral-500 hover:text-neutral-300"
+        >
+          Ver mi programa completo →
+        </Link>
       </div>
 
       {/* Tus comidas de hoy */}
@@ -888,6 +885,7 @@ function BloqueClienta({
               <div className="flex-1">
                 <RegistroPasos
                   clientaId={clientaId}
+                  coachId={coachId}
                   fecha={fecha}
                   semana={semana}
                   dia={dia}

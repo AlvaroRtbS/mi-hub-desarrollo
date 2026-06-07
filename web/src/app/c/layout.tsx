@@ -1,24 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  Home,
-  ClipboardList,
-  Apple,
-  Ruler,
-  Camera,
-  MessageCircle,
-} from "lucide-react";
+import { Home, Apple, TrendingUp, MessageCircle } from "lucide-react";
 import { TabBar } from "./tab-bar";
 import { TourBienvenida } from "./tour-bienvenida";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 
+// 4 pestañas, lo justo para no perderse. "Programa" se abre desde Hoy y
+// "Fotos" desde Progreso (no son pestañas propias).
 const TABS = [
   { href: "/c/hoy", Icon: Home, label: "Hoy" },
-  { href: "/c/programa", Icon: ClipboardList, label: "Programa" },
   { href: "/c/nutricion", Icon: Apple, label: "Dieta" },
-  { href: "/c/metricas", Icon: Ruler, label: "Medidas" },
-  { href: "/c/fotos", Icon: Camera, label: "Fotos" },
+  { href: "/c/metricas", Icon: TrendingUp, label: "Progreso" },
   { href: "/c/mensajes", Icon: MessageCircle, label: "Chat" },
 ] as const;
 
