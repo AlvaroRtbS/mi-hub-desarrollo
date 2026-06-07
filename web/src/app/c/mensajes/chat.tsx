@@ -25,9 +25,12 @@ function formateaHora(iso: string): string {
 export function ChatClienta({
   clientaId,
   mensajesIniciales,
+  soloLectura = false,
 }: {
   clientaId: string;
   mensajesIniciales: Mensaje[];
+  /** Si es true, oculta el cuadro de escribir: la clienta responde por WhatsApp. */
+  soloLectura?: boolean;
 }) {
   const router = useRouter();
   const [borrador, setBorrador] = useState("");
@@ -92,14 +95,23 @@ export function ChatClienta({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-220px)] min-h-[400px] mt-4">
+    <div
+      className={
+        "flex flex-col mt-4 " +
+        (soloLectura
+          ? "max-h-[55vh]"
+          : "h-[calc(100vh-220px)] min-h-[400px]")
+      }
+    >
       <div
         ref={contenedorRef}
         className="flex-1 overflow-y-auto py-2 space-y-3 pr-2"
       >
         {mensajes.length === 0 ? (
           <div className="text-center text-sm text-neutral-500 py-12">
-            Aún no hay mensajes. ¡Escribe el primero!
+            {soloLectura
+              ? "Aquí verás tu conversación con tu entrenador."
+              : "Aún no hay mensajes. ¡Escribe el primero!"}
           </div>
         ) : (
           mensajes.map((m) => {
@@ -140,7 +152,7 @@ export function ChatClienta({
       )}
 
       {/* Respuestas rápidas — comunes en chat coach-clienta */}
-      {!borrador && (
+      {!soloLectura && !borrador && (
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 mb-1">
           {RESPUESTAS_RAPIDAS.map((r) => (
             <button
@@ -155,31 +167,33 @@ export function ChatClienta({
         </div>
       )}
 
-      <form
-        onSubmit={enviar}
-        className="border-t border-neutral-800 pt-3 flex items-end gap-2"
-      >
-        <textarea
-          value={borrador}
-          onChange={(e) => setBorrador(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              enviar(e);
-            }
-          }}
-          placeholder="Escribe a tu entrenador..."
-          rows={2}
-          className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none"
-        />
-        <button
-          type="submit"
-          disabled={enviando || !borrador.trim()}
-          className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium"
+      {!soloLectura && (
+        <form
+          onSubmit={enviar}
+          className="border-t border-neutral-800 pt-3 flex items-end gap-2"
         >
-          {enviando ? "..." : "Enviar"}
-        </button>
-      </form>
+          <textarea
+            value={borrador}
+            onChange={(e) => setBorrador(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                enviar(e);
+              }
+            }}
+            placeholder="Escribe a tu entrenador..."
+            rows={2}
+            className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none"
+          />
+          <button
+            type="submit"
+            disabled={enviando || !borrador.trim()}
+            className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium"
+          >
+            {enviando ? "..." : "Enviar"}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
