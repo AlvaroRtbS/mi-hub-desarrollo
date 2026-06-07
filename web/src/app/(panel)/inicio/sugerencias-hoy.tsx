@@ -9,6 +9,7 @@ import {
   Sparkles,
   Reply,
   ClipboardCheck,
+  AlertTriangle,
 } from "lucide-react";
 
 type Sesion = {
@@ -20,6 +21,7 @@ type Sesion = {
 type Sugerencia = {
   id: string;
   tipo:
+    | "riesgo"
     | "responder"
     | "checkin_pendiente"
     | "felicitar"
@@ -177,8 +179,18 @@ export async function SugerenciasHoy() {
       });
     }
 
-    // 2) Contactar inactividad (≥5 días sin entrenar)
-    if (diasSinEntrenar != null && diasSinEntrenar >= 5) {
+    // 2) Inactividad — graduada (#15 riesgo de abandono):
+    //    ≥10 días = RIESGO (rojo, máxima prioridad); 5-9 días = contactar (amber).
+    if (diasSinEntrenar != null && diasSinEntrenar >= 10) {
+      agregar(c.id, {
+        tipo: "riesgo",
+        icono: <AlertTriangle className="size-4" />,
+        iconoColor: "text-red-400",
+        titulo: `${c.nombre} en riesgo: ${diasSinEntrenar} días sin entrenar`,
+        detalle: "Sin actividad hace tiempo — contáctala hoy para no perderla.",
+        href: `/mensajes/${c.id}?plantilla=recordar_inactividad`,
+      });
+    } else if (diasSinEntrenar != null && diasSinEntrenar >= 5) {
       agregar(c.id, {
         tipo: "contactar",
         icono: <MessageSquare className="size-4" />,
@@ -303,13 +315,14 @@ export async function SugerenciasHoy() {
 
   // Limita y prioriza: felicitar > contactar > celebrar > resumen > foto
   const prioridad: Record<Sugerencia["tipo"], number> = {
-    responder: 0,
-    contactar: 1,
-    checkin_pendiente: 2,
-    felicitar: 3,
-    celebrar_metricas: 4,
-    resumen: 5,
-    pedir_foto: 6,
+    riesgo: 0,
+    responder: 1,
+    contactar: 2,
+    checkin_pendiente: 3,
+    felicitar: 4,
+    celebrar_metricas: 5,
+    resumen: 6,
+    pedir_foto: 7,
   };
   sugerencias.sort((a, b) => prioridad[a.tipo] - prioridad[b.tipo]);
   const top = sugerencias.slice(0, 6);
