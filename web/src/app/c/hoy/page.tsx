@@ -793,7 +793,26 @@ function BloqueClienta({
 }) {
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-3">
-      <div className="font-medium text-sm">{bloque.titulo}</div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="font-medium text-sm">{bloque.titulo}</div>
+        {bloque.circuito && (
+          <span
+            className="text-[10px] font-medium px-1.5 py-0.5 rounded-full border"
+            style={{
+              color: "var(--brand)",
+              borderColor: "color-mix(in srgb, var(--brand) 40%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--brand) 12%, transparent)",
+            }}
+          >
+            🔄 Circuito · {bloque.rondas ?? 3} rondas
+          </span>
+        )}
+      </div>
+      {bloque.circuito && (
+        <div className="text-xs text-neutral-500 mt-0.5">
+          Haz los ejercicios en secuencia y repite {bloque.rondas ?? 3} rondas.
+        </div>
+      )}
       {bloque.indicaciones && (
         <div className="text-xs text-neutral-500 mt-0.5">{bloque.indicaciones}</div>
       )}

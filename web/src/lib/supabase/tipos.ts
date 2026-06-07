@@ -231,6 +231,11 @@ export type Bloque = {
   id: string;
   titulo: string;
   indicaciones?: string;
+  /** Si es true, el bloque es un circuito: sus ejercicios se hacen en
+   *  secuencia y se repiten `rondas` veces. */
+  circuito?: boolean;
+  /** Nº de rondas del circuito (solo si circuito = true). */
+  rondas?: number;
   elementos: Elemento[];
 };
 

@@ -1288,6 +1288,41 @@ function VistaBloque({
           placeholder="Indicaciones (opcional): descanso entre series, tempo, RPE..."
         />
 
+        {/* Circuito (#1 huecos TS): ejercicios en secuencia, N rondas */}
+        <div className="flex items-center flex-wrap gap-2 mb-3 text-xs">
+          <label className="inline-flex items-center gap-1.5 cursor-pointer text-neutral-400">
+            <input
+              type="checkbox"
+              checked={!!bloque.circuito}
+              onChange={(e) =>
+                onActualizar({
+                  circuito: e.target.checked,
+                  rondas: e.target.checked ? bloque.rondas ?? 3 : undefined,
+                })
+              }
+              className="accent-brand-600"
+            />
+            🔄 Circuito
+          </label>
+          {bloque.circuito && (
+            <span className="inline-flex items-center gap-1 text-neutral-400">
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={bloque.rondas ?? 3}
+                onChange={(e) =>
+                  onActualizar({
+                    rondas: Math.max(1, Math.trunc(Number(e.target.value) || 1)),
+                  })
+                }
+                className="w-12 bg-neutral-900 border border-neutral-800 rounded px-1 py-0.5 text-center text-neutral-200"
+              />
+              rondas · los ejercicios se hacen en secuencia y se repiten
+            </span>
+          )}
+        </div>
+
         {bloque.elementos.length === 0 ? (
           <div className="text-xs text-neutral-600 italic py-2">
             Sin elementos. Añade uno abajo.

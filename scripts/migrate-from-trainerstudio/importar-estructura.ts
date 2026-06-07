@@ -220,9 +220,16 @@ function construir(wblocks: Wblock[], ejMap: Map<string, string>) {
         });
         if (elementos.length === 0) continue;
         flush();
+        // Nº de rondas = máximo de series entre los ejercicios del circuito.
+        const rondas = Math.max(
+          1,
+          ...(it.circuitExercises ?? []).map((ce: Item) => (ce.sets ?? []).length || 0)
+        );
         dia.bloques.push({
           id: randomUUID(),
           titulo: it.circuitName || "Circuito",
+          circuito: true,
+          rondas,
           indicaciones: "Circuito — realiza los ejercicios en secuencia.",
           elementos,
         });
