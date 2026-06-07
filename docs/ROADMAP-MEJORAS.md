@@ -17,7 +17,7 @@ Vamos **~1,5-2 semanas adelantados** sobre el plan original. Resumen por bloque:
 | 3 — Entrenamiento | 🟡 | Ejercicios/programas migrados; **circuitos de TS expandidos a ejercicios reales** (import); IA a Gemini free. Falta: circuitos en el EDITOR + pulir editor |
 | 4 — Nutrición + seguimiento | ✅ | **Superado**: equivalencias + tabla + generador + perfil dietético + métricas + comparador fotos + **pasos diarios** (manual + atajo iPhone) |
 | 5 — Asistente IA web (chatbot) | 🔴 | No empezado; iría con Gemini free |
-| 6 — Datos reales + pulido pre-Pro | 🟡 | Datos migrados (incl. **fotos** y **métricas normalizadas**); **panel de activación de clientas construido (#16)** pero clientas aún sin invitar (diferido al lanzamiento). Falta storage/cuota y branding/responsive |
+| 6 — Datos reales + pulido pre-Pro | 🟡 | Datos migrados (fotos, métricas); panel activación (#16) listo (clientas sin invitar → lanzamiento). **Branding ✅** (marca RTBS morada #6a517b en panel/portal/login) + **responsive ✅** (tablas con scroll). Solo falta: storage/cuota (→ Pro 27-jun) y activar clientas (lanzamiento) |
 
 **Extras hechos (no estaban en el plan):** PWA instalable, constructor de formularios genérico, perfil dietético, IA migrada a Gemini free, centrado/ancho del panel. **Migración TS completada:** métricas normalizadas, circuitos del programa, 40 fotos de progreso, pasos. **Pool hecho:** A#1-4,6,7 · B#8,9(push),11 · C#16.
 
