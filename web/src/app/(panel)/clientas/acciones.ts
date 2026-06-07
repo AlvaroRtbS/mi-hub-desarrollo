@@ -154,6 +154,24 @@ export async function cambiarEstadoClienta(
   const coachId = await obtenerCoachId();
   if (!coachId) return { ok: false, error: "No autenticada." };
 
+  // Gate RGPD: no se puede activar a una clienta sin contrato firmado.
+  if (estado === "activa") {
+    const { data: firma } = await supabase
+      .from("consentimientos")
+      .select("id")
+      .eq("clienta_id", id)
+      .eq("tipo", "contrato_servicios")
+      .eq("estado", "firmado")
+      .maybeSingle();
+    if (!firma) {
+      return {
+        ok: false,
+        error:
+          "No puedes activar a la clienta hasta que firme el contrato. Envíaselo desde su ficha (o márcalo firmado a mano si ya lo firmó por otra vía).",
+      };
+    }
+  }
+
   const { error } = await supabase
     .from("clientas")
     .update({ estado })

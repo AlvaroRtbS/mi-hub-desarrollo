@@ -34,6 +34,7 @@ import { PestanaActividad } from "./pestana-actividad";
 import { ComentariosSesiones } from "./comentarios-sesiones";
 import type { TipoFicha } from "./fichas-tipos";
 import { Tooltip } from "@/components/ui/tooltip";
+import { PanelContrato, type EstadoContrato } from "./panel-contrato";
 
 type AsignacionResumen = {
   id: string;
@@ -83,6 +84,15 @@ export default async function ClientaPage({
     .maybeSingle<Clienta>();
 
   if (!clienta) notFound();
+
+  // Contrato de servicios (consentimiento RGPD)
+  const { data: contratoRow } = await supabase
+    .from("consentimientos")
+    .select("estado")
+    .eq("clienta_id", id)
+    .eq("tipo", "contrato_servicios")
+    .maybeSingle<{ estado: EstadoContrato }>();
+  const contratoEstado: EstadoContrato = contratoRow?.estado ?? null;
 
   // Asignaciones activas
   const { data: asignacionesData } = await supabase
@@ -235,6 +245,7 @@ export default async function ClientaPage({
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <EtiquetaEstado estado={clienta.estado} />
+              <BadgeContratoMini estado={contratoEstado} />
               <span className="text-sm text-neutral-500">{clienta.email}</span>
             </div>
             <div className="mt-2">
@@ -346,6 +357,7 @@ export default async function ClientaPage({
               tokenShare={tokenShare}
               tokenInvitacion={tokenInvitacion}
               yaEnlazada={yaEnlazada}
+              contratoEstado={contratoEstado}
             />
           </>
         )}
@@ -392,6 +404,20 @@ function enlaceWhatsapp(numero: string | null | undefined): string | null {
   if (!d) return null;
   if (d.length === 9) d = "34" + d; // móvil ES sin prefijo
   return `https://wa.me/${d}`;
+}
+
+function BadgeContratoMini({ estado }: { estado: EstadoContrato }) {
+  const mapa: Record<string, { txt: string; clase: string }> = {
+    firmado: { txt: "📄 Contrato firmado", clase: "bg-green-500/15 text-green-400 border-green-500/30" },
+    pendiente: { txt: "📄 Contrato pendiente", clase: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
+    rechazado: { txt: "📄 Contrato rechazado", clase: "bg-red-500/15 text-red-400 border-red-500/30" },
+  };
+  const m = estado ? mapa[estado] : { txt: "📄 Sin contrato", clase: "bg-neutral-700/30 text-neutral-400 border-neutral-700" };
+  return (
+    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${m.clase}`}>
+      {m.txt}
+    </span>
+  );
 }
 
 function diasDesde(iso: string): number {
@@ -507,6 +533,7 @@ function SeccionResumen({
   tokenShare,
   tokenInvitacion,
   yaEnlazada,
+  contratoEstado,
 }: {
   clienta: Clienta;
   asignacionActiva: AsignacionResumen | undefined;
@@ -516,6 +543,7 @@ function SeccionResumen({
   tokenShare: string | null;
   tokenInvitacion: string | null;
   yaEnlazada: boolean;
+  contratoEstado: EstadoContrato;
 }) {
   return (
     <div className="space-y-6">
@@ -524,6 +552,9 @@ function SeccionResumen({
         <Tarjeta titulo="Fecha nacimiento" valor={formatearFecha(clienta.fecha_nacimiento)} />
         <Tarjeta titulo="Alta" valor={formatearFecha(clienta.creada_en)} />
       </div>
+
+      {/* Contrato de servicios (RGPD) */}
+      <PanelContrato clientaId={clienta.id} estado={contratoEstado} />
 
       {clienta.notas_publicas && (
         <div className="border border-neutral-800 rounded-2xl p-5">

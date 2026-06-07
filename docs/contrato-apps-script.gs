@@ -37,15 +37,21 @@ function alFirmarContrato(e) {
 
   for (var i = 0; i < items.length; i++) {
     var titulo = String(items[i].getItem().getTitle()).toLowerCase();
-    var valor  = items[i].getResponse();
-    if (titulo.indexOf('email') > -1 || titulo.indexOf('correo') > -1) {
-      email = String(valor).trim();
-    } else if (titulo.indexOf('acept') > -1 || titulo.indexOf('condicion') > -1) {
-      aceptacion = String(valor);
+    var valor  = String(items[i].getResponse());
+
+    // La aceptación se detecta por su VALOR ("Acepto..."/"No acepto..."), no por
+    // el título — así da igual cómo se llame esa pregunta.
+    if (valor.toLowerCase().indexOf('acept') > -1) { aceptacion = valor; continue; }
+
+    // OJO: el campo "Nombre y Apellidos, email y domicilio" también contiene
+    // "email" en el título, así que comprobamos nombre/domicilio ANTES que email
+    // para no pisar el email real del campo "¿Cuál es tu email?".
+    if (titulo.indexOf('nombre') > -1 || titulo.indexOf('domicilio') > -1 || titulo.indexOf('direcci') > -1) {
+      nombre = valor;
+    } else if (titulo.indexOf('email') > -1 || titulo.indexOf('correo') > -1) {
+      email = valor.trim();
     } else if (titulo.indexOf('fecha') > -1) {
-      fecha = String(valor);
-    } else if (titulo.indexOf('nombre') > -1 || titulo.indexOf('direcci') > -1) {
-      nombre = String(valor);
+      fecha = valor;
     }
   }
 
@@ -55,7 +61,8 @@ function alFirmarContrato(e) {
   }
 
   // "Acepto..." cuenta como firmado; "No acepto..." no.
-  var acepta = /acept/i.test(aceptacion) && !/no\s*acept/i.test(aceptacion);
+  var aLow = aceptacion.toLowerCase();
+  var acepta = aLow.indexOf('acept') > -1 && aLow.indexOf('no acept') < 0;
 
   enviar({
     email: email,
