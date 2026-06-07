@@ -4,10 +4,11 @@
 
 @layer base {
   :root {
-    /* Color principal de la marca del coach. Se sobreescribe en los
-       layouts cuando el coach ha guardado un color en /ajustes. */
-    --brand: #16a34a;
-    --brand-hover: #15803d;
+    /* Color principal de la marca del coach (RTBS, morado). El portal de la
+       clienta lo sobreescribe con el color del coach desde la BD; el panel
+       usa este default. Sin multi-coach, este es el color de Álvaro. */
+    --brand: #6a517b;
+    --brand-hover: #5a4569;
   }
   html {
     color-scheme: dark;

@@ -468,8 +468,8 @@ export default async function HoyPage() {
           className="mt-3 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2"
           style={{
             background:
-              "linear-gradient(90deg, color-mix(in srgb, #22c55e 25%, transparent), color-mix(in srgb, #22c55e 8%, transparent))",
-            borderLeft: "3px solid #22c55e",
+              "linear-gradient(90deg, color-mix(in srgb, var(--brand) 25%, transparent), color-mix(in srgb, var(--brand) 8%, transparent))",
+            borderLeft: "3px solid var(--brand)",
           }}
         >
           <span>🎉</span>
