@@ -6,6 +6,7 @@ import { FormularioMiMetrica } from "./formulario";
 import { MiniGrafica } from "./grafica";
 import { PasosDiarios } from "./pasos-diarios";
 import { ResumenEvolucion } from "./resumen-evolucion";
+import { CompartirProgreso } from "./compartir-progreso";
 
 type MetricaFila = {
   id: string;
@@ -34,10 +35,16 @@ export default async function MetricasClientaPage() {
 
   const { data: clienta } = await supabase
     .from("clientas")
-    .select("id, pasos_ingest_token")
+    .select("id, pasos_ingest_token, coaches(marca_nombre, marca_logo_url)")
     .eq("user_id", user.id)
-    .maybeSingle<{ id: string; pasos_ingest_token: string | null }>();
+    .maybeSingle<{
+      id: string;
+      pasos_ingest_token: string | null;
+      coaches: { marca_nombre: string | null; marca_logo_url: string | null } | null;
+    }>();
   if (!clienta) return null;
+  const marcaNombre = clienta.coaches?.marca_nombre ?? "Tu entrenador";
+  const logoMarca = clienta.coaches?.marca_logo_url ?? null;
 
   const { data: metricasData } = await supabase
     .from("metricas")
@@ -127,6 +134,18 @@ export default async function MetricasClientaPage() {
         fotoAntes={fotoAntes}
         fotoAhora={fotoAhora}
       />
+
+      {(peso.delta !== null || entrenosCount || (fotoAntes && fotoAhora)) && (
+        <CompartirProgreso
+          pesoDelta={peso.delta}
+          pesoUnidad={peso.unidad}
+          entrenos={entrenosCount ?? 0}
+          fotoAntes={fotoAntes}
+          fotoAhora={fotoAhora}
+          marcaNombre={marcaNombre}
+          logoUrl={logoMarca}
+        />
+      )}
 
       <PasosDiarios token={clienta.pasos_ingest_token} recientes={pasosRecientes} />
 
