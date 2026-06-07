@@ -5,7 +5,8 @@ sin esfuerzo y vea el **valor** real; (C) que el **coach** gane eficiencia y
 retenga clientas. Esfuerzo orientativo: S (pequeño), M (medio), L (grande).
 
 ## A) Clienta — entrar y entender (simplicidad + claridad)
-> Estado 4-jun: ✅ #1 (ya existía; +paso de Dieta) · ✅ #2/#6 ("Tus comidas de hoy" en Hoy) · ✅ #3 (login: olvidé contraseña + enlace mágico — PENDIENTE probar en vivo + allowlist Redirect URLs en Supabase) · ✅ #4 (explicador en Dieta) · ✅ #7 (formulario tipo asistente) · ⏸️ #5 (ayuda contextual: aplazado, poco valor en móvil con tooltips hover).
+> Estado 4-jun: ✅ #1 (ya existía; +paso de Dieta) · ✅ #2 ("Tus comidas de hoy" en Hoy) · ✅ #3 (login: olvidé contraseña + enlace mágico — Redirect URLs allowlisteadas; probar en vivo) · ✅ #4 (explicador en Dieta) · ✅ #7 (formulario tipo asistente).
+> Estado 7-jun: ✅ **#5** (glosario contextual tap-to-toggle en esfuerzo/energía y check-in; mobile-friendly, sin hover) · ✅ **#6** (checklist diario "Qué hago hoy" completo: entreno/pasos/foto/comidas con estado, solo lo que aplica al día).
 
 1. **Bienvenida guiada el primer día** (S) — 3-4 pantallas con tu marca: "esto es tu app, aquí ves tu entreno de hoy, tu dieta, tus fotos y hablas conmigo". Reduce el abandono del día 1.
 2. **"Hoy" como pantalla héroe** (M) — lo primero al entrar: "Tu entreno de hoy" + "Tus comidas de hoy" + botón grande "Empezar". Que nunca se pregunte "¿y ahora qué hago?".
@@ -16,7 +17,7 @@ retenga clientas. Esfuerzo orientativo: S (pequeño), M (medio), L (grande).
 7. **Formulario inicial tipo conversación** (M) — una pregunta por pantalla con barra de progreso, en vez de un formulario largo que intimida.
 
 ## B) Clienta — ver el VALOR (motivación y resultados)
-> Estado 4-jun: ✅ #8 (tarjeta "Tu evolución" en Medidas) · ✅ #11 ("Tu semana" en Hoy) · ✅ #9 (push notifications — requiere claves VAPID en Vercel + prueba en móvil). Pendientes/opcionales: #10 (hitos, incremental), #12 (compartible), #13 (feedback más personal).
+> Estado 4-jun: ✅ #8 (tarjeta "Tu evolución" en Medidas) · ✅ #11 ("Tu semana" en Hoy) · ✅ #9 (push — VAPID en Vercel, probar en móvil) · ✅ #10 (banner de hito de peso) · ✅ **#13** (feedback del coach por sesión, 7-jun). Pendiente/opcional: #12 (antes/después compartible).
 
 8. **Pantalla "Tu evolución"** (M) — peso + medidas + foto antes/después + adherencia juntos, visual y motivador. (Ya hay comparador; falta la vista unificada de resultados.)
 9. **Notificaciones push (PWA)** (L) — "tu entreno de hoy", "nuevo plan", "te toca check-in", "mensaje de Álvaro". Clave para uso recurrente y retención.
