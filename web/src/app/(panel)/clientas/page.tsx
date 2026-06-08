@@ -6,7 +6,7 @@ import { EtiquetaEtapa } from "@/components/ui/etiqueta-etapa";
 import { BuscadorDebounced } from "@/components/ui/buscador-debounced";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatearFecha, inicialesNombre } from "@/lib/utilidades";
-import type { Clienta, EstadoClienta } from "@/lib/supabase/tipos";
+import type { Clienta, EstadoClienta, EtapaClienta } from "@/lib/supabase/tipos";
 
 const FILTROS: Array<{ valor: EstadoClienta | "todas"; label: string }> = [
   { valor: "activa", label: "Activas" },
@@ -15,16 +15,44 @@ const FILTROS: Array<{ valor: EstadoClienta | "todas"; label: string }> = [
   { valor: "todas", label: "Todas" },
 ];
 
+const FILTROS_ETAPA: Array<{ valor: EtapaClienta | "todas"; label: string }> = [
+  { valor: "todas", label: "Todas" },
+  { valor: "lead", label: "Leads" },
+  { valor: "activa", label: "Activas" },
+  { valor: "pausada", label: "Pausadas" },
+  { valor: "recuperable", label: "Recuperables" },
+  { valor: "baja", label: "Bajas" },
+];
+const ETAPAS_VALIDAS = ["lead", "activa", "pausada", "baja", "recuperable"] as const;
+
 export default async function ClientasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; q?: string }>;
+  searchParams: Promise<{ estado?: string; etapa?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const filtro = (FILTROS.find((f) => f.valor === params.estado)?.valor ?? "activa") as
     | EstadoClienta
     | "todas";
+  const etapaFiltro = (ETAPAS_VALIDAS as readonly string[]).includes(params.etapa ?? "")
+    ? (params.etapa as EtapaClienta)
+    : null;
   const q = (params.q ?? "").trim();
+
+  // Construye el href de un filtro preservando los otros (estado/etapa/q).
+  function construirHref(next: {
+    estado?: EstadoClienta | "todas";
+    etapa?: EtapaClienta | "todas";
+  }): string {
+    const p = new URLSearchParams();
+    const e = next.estado ?? filtro;
+    const et = next.etapa ?? etapaFiltro ?? "todas";
+    if (e !== "activa") p.set("estado", e); // 'activa' es el defecto → se omite
+    if (et !== "todas") p.set("etapa", et);
+    if (q) p.set("q", q);
+    const s = p.toString();
+    return "/clientas" + (s ? `?${s}` : "");
+  }
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -35,6 +63,7 @@ export default async function ClientasPage({
     .order("nombre");
 
   if (filtro !== "todas") query = query.eq("estado", filtro);
+  if (etapaFiltro) query = query.eq("etapa", etapaFiltro);
   // Sanea q: comas, paréntesis, comodines y barras romperían/alterarían el
   // filtro PostgREST `.or(...)`. Se eliminan antes de construirlo.
   const qSafe = q.replace(/[%,()*\\]/g, "").trim();
@@ -125,10 +154,7 @@ export default async function ClientasPage({
         <div className="flex gap-1">
           {FILTROS.map((f) => {
             const activo = f.valor === filtro;
-            const params = new URLSearchParams();
-            if (f.valor !== "activa") params.set("estado", f.valor);
-            if (q) params.set("q", q);
-            const href = "/clientas" + (params.toString() ? `?${params}` : "");
+            const href = construirHref({ estado: f.valor });
             return (
               <Link
                 key={f.valor}
@@ -151,6 +177,31 @@ export default async function ClientasPage({
             placeholder="Buscar por nombre o email..."
             className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand-500"
           />
+        </div>
+      </div>
+
+      {/* Filtro por etapa del funnel comercial (independiente del estado). */}
+      <div className="flex items-center gap-2 mb-4 text-sm">
+        <span className="text-neutral-500 shrink-0">Funnel:</span>
+        <div className="flex gap-1 flex-wrap">
+          {FILTROS_ETAPA.map((f) => {
+            const activo = (etapaFiltro ?? "todas") === f.valor;
+            const href = construirHref({ etapa: f.valor });
+            return (
+              <Link
+                key={f.valor}
+                href={href}
+                className={
+                  "px-3 py-1 rounded-lg border " +
+                  (activo
+                    ? "bg-neutral-800 border-neutral-700 text-white"
+                    : "border-transparent text-neutral-400 hover:text-white hover:bg-neutral-900")
+                }
+              >
+                {f.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
