@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Boton } from "@/components/ui/boton";
 import { EtiquetaEstado } from "@/components/ui/etiqueta-estado";
+import { EtiquetaEtapa } from "@/components/ui/etiqueta-etapa";
 import { BuscadorDebounced } from "@/components/ui/buscador-debounced";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatearFecha, inicialesNombre } from "@/lib/utilidades";
@@ -29,7 +30,7 @@ export default async function ClientasPage({
   let query = supabase
     .from("clientas")
     .select(
-      "id, nombre, apellidos, email, estado, foto_url, creada_en, asignaciones(programas(nombre), activa)"
+      "id, nombre, apellidos, email, estado, etapa, foto_url, creada_en, asignaciones(programas(nombre), activa)"
     )
     .order("nombre");
 
@@ -184,6 +185,7 @@ export default async function ClientasPage({
                 <th className="text-left px-4 py-3 font-medium">Nombre</th>
                 <th className="text-left px-4 py-3 font-medium">Programa activo</th>
                 <th className="text-left px-4 py-3 font-medium">Estado</th>
+                <th className="text-left px-4 py-3 font-medium">Funnel</th>
                 <th className="text-left px-4 py-3 font-medium">Alta</th>
               </tr>
             </thead>
@@ -265,6 +267,9 @@ export default async function ClientasPage({
                     </td>
                     <td className="px-4 py-3">
                       <EtiquetaEstado estado={c.estado} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <EtiquetaEtapa etapa={c.etapa} />
                     </td>
                     <td className="px-4 py-3 text-neutral-400">
                       {formatearFecha(c.creada_en)}
