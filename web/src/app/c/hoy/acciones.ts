@@ -24,6 +24,99 @@ type RegistroElemento = {
 
 type RegistrosSesion = Record<string, RegistroElemento>;
 
+type ClienteSupabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+const MAX_REINTENTOS = 5;
+
+/**
+ * Escritura segura sobre `sesiones.registros` (JSONB) con BLOQUEO OPTIMISTA.
+ *
+ * El auto-save del entreno dispara varias escrituras casi simultáneas (marcar
+ * serie + perder foco de peso/reps). Antes se hacía leer-modificar-escribir del
+ * JSON completo sin atomicidad → la segunda escritura pisaba la primera (lost
+ * update). Aquí:
+ *   1. Leemos la sesión (incluido `actualizada_en`).
+ *   2. Aplicamos el cambio sobre una copia de los registros.
+ *   3. Hacemos UPDATE condicionado a que `actualizada_en` NO haya cambiado.
+ *   4. Si 0 filas afectadas (otra escritura entró en medio) → reintentamos con
+ *      el estado fresco. Si la sesión no existía, la creamos (con su propia
+ *      gestión de carrera contra el índice único clienta_id+fecha).
+ *
+ * `aplicar` debe ser PURA (no mutar el argumento) y devolver los registros
+ * nuevos + columnas extra opcionales (p. ej. porcentaje_completado).
+ */
+async function actualizarSesion(
+  supabase: ClienteSupabase,
+  base: {
+    coachId: string;
+    clientaId: string;
+    fecha: string;
+    semana: number;
+    dia: number;
+  },
+  aplicar: (registros: RegistrosSesion) => {
+    registros: RegistrosSesion;
+    extra?: Record<string, unknown>;
+  }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let ultimoError: string | null = null;
+
+  for (let intento = 0; intento < MAX_REINTENTOS; intento++) {
+    const { data: existente } = await supabase
+      .from("sesiones")
+      .select("id, registros, actualizada_en")
+      .eq("clienta_id", base.clientaId)
+      .eq("fecha", base.fecha)
+      .maybeSingle<{
+        id: string;
+        registros: RegistrosSesion | null;
+        actualizada_en: string;
+      }>();
+
+    if (!existente) {
+      const { registros, extra } = aplicar({});
+      const { error } = await supabase.from("sesiones").insert({
+        coach_id: base.coachId,
+        clienta_id: base.clientaId,
+        fecha: base.fecha,
+        semana: base.semana,
+        dia: base.dia,
+        registros,
+        ...(extra ?? {}),
+      });
+      if (!error) return { ok: true };
+      // Carrera de creación (índice único clienta_id+fecha): otra petición creó
+      // la fila a la vez. Guardamos el error y reintentamos: en la próxima
+      // vuelta la encontraremos y haremos UPDATE en lugar de INSERT.
+      ultimoError = error.message;
+      continue;
+    }
+
+    const { registros, extra } = aplicar(existente.registros ?? {});
+    const { data: filas, error } = await supabase
+      .from("sesiones")
+      .update({
+        registros,
+        ...(extra ?? {}),
+        actualizada_en: new Date().toISOString(),
+      })
+      .eq("id", existente.id)
+      .eq("actualizada_en", existente.actualizada_en)
+      .select("id");
+    if (error) return { ok: false, error: error.message };
+    if (filas && filas.length > 0) return { ok: true };
+    // 0 filas: otra escritura concurrente cambió `actualizada_en` entre el read
+    // y el update → reintentar con el estado fresco.
+  }
+
+  return {
+    ok: false,
+    error:
+      ultimoError ??
+      "No se pudo guardar por escrituras simultáneas. Inténtalo de nuevo.",
+  };
+}
+
 /**
  * Guarda (o actualiza) los datos reales de UNA serie de UN ejercicio en la
  * sesión del día. Si la sesión no existe, la crea. Recalcula automáticamente
@@ -59,113 +152,72 @@ export async function guardarRegistroSerie(input: {
     }>();
   if (!asign) return { ok: false, error: "No hay asignación activa." };
 
-  // Obtener sesión existente o crear vacía
-  const { data: existente } = await supabase
-    .from("sesiones")
-    .select("id, registros")
-    .eq("clienta_id", input.clientaId)
-    .eq("fecha", input.fecha)
-    .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
-
-  let sesionId = existente?.id ?? null;
-  const registros: RegistrosSesion = existente?.registros ?? {};
-
-  if (!sesionId) {
-    const { data: nueva, error: errCrear } = await supabase
-      .from("sesiones")
-      .insert({
-        coach_id: asign.coach_id,
-        clienta_id: input.clientaId,
-        fecha: input.fecha,
-        semana: input.semana,
-        dia: input.dia,
-        completada: false,
-        porcentaje_completado: 0,
-        registros: {},
-      })
-      .select("id")
-      .single<{ id: string }>();
-    if (errCrear || !nueva) {
-      // Posible condición de carrera (doble guardado simultáneo): otra petición
-      // creó la sesión del día a la vez y chocó con el índice único
-      // (clienta_id, fecha). Reusamos la fila ya existente y mezclamos lo que
-      // la otra petición hubiera guardado, en vez de devolver error.
-      const { data: ya } = await supabase
-        .from("sesiones")
-        .select("id, registros")
-        .eq("clienta_id", input.clientaId)
-        .eq("fecha", input.fecha)
-        .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
-      if (!ya) {
-        return {
-          ok: false,
-          error: errCrear?.message ?? "No se pudo crear la sesión.",
-        };
+  const r = await actualizarSesion(
+    supabase,
+    {
+      coachId: asign.coach_id,
+      clientaId: input.clientaId,
+      fecha: input.fecha,
+      semana: input.semana,
+      dia: input.dia,
+    },
+    (registros) => {
+      // Merge en registros[elementoId].series_realizadas[serieIdx]
+      const elementoReg = registros[input.elementoId] ?? {};
+      const series = [...(elementoReg.series_realizadas ?? [])];
+      while (series.length <= input.serieIdx) {
+        series.push({ peso: "", reps: "", completado: false });
       }
-      sesionId = ya.id;
-      Object.assign(registros, ya.registros ?? {});
-    } else {
-      sesionId = nueva.id;
-    }
-  }
+      series[input.serieIdx] = { ...series[input.serieIdx]!, ...input.parche };
+      const nuevos: RegistrosSesion = {
+        ...registros,
+        [input.elementoId]: { ...elementoReg, series_realizadas: series },
+      };
 
-  // Merge en registros[elementoId].series_realizadas[serieIdx]
-  const elementoReg = registros[input.elementoId] ?? {};
-  const series = (elementoReg.series_realizadas ?? []) as SerieRealizada[];
-  while (series.length <= input.serieIdx) {
-    series.push({ peso: "", reps: "", completado: false });
-  }
-  series[input.serieIdx] = {
-    ...series[input.serieIdx]!,
-    ...input.parche,
-  };
-  // Preserva otros campos del elemento (p.ej. comentario) al actualizar series.
-  registros[input.elementoId] = { ...elementoReg, series_realizadas: series };
-
-  // Recalcular porcentaje a partir del snapshot del día
-  const semanaIdx = input.semana - 1;
-  const diaIdx = input.dia - 1;
-  const diaDef = asign.estructura_snapshot?.[semanaIdx]?.dias?.[diaIdx];
-  let totalSeriesDia = 0;
-  let totalCompletado = 0;
-  if (diaDef && !diaDef.descanso) {
-    for (const b of diaDef.bloques ?? []) {
-      for (const el of b.elementos ?? []) {
-        if (el.tipo === "ejercicio") {
-          totalSeriesDia += el.series?.length ?? 0;
-          const reg = registros[el.id];
-          if (reg?.series_realizadas) {
-            for (const s of reg.series_realizadas) {
-              if (s.completado) totalCompletado += 1;
+      // Recalcular porcentaje a partir del snapshot del día
+      const diaDef =
+        asign.estructura_snapshot?.[input.semana - 1]?.dias?.[input.dia - 1];
+      let totalSeriesDia = 0;
+      let totalCompletado = 0;
+      if (diaDef && !diaDef.descanso) {
+        for (const b of diaDef.bloques ?? []) {
+          for (const el of b.elementos ?? []) {
+            if (el.tipo === "ejercicio") {
+              totalSeriesDia += el.series?.length ?? 0;
+              const reg = nuevos[el.id];
+              if (reg?.series_realizadas) {
+                for (const s of reg.series_realizadas) {
+                  if (s.completado) totalCompletado += 1;
+                }
+              }
             }
           }
         }
       }
+      const porcentaje =
+        totalSeriesDia > 0
+          ? Math.min(100, Math.round((totalCompletado / totalSeriesDia) * 100))
+          : 0;
+
+      return {
+        registros: nuevos,
+        extra: {
+          porcentaje_completado: porcentaje,
+          completada: porcentaje >= 100,
+        },
+      };
     }
-  }
-  const porcentaje =
-    totalSeriesDia > 0
-      ? Math.min(100, Math.round((totalCompletado / totalSeriesDia) * 100))
-      : 0;
+  );
 
-  const { error: errUpd } = await supabase
-    .from("sesiones")
-    .update({
-      registros,
-      porcentaje_completado: porcentaje,
-      completada: porcentaje >= 100,
-    })
-    .eq("id", sesionId);
-  if (errUpd) return { ok: false, error: errUpd.message };
-
-  revalidatePath("/c/hoy");
-  return { ok: true };
+  if (r.ok) revalidatePath("/c/hoy");
+  return r;
 }
 
 /**
  * Guarda el comentario de la clienta sobre UN ejercicio concreto del día
  * (#2 huecos TS). Se almacena en sesiones.registros[elementoId].comentario.
- * Crea la sesión del día si aún no existe.
+ * Crea la sesión del día si aún no existe. Además, al quitar fotos adjuntas,
+ * borra los objetos huérfanos del bucket (evita fuga de almacenamiento).
  */
 export async function guardarComentarioEjercicio(input: {
   clientaId: string;
@@ -189,42 +241,43 @@ export async function guardarComentarioEjercicio(input: {
     .maybeSingle<{ coach_id: string }>();
   if (!clienta) return { ok: false, error: "Clienta no encontrada." };
 
-  const { data: existente } = await supabase
-    .from("sesiones")
-    .select("id, registros")
-    .eq("clienta_id", input.clientaId)
-    .eq("fecha", input.fecha)
-    .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
+  let adjuntosAEliminar: string[] = [];
 
-  const registros: RegistrosSesion = existente?.registros ?? {};
-  const limpio = input.comentario.trim();
-  const adjuntos = (input.adjuntos ?? []).filter(Boolean);
-  registros[input.elementoId] = {
-    ...(registros[input.elementoId] ?? {}),
-    comentario: limpio || undefined,
-    adjuntos: adjuntos.length ? adjuntos : undefined,
-  };
-
-  if (existente) {
-    const { error } = await supabase
-      .from("sesiones")
-      .update({ registros })
-      .eq("id", existente.id);
-    if (error) return { ok: false, error: error.message };
-  } else {
-    const { error } = await supabase.from("sesiones").insert({
-      coach_id: clienta.coach_id,
-      clienta_id: input.clientaId,
+  const r = await actualizarSesion(
+    supabase,
+    {
+      coachId: clienta.coach_id,
+      clientaId: input.clientaId,
       fecha: input.fecha,
       semana: input.semana,
       dia: input.dia,
-      registros,
-    });
-    if (error) return { ok: false, error: error.message };
-  }
+    },
+    (registros) => {
+      const prev = registros[input.elementoId] ?? {};
+      const limpio = input.comentario.trim();
+      const adjuntos = (input.adjuntos ?? []).filter(Boolean);
+      // Adjuntos que estaban guardados y ya no están → a borrar del bucket.
+      const prevAdj = prev.adjuntos ?? [];
+      adjuntosAEliminar = prevAdj.filter((p) => !adjuntos.includes(p));
+      return {
+        registros: {
+          ...registros,
+          [input.elementoId]: {
+            ...prev,
+            comentario: limpio || undefined,
+            adjuntos: adjuntos.length ? adjuntos : undefined,
+          },
+        },
+      };
+    }
+  );
 
-  revalidatePath("/c/hoy");
-  return { ok: true };
+  if (r.ok && adjuntosAEliminar.length > 0) {
+    // Best-effort: si falla el borrado del objeto, no revertimos el guardado.
+    await supabase.storage.from("fotos-progreso").remove(adjuntosAEliminar);
+  }
+  if (r.ok) revalidatePath("/c/hoy");
+  return r;
 }
 
 /**
@@ -250,60 +303,39 @@ export async function guardarRegistroPasos(input: {
     return { ok: false, error: errCl?.message ?? "Clienta no encontrada." };
   }
 
-  const { data: existente } = await supabase
-    .from("sesiones")
-    .select("id, registros")
-    .eq("clienta_id", input.clientaId)
-    .eq("fecha", input.fecha)
-    .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
+  let capturasAEliminar: string[] = [];
 
-  const registros: RegistrosSesion = existente?.registros ?? {};
-  const elementoReg = registros[input.elementoId] ?? {};
-  registros[input.elementoId] = {
-    ...elementoReg,
-    pasos: input.pasos,
-    capturas: input.capturas,
-  };
-
-  if (!existente) {
-    const { error: errIns } = await supabase.from("sesiones").insert({
-      coach_id: clienta.coach_id,
-      clienta_id: input.clientaId,
+  const r = await actualizarSesion(
+    supabase,
+    {
+      coachId: clienta.coach_id,
+      clientaId: input.clientaId,
       fecha: input.fecha,
       semana: input.semana,
       dia: input.dia,
-      registros,
-    });
-    if (errIns) {
-      // Carrera: otra petición creó la sesión a la vez. Reusar la existente y
-      // fusionar este elemento sobre sus registros.
-      const { data: ya } = await supabase
-        .from("sesiones")
-        .select("id, registros")
-        .eq("clienta_id", input.clientaId)
-        .eq("fecha", input.fecha)
-        .maybeSingle<{ id: string; registros: RegistrosSesion | null }>();
-      if (!ya) return { ok: false, error: errIns.message };
-      const fusion: RegistrosSesion = {
-        ...(ya.registros ?? {}),
-        [input.elementoId]: registros[input.elementoId]!,
+    },
+    (registros) => {
+      const prev = registros[input.elementoId] ?? {};
+      const prevCap = prev.capturas ?? [];
+      capturasAEliminar = prevCap.filter((p) => !input.capturas.includes(p));
+      return {
+        registros: {
+          ...registros,
+          [input.elementoId]: {
+            ...prev,
+            pasos: input.pasos,
+            capturas: input.capturas,
+          },
+        },
       };
-      const { error: errUpd2 } = await supabase
-        .from("sesiones")
-        .update({ registros: fusion })
-        .eq("id", ya.id);
-      if (errUpd2) return { ok: false, error: errUpd2.message };
     }
-  } else {
-    const { error: errUpd } = await supabase
-      .from("sesiones")
-      .update({ registros })
-      .eq("id", existente.id);
-    if (errUpd) return { ok: false, error: errUpd.message };
-  }
+  );
 
-  revalidatePath("/c/hoy");
-  return { ok: true };
+  if (r.ok && capturasAEliminar.length > 0) {
+    await supabase.storage.from("fotos-progreso").remove(capturasAEliminar);
+  }
+  if (r.ok) revalidatePath("/c/hoy");
+  return r;
 }
 
 /**

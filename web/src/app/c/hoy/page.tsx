@@ -207,7 +207,22 @@ export default async function HoyPage() {
     );
   }
 
-  const dia = semana.dias[diaIdx]!;
+  const dia = semana.dias[diaIdx];
+  if (!dia) {
+    // Snapshot mal formado (semana con menos días de los esperados): no tumbar
+    // la pantalla con un 500; mostrar aviso para que el coach lo corrija.
+    return (
+      <div>
+        <Saludo nombre={clienta.nombre} nivel={nivel} xp={xp} />
+        <div className="border border-neutral-800 rounded-2xl p-6 text-center mt-6">
+          <div className="text-2xl mb-2">🗓️</div>
+          <div className="text-sm">
+            El plan de esta semana parece incompleto. Avísale a tu entrenador.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // URLs firmadas para PDFs y vídeos adjuntos del día actual
   const pathsAdjuntos: (string | null)[] = [];
