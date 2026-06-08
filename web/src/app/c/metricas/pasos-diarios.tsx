@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Footprints, Check, Smartphone, ChevronDown } from "lucide-react";
 import { registrarPasosDiarios } from "./acciones-pasos";
@@ -32,6 +32,19 @@ export function PasosDiarios({
   const [error, setError] = useState<string | null>(null);
   const [verAtajo, setVerAtajo] = useState(false);
   const [copiado, setCopiado] = useState(false);
+
+  // La automatización solo existe en iPhone (app Atajos + Salud). En Android no
+  // hay vía automática fiable, así que allí se usa la entrada manual de arriba.
+  // Se calcula en el cliente para no romper la hidratación.
+  const [esIOS, setEsIOS] = useState(false);
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    const iPhoneOiPad =
+      /iphone|ipad|ipod/i.test(ua) ||
+      // iPadOS 13+ se presenta como Mac con pantalla táctil
+      (ua.includes("Mac") && typeof document !== "undefined" && "ontouchend" in document);
+    setEsIOS(iPhoneOiPad);
+  }, []);
 
   const media7 = useMemo(() => {
     const ult = recientes.slice(0, 7);
@@ -139,8 +152,8 @@ export function PasosDiarios({
         </div>
       )}
 
-      {/* Configurar atajo automático (iPhone) */}
-      {url && (
+      {/* Configurar atajo automático — solo iPhone (Atajos + Salud) */}
+      {url && esIOS && (
         <div className="mt-4 border-t border-neutral-900 pt-3">
           <button
             onClick={() => setVerAtajo((v) => !v)}
