@@ -6,6 +6,7 @@ import type { Toma } from "@/lib/nutricion";
 import { ALIMENTOS_POR_DEFECTO } from "@/lib/nutricion-equivalencias-default";
 import { generarMenuPlan, type AlimentoGen } from "@/lib/generar-menu";
 import { restriccionesATexto, type DietaRestricciones } from "@/lib/dieta";
+import type { PreguntaForm } from "@/lib/formularios";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
 export type ResultadoCrear = { ok: true; id: string } | { ok: false; error: string };
@@ -165,29 +166,44 @@ export async function sugerirMenuLocal(
   }
 
   // Restricciones de la clienta (si la hay): perfil dietético (checks + nota
-  // libre) + Formulario Inicial.
-  let intolerancias = "";
+  // libre) + la respuesta de alergias de su Valoración de alimentación.
   let perfilDieta = "";
+  let alergias = "";
   if (clientaId) {
-    const { data: fr } = await supabase
-      .from("formulario_respuestas")
-      .select("respuestas")
-      .eq("clienta_id", clientaId)
-      .eq("tipo", "inicial")
-      .maybeSingle<{ respuestas: Record<string, string> }>();
-    const r = fr?.respuestas ?? {};
-    intolerancias = [r.alimentacion, r.algo_mas].filter(Boolean).join(". ");
-
     const { data: cl } = await supabase
       .from("clientas")
       .select("dieta_restricciones")
       .eq("id", clientaId)
       .maybeSingle<{ dieta_restricciones: DietaRestricciones }>();
     perfilDieta = restriccionesATexto(cl?.dieta_restricciones);
+
+    // Plantilla marcada como "vuelca_a_dieta" (la Valoración de alimentación).
+    // Solo usamos la pregunta de alergias/intolerancias: el generador excluye
+    // por palabras negativas, así que los "gustos" lo confundirían.
+    const { data: vForm } = await supabase
+      .from("formularios")
+      .select("id, preguntas")
+      .eq("coach_id", coachId)
+      .eq("vuelca_a_dieta", true)
+      .maybeSingle<{ id: string; preguntas: PreguntaForm[] }>();
+    if (vForm) {
+      const { data: asig } = await supabase
+        .from("formulario_asignaciones")
+        .select("respuestas")
+        .eq("formulario_id", vForm.id)
+        .eq("clienta_id", clientaId)
+        .eq("completado", true)
+        .maybeSingle<{ respuestas: Record<string, string | string[]> }>();
+      const preg = (vForm.preguntas ?? []).find((p) =>
+        /alergia|intolerancia/i.test(p.label)
+      );
+      const val = preg ? asig?.respuestas?.[preg.id] : undefined;
+      if (typeof val === "string") alergias = val;
+    }
   }
 
-  // Combina perfil dietético + formulario + notas del plan como restricciones.
-  const textoRestricciones = [perfilDieta, intolerancias, notas]
+  // Combina perfil dietético + alergias del formulario + notas del plan.
+  const textoRestricciones = [perfilDieta, alergias, notas]
     .filter(Boolean)
     .join(". ");
 

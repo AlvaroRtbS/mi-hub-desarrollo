@@ -81,7 +81,11 @@ export async function GET(request: Request) {
         .select("id")
         .eq("clienta_id", c.id)
         .eq("remitente", "clienta"),
-      supabase.from("formulario_respuestas").select("id").eq("clienta_id", c.id),
+      supabase
+        .from("formulario_asignaciones")
+        .select("id")
+        .eq("clienta_id", c.id)
+        .eq("completado", true),
     ]);
 
     const sesionesTyped = (sesiones ?? []) as Array<{

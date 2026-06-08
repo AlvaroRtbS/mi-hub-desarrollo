@@ -90,9 +90,10 @@ async function recalcularParaClienta(
       .eq("clienta_id", clientaId)
       .eq("remitente", "clienta"),
     supabase
-      .from("formulario_respuestas")
+      .from("formulario_asignaciones")
       .select("id")
-      .eq("clienta_id", clientaId),
+      .eq("clienta_id", clientaId)
+      .eq("completado", true),
   ]);
 
   if (!clienta || !clienta.gamificacion_activa) return [];
