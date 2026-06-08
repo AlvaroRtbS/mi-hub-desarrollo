@@ -25,6 +25,19 @@ import {
 
 const DEMO_TAG = "demo:mi-hub";
 
+// Endpoint de desarrollo: no debe ejecutarse en producción salvo que se habilite
+// explícitamente (ALLOW_SEED=true). Evita que un coach autenticado cree/borre
+// datos demo en el entorno real.
+function seedBloqueado(): NextResponse | null {
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_SEED !== "true") {
+    return NextResponse.json(
+      { ok: false, error: "Endpoint de desarrollo deshabilitado en producción." },
+      { status: 403 }
+    );
+  }
+  return null;
+}
+
 type Clienta = { nombre: string; apellidos: string; email: string; estado: "activa" };
 
 const CLIENTAS: Array<{
@@ -116,6 +129,9 @@ function bloquePrincipal(
 }
 
 export async function POST() {
+  const bloqueado = seedBloqueado();
+  if (bloqueado) return bloqueado;
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -437,6 +453,9 @@ export async function POST() {
 }
 
 export async function DELETE() {
+  const bloqueado = seedBloqueado();
+  if (bloqueado) return bloqueado;
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },

@@ -11,7 +11,21 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+// Endpoint de desarrollo: deshabilitado en producción salvo ALLOW_SEED=true.
+function seedBloqueado(): NextResponse | null {
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_SEED !== "true") {
+    return NextResponse.json(
+      { ok: false, error: "Endpoint de desarrollo deshabilitado en producción." },
+      { status: 403 }
+    );
+  }
+  return null;
+}
+
 export async function POST() {
+  const bloqueado = seedBloqueado();
+  if (bloqueado) return bloqueado;
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },

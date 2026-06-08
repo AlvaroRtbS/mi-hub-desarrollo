@@ -4,12 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Footprints, Check, Smartphone, ChevronDown } from "lucide-react";
 import { registrarPasosDiarios } from "./acciones-pasos";
+import { hoyISO } from "@/lib/utilidades";
 
 type DiaPasos = { fecha: string; pasos: number; fuente: string | null };
-
-function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function diaCorto(iso: string): string {
   return new Date(iso + "T00:00:00Z").toLocaleDateString("es-ES", {
