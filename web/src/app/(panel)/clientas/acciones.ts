@@ -24,6 +24,47 @@ function fechaISOValida(iso: string): boolean {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso;
 }
 
+const ETAPAS = ["lead", "activa", "pausada", "baja", "recuperable"] as const;
+
+/**
+ * Lee y valida los campos comerciales (CRM Fase 1) del formulario de clienta.
+ * Devuelve un objeto listo para spread en el insert/update, o un error.
+ */
+function leerCamposComerciales(
+  formData: FormData
+):
+  | { ok: true; campos: Record<string, unknown> }
+  | { ok: false; error: string } {
+  const texto = (k: string) => String(formData.get(k) ?? "").trim() || null;
+
+  const etapaRaw = String(formData.get("etapa") ?? "").trim();
+  const etapa = etapaRaw === "" ? null : etapaRaw;
+  if (etapa && !ETAPAS.includes(etapa as (typeof ETAPAS)[number])) {
+    return { ok: false, error: "Etapa de funnel no válida." };
+  }
+
+  const whatsapp = texto("whatsapp_phone");
+  if (whatsapp && !validarTelefono(whatsapp)) {
+    return { ok: false, error: "El WhatsApp no es válido." };
+  }
+
+  return {
+    ok: true,
+    campos: {
+      etapa,
+      lead_source: texto("lead_source"),
+      whatsapp_phone: whatsapp,
+      es_avatar_objetivo: formData.get("es_avatar_objetivo") === "on",
+      objetivo_principal: texto("objetivo_principal"),
+      ciudad: texto("ciudad"),
+      condiciones_medicas: texto("condiciones_medicas"),
+      lesiones_limitaciones: texto("lesiones_limitaciones"),
+      material: texto("material"),
+      notas_contexto: texto("notas_contexto"),
+    },
+  };
+}
+
 async function obtenerCoachId(): Promise<string | null> {
   const supabase = await createSupabaseServerClient();
   const {
@@ -55,6 +96,9 @@ export async function crearClienta(formData: FormData): Promise<ResultadoAccion>
   if (telefono && !validarTelefono(telefono))
     return { ok: false, error: "El teléfono no es válido." };
 
+  const comercial = leerCamposComerciales(formData);
+  if (!comercial.ok) return comercial;
+
   const { data, error } = await supabase
     .from("clientas")
     .insert({
@@ -65,6 +109,7 @@ export async function crearClienta(formData: FormData): Promise<ResultadoAccion>
       telefono,
       estado: "invitada",
       invitada_en: new Date().toISOString(),
+      ...comercial.campos,
     })
     .select("id")
     .single();
@@ -121,6 +166,9 @@ export async function actualizarClienta(
   )
     return { ok: false, error: "La fecha de nacimiento no es válida." };
 
+  const comercial = leerCamposComerciales(formData);
+  if (!comercial.ok) return comercial;
+
   const { error } = await supabase
     .from("clientas")
     .update({
@@ -130,6 +178,7 @@ export async function actualizarClienta(
       telefono,
       fecha_nacimiento: fechaNacimiento,
       notas_publicas: notas,
+      ...comercial.campos,
     })
     .eq("id", id)
     .eq("coach_id", coachId);
