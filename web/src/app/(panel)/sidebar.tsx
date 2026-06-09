@@ -16,6 +16,7 @@ import {
   Sparkles,
   Settings,
   CreditCard,
+  ListChecks,
   Menu,
   X,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const GRUPOS: {
     titulo: null,
     enlaces: [
       { href: "/inicio", label: "Inicio", Icon: Home },
+      { href: "/agenda", label: "Agenda", Icon: ListChecks },
       { href: "/asistente", label: "Asistente", Icon: Sparkles },
     ],
   },

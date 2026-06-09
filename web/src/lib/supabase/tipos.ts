@@ -105,6 +105,17 @@ export type Pago = {
   actualizada_en: string;
 };
 
+export type TareaCoach = {
+  id: string;
+  coach_id: string;
+  texto: string;
+  hecha: boolean;
+  vence: string | null;
+  clienta_id: string | null;
+  creada_en: string;
+  completada_en: string | null;
+};
+
 export type Ejercicio = {
   id: string;
   coach_id: string;

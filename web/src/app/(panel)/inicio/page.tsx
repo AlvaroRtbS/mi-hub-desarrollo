@@ -7,6 +7,7 @@ import { BotonCargarDemo } from "./boton-demo";
 import { SugerenciasHoy } from "./sugerencias-hoy";
 import { BotonInformeSemanal } from "./boton-informe-semanal";
 import { ResumenSemana } from "./resumen-semana";
+import { KpisNegocio } from "./kpis-negocio";
 
 type AsignacionConSnapshot = {
   id: string;
@@ -200,6 +201,9 @@ export default async function InicioPage() {
         <Stat label="Programas" valor={programas.count ?? 0} href="/programas" />
         <Stat label="Ejercicios" valor={ejercicios.count ?? 0} href="/ejercicios" />
       </div>
+
+      {/* KPIs comerciales (CRM Fase 3) */}
+      <KpisNegocio />
 
       <div className="mb-4">
         <ResumenSemana />
