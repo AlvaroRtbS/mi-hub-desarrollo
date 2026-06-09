@@ -35,6 +35,7 @@ import { ComentariosSesiones } from "./comentarios-sesiones";
 import type { TipoFicha } from "./fichas-tipos";
 import { Tooltip } from "@/components/ui/tooltip";
 import { PanelContrato, type EstadoContrato } from "./panel-contrato";
+import { PanelInscripcionPagos } from "./panel-inscripcion-pagos";
 
 type AsignacionResumen = {
   id: string;
@@ -555,6 +556,9 @@ function SeccionResumen({
 
       {/* Contrato de servicios (RGPD) */}
       <PanelContrato clientaId={clienta.id} estado={contratoEstado} />
+
+      {/* Inscripción y pagos (CRM Fase 3) */}
+      <PanelInscripcionPagos clientaId={clienta.id} />
 
       {clienta.notas_publicas && (
         <div className="border border-neutral-800 rounded-2xl p-5">

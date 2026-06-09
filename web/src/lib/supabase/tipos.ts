@@ -56,6 +56,55 @@ export type Clienta = {
   stripe_customer_id: string | null;
 };
 
+// --- CRM Fase 3 (inscripciones + pagos) ---
+export type TipoPago = "unico" | "fraccionado";
+export type EstadoInscripcion = "activa" | "finalizada" | "cancelada";
+export type EstadoPago = "pendiente" | "pagado" | "fallido" | "reembolsado";
+export type OrigenPago =
+  | "stripe"
+  | "sepa"
+  | "bizum"
+  | "transferencia"
+  | "efectivo"
+  | "otro";
+
+export type Inscripcion = {
+  id: string;
+  coach_id: string;
+  clienta_id: string;
+  concepto: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  importe_total: number | null;
+  tipo_pago: TipoPago;
+  cuotas_total: number;
+  renovacion_fecha: string | null;
+  estado: EstadoInscripcion;
+  stripe_subscription_id: string | null;
+  notas: string | null;
+  creada_en: string;
+  actualizada_en: string;
+};
+
+export type Pago = {
+  id: string;
+  coach_id: string;
+  clienta_id: string;
+  inscripcion_id: string | null;
+  importe: number;
+  moneda: string;
+  concepto: string | null;
+  fecha_vencimiento: string | null;
+  pagado_en: string | null;
+  estado: EstadoPago;
+  origen: OrigenPago | null;
+  numero_cuota: number | null;
+  stripe_payment_intent_id: string | null;
+  notas: string | null;
+  creada_en: string;
+  actualizada_en: string;
+};
+
 export type Ejercicio = {
   id: string;
   coach_id: string;
