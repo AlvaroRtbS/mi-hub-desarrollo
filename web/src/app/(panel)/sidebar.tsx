@@ -15,6 +15,7 @@ import {
   FileText,
   Sparkles,
   Settings,
+  CreditCard,
   Menu,
   X,
 } from "lucide-react";
@@ -37,6 +38,7 @@ const GRUPOS: {
     enlaces: [
       { href: "/clientas", label: "Clientas", Icon: Users },
       { href: "/clientas/comparativa", label: "Comparativa", Icon: LineChart },
+      { href: "/pagos", label: "Pagos", Icon: CreditCard },
       { href: "/calendario", label: "Calendario", Icon: Calendar },
       { href: "/formularios", label: "Formularios", Icon: FileText },
       { href: "/mensajes", label: "Mensajes", Icon: MessageSquare },
