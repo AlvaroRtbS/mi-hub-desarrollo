@@ -67,17 +67,14 @@ export async function middleware(request: NextRequest) {
 
     // Bloquear acceso cruzado: una clienta no debería poder entrar al panel
     // de coach (y viceversa). Si lo intenta, redirige a su zona.
-    const esRutaCoach =
-      path.startsWith("/clientas") ||
-      path.startsWith("/programas") ||
-      path.startsWith("/ejercicios") ||
-      path.startsWith("/calendario") ||
-      path.startsWith("/nutricion") ||
-      path.startsWith("/metricas") ||
-      path.startsWith("/mensajes") ||
-      path.startsWith("/inicio");
-
+    // Regla robusta (no una lista que se queda coja con rutas nuevas):
+    //   - /c/* es zona de clienta.
+    //   - /api/* gestiona su propia auth (no redirigir, devolvería HTML).
+    //   - lo público ya se filtró arriba.
+    //   - TODO lo demás del panel es zona de coach.
     const esRutaClienta = path.startsWith("/c/");
+    const esRutaCoach =
+      !esRutaClienta && !esRutaPublica && !path.startsWith("/api/");
 
     if (esRutaCoach || esRutaClienta) {
       const { data: coach } = await supabase

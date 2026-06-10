@@ -14,11 +14,17 @@ export default async function PanelLayout({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: coach } = await supabase
+  const { data: coach, error: errorCoach } = await supabase
     .from("coaches")
     .select("nombre, email, marca_color_primario")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  // Gate del panel: solo el coach entra aquí. Si la cuenta no es coach (p. ej.
+  // una clienta logueada), fuera al portal. Solo redirigimos cuando estamos
+  // SEGUROS de que no hay coach (sin error de consulta), para no expulsar a un
+  // coach legítimo por un fallo transitorio de red/BD.
+  if (!errorCoach && !coach) redirect("/c/hoy");
 
   const colorMarca =
     (coach?.marca_color_primario as string | null) ?? "#16a34a";
