@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Markdown } from "@/components/markdown";
+import { VisorManual } from "@/components/visor-manual";
 
 type Pestana = "coach" | "clienta";
 
@@ -22,7 +22,7 @@ export function VisorTutoriales({
 
   return (
     <div>
-      <div className="flex gap-1 mb-6 sticky top-0 bg-neutral-950/90 backdrop-blur py-2 z-10">
+      <div className="flex gap-1 mb-6">
         <button onClick={() => setPestana("coach")} className={tabCls(pestana === "coach")}>
           🧑‍🏫 Manual del coach
         </button>
@@ -36,7 +36,8 @@ export function VisorTutoriales({
           Útil para resolverle dudas o para reenviárselo.
         </p>
       )}
-      <Markdown texto={pestana === "coach" ? manualCoach : manualClienta} />
+      {/* key fuerza a resetear la sección abierta al cambiar de manual */}
+      <VisorManual key={pestana} texto={pestana === "coach" ? manualCoach : manualClienta} />
     </div>
   );
 }

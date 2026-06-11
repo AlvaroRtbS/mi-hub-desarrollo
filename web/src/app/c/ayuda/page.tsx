@@ -1,6 +1,6 @@
 import Link from "next/link";
 import manualClienta from "@/contenido/manual-clienta.md";
-import { Markdown } from "@/components/markdown";
+import { VisorManual } from "@/components/visor-manual";
 
 export const metadata = { title: "Guía de la app" };
 
@@ -13,7 +13,7 @@ export default function AyudaClientaPage() {
           ← Volver
         </Link>
       </div>
-      <Markdown texto={manualClienta} />
+      <VisorManual texto={manualClienta} />
     </div>
   );
 }

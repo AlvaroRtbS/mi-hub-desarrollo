@@ -26,7 +26,7 @@
 
 ---
 
-## 1. El día a día en 5 minutos
+## 1. ☀️ El día a día en 5 minutos
 
 La rutina típica de una mañana:
 
@@ -38,7 +38,7 @@ La rutina típica de una mañana:
 
 ---
 
-## 2. Inicio: tu cuadro de mandos
+## 2. 📊 Inicio: tu cuadro de mandos
 
 Lo que ves nada más entrar:
 
@@ -52,7 +52,7 @@ Lo que ves nada más entrar:
 
 ---
 
-## 3. Clientas: alta, invitación y estados
+## 3. 👥 Clientas: alta, invitación y estados
 
 ### Alta de una clienta nueva
 
@@ -89,7 +89,7 @@ Lo que ves nada más entrar:
 
 ---
 
-## 4. La ficha de clienta a fondo
+## 4. 🗂️ La ficha de clienta a fondo
 
 `/clientas/[id]` es el centro de todo. Arriba siempre: avatar, estado, contrato, botón WhatsApp, Editar y el menú de estado. Debajo, 4 KPIs fijos: **Programa activo · Racha · Adherencia · Último entreno**.
 
@@ -116,7 +116,7 @@ Botones IA:
 
 ---
 
-## 5. Programas de entrenamiento
+## 5. 🏋️ Programas de entrenamiento
 
 ### Crear
 
@@ -144,7 +144,7 @@ La asignación guarda una **copia** (snapshot) del programa: si después editas 
 
 ---
 
-## 6. Ejercicios (biblioteca)
+## 6. 💪 Ejercicios (biblioteca)
 
 **Ejercicios**: tu catálogo central. Búsqueda + filtros por grupo muscular.
 
@@ -152,7 +152,7 @@ Cada ejercicio: nombre, descripción, grupos musculares, material, imagen y **v�
 
 ---
 
-## 7. Nutrición
+## 7. 🥗 Nutrición
 
 Tres herramientas (botones arriba en **Nutrición**):
 
@@ -166,7 +166,7 @@ La **Tabla de alimentos** (`/nutricion/alimentos`) es la base de datos que alime
 
 ---
 
-## 8. Formularios y check-ins
+## 8. 📋 Formularios y check-ins
 
 ### Constructor de formularios
 
@@ -182,7 +182,7 @@ La clienta lo rellena cada semana desde su portal (entreno 1-5, dieta 1-5, energ
 
 ---
 
-## 9. Mensajes
+## 9. 💬 Mensajes
 
 - **Mensajes**: conversaciones ordenadas con badge de no leídos. Al abrir una conversación se marca leída.
 - Escribes con normalidad; **la clienta NO puede responder desde la app** (decisión deliberada): su portal le muestra tu conversación y un botón gigante de **WhatsApp**. La comunicación de vuelta llega por WhatsApp.
@@ -190,14 +190,14 @@ La clienta lo rellena cada semana desde su portal (entreno 1-5, dieta 1-5, energ
 
 ---
 
-## 10. Calendario y Agenda
+## 10. 🗓️ Calendario y Agenda
 
 - **Calendario**: quién entrena qué y cuándo, en vista **mes / semana / día**. La vista semana es una tabla clientas × días con el estado de cada sesión (Sin empezar / Finalizado / Descanso). Perfecto para detectar huecos.
 - **Agenda**: tu lista personal de tareas (no atada a clientas): texto + fecha de vencimiento opcional. Las vencidas salen en rojo. Filtros: pendientes / hechas / todas. *(Las tareas POR clienta van en su ficha, pestaña Proyecto.)*
 
 ---
 
-## 11. Pagos e inscripciones (CRM)
+## 11. 💶 Pagos e inscripciones (CRM)
 
 ### Conceptos
 
@@ -225,7 +225,7 @@ Cuando un ciclo termina: **Marcar finalizada** (o **Cancelar** si se rompe a mit
 
 ---
 
-## 12. Asistente IA y Métricas
+## 12. ✨ Asistente IA y Métricas
 
 - **Asistente** (`/asistente`): chatbot que responde sobre tus datos: *"¿quién ha bajado de peso esta semana?"*, *"¿quién tiene adherencia baja?"*, *"resumen de actividad"*. Conoce métricas con evolución de ~3 semanas.
 - **Métricas** (`/metricas`): tabla de todas las clientas activas con peso/cintura/cadera/% grasa, su delta vs la medida anterior y fecha. Botón **+ Nueva métrica** para registrar tú una medida (ej. tras una videollamada de revisión). Las clientas también registran las suyas desde su portal.
@@ -233,7 +233,7 @@ Cuando un ciclo termina: **Marcar finalizada** (o **Cancelar** si se rompe a mit
 
 ---
 
-## 13. Ajustes y marca
+## 13. ⚙️ Ajustes y marca
 
 **Ajustes**: tus datos (nombre, email, teléfono, bio, foto) y tu **marca**:
 
@@ -243,13 +243,13 @@ Cuando un ciclo termina: **Marcar finalizada** (o **Cancelar** si se rompe a mit
 
 ---
 
-## 14. Imprimir / PDF
+## 14. 🖨️ Imprimir / PDF
 
 Desde la ficha → **🖨️ Imprimir / PDF** (`/imprimir/clienta/[id]`): ficha completa con marca, programa activo, métricas, últimas 30 sesiones, fotos y notas. Se imprime con Ctrl+P o se guarda como PDF. También hay versión imprimible de programas y planes de nutrición.
 
 ---
 
-## 15. Acciones peligrosas y trucos
+## 15. ⚠️ Acciones peligrosas y trucos
 
 **Irreversibles (siempre piden confirmación):**
 

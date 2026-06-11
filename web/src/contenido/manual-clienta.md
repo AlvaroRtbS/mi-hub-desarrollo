@@ -22,7 +22,7 @@
 
 ---
 
-## 1. Tu primera vez: crear la cuenta
+## 1. 🔑 Tu primera vez: crear la cuenta
 
 1. Tu entrenador te manda un **enlace de invitación** (normalmente por WhatsApp).
 2. Lo abres y verás tu email ya puesto. Solo tienes que **crear una contraseña** (mínimo 8 caracteres) y repetirla.
@@ -36,7 +36,7 @@
 
 ---
 
-## 2. Instalar la app en tu móvil
+## 2. 📲 Instalar la app en tu móvil
 
 No hay que descargar nada de ninguna tienda: la web SE INSTALA como una app más, con su icono.
 
@@ -47,7 +47,7 @@ A partir de ahí, ábrela siempre desde su icono. Si en algún momento no tienes
 
 ---
 
-## 3. Las 4 pestañas de abajo
+## 3. 🧭 Las 4 pestañas de abajo
 
 | Pestaña | Para qué |
 |---|---|
@@ -60,7 +60,7 @@ Las fotos, los formularios y el check-in se abren desde dentro de estas pantalla
 
 ---
 
-## 4. HOY: tu entreno del día
+## 4. 🏋️ HOY: tu entreno del día
 
 Al abrir la app ves tu saludo, tu **nivel** y, si llevas racha, un aviso del tipo *"🔥 7 días seguidos entrenando. ¡Sigue así!"*.
 
@@ -92,7 +92,7 @@ Cada ejercicio tiene su foto/vídeo y sus series. Por cada serie:
 
 ---
 
-## 5. DIETA: tu plan de comidas
+## 5. 🍎 DIETA: tu plan de comidas
 
 Tu plan funciona por **raciones**: cada comida (desayuno, almuerzo…) te dice cuántas raciones de cada grupo te tocan:
 
@@ -108,7 +108,7 @@ Además puedes tener:
 
 ---
 
-## 6. PROGRESO: medidas, fotos y pasos
+## 6. 📈 PROGRESO: medidas, fotos y pasos
 
 ### Tu evolución
 
@@ -143,7 +143,7 @@ En Progreso → **"📸 Fotos →"** (o desde el aviso del día):
 
 ---
 
-## 7. CHAT: hablar con tu entrenador
+## 7. 💬 CHAT: hablar con tu entrenador
 
 En la pestaña Chat verás los mensajes que te escribe tu entrenador y vuestra conversación.
 
@@ -153,7 +153,7 @@ Cuando tengas mensajes nuevos, la pestaña Chat muestra un numerito rojo.
 
 ---
 
-## 8. Formularios y check-in semanal
+## 8. ✅ Formularios y check-in semanal
 
 ### Formularios
 
@@ -169,7 +169,7 @@ Una vez por semana, un minuto para contarle cómo te fue: entreno (1-5), dieta (
 
 ---
 
-## 9. Tu perfil y las notificaciones
+## 9. 🔔 Tu perfil y las notificaciones
 
 Tu icono/perfil te deja editar nombre, apellidos, teléfono y fecha de nacimiento (el email no se puede cambiar).
 
@@ -179,7 +179,7 @@ Tu icono/perfil te deja editar nombre, apellidos, teléfono y fecha de nacimient
 
 ---
 
-## 10. Logros y niveles
+## 10. 🏆 Logros y niveles
 
 Entrenando, registrando medidas y haciendo tus check-ins vas desbloqueando **logros** (🏋️ primera sesión, 🔥 7 días seguidos, 📸 primera foto…) que suman **XP** y suben tu **nivel** (la barrita de arriba en HOY). Tus logros se ven al final de la pantalla HOY.
 
@@ -187,7 +187,7 @@ Es solo una forma divertida de ver tu constancia — lo que de verdad importa es
 
 ---
 
-## 11. Preguntas frecuentes
+## 11. ❓ Preguntas frecuentes
 
 **"He puesto mal el peso en una serie."**
 Corrígelo sin más: toca el número y reescríbelo. Se guarda solo.
