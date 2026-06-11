@@ -21,7 +21,7 @@
 11. [Pagos e inscripciones (CRM)](#11-pagos-e-inscripciones-crm)
 12. [Asistente IA y Métricas](#12-asistente-ia-y-métricas)
 13. [Ajustes y marca](#13-ajustes-y-marca)
-14. [Imprimir / PDF](#14-imprimir--pdf)
+14. [Imprimir / PDF](#14-imprimir-pdf)
 15. [Acciones peligrosas y trucos](#15-acciones-peligrosas-y-trucos)
 
 ---

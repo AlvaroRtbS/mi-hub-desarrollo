@@ -17,6 +17,7 @@ import {
   Settings,
   CreditCard,
   ListChecks,
+  BookOpen,
   Menu,
   X,
 } from "lucide-react";
@@ -52,6 +53,7 @@ const GRUPOS: {
       { href: "/programas", label: "Programas", Icon: ClipboardList },
       { href: "/ejercicios", label: "Ejercicios", Icon: Dumbbell },
       { href: "/nutricion", label: "Nutrición", Icon: Apple },
+      { href: "/tutoriales", label: "Tutoriales", Icon: BookOpen },
     ],
   },
 ];

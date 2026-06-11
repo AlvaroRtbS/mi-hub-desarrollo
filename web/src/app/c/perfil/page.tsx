@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FormularioPerfilClienta } from "./formulario";
 import { NotificacionesToggle } from "./notificaciones-toggle";
@@ -31,6 +32,20 @@ export default async function PerfilClientaPage() {
       <div className="mt-6">
         <NotificacionesToggle />
       </div>
+
+      <Link
+        href="/c/ayuda"
+        className="mt-6 flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 hover:bg-neutral-900/50 transition"
+      >
+        <span className="text-2xl">📖</span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-medium">Guía de la app</span>
+          <span className="block text-xs text-neutral-500">
+            Cómo usar cada pantalla, paso a paso.
+          </span>
+        </span>
+        <span className="text-neutral-600">→</span>
+      </Link>
     </div>
   );
 }
