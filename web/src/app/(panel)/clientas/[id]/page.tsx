@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Boton } from "@/components/ui/boton";
 import { EtiquetaEstado } from "@/components/ui/etiqueta-estado";
-import { formatearFecha, inicialesNombre } from "@/lib/utilidades";
+import { formatearFecha, hoyISO, inicialesNombre } from "@/lib/utilidades";
 import type { Clienta, EstructuraPrograma } from "@/lib/supabase/tipos";
 import {
   calcularAdherencia,
@@ -172,7 +172,9 @@ export default async function ClientaPage({
     (clienta as unknown as { gamificacion_activa?: boolean }).gamificacion_activa ?? true;
 
   // Adherencia: si tiene asignación activa, calcular racha y %.
-  const hoyIso = new Date().toISOString().slice(0, 10);
+  // hoyISO() es Europe/Madrid; en Vercel (UTC) toISOString() daría el día
+  // anterior entre las 00:00 y la 01:00/02:00 de Madrid.
+  const hoyIso = hoyISO();
   let adherencia: ReturnType<typeof calcularAdherencia> | null = null;
   let tokenShare: string | null = null;
   if (asignacionActiva) {
@@ -422,8 +424,10 @@ function BadgeContratoMini({ estado }: { estado: EstadoContrato }) {
 }
 
 function diasDesde(iso: string): number {
-  const hoy = new Date();
-  const f = new Date(iso);
+  // Comparamos día-calendario contra día-calendario en UTC (patrón +T00:00:00Z)
+  // para no depender de la zona horaria del servidor.
+  const hoy = new Date(hoyISO() + "T00:00:00Z");
+  const f = new Date(iso.slice(0, 10) + "T00:00:00Z");
   return Math.max(0, Math.floor((hoy.getTime() - f.getTime()) / 86400000));
 }
 

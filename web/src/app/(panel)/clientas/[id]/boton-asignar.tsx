@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { asignarPrograma } from "../../programas/acciones";
+import { hoyISO } from "@/lib/utilidades";
 
 type ProgramaOpcion = {
   id: string;
@@ -24,7 +25,7 @@ export function BotonAsignar({
   const [programas, setProgramas] = useState<ProgramaOpcion[]>([]);
   const [cargandoLista, setCargandoLista] = useState(false);
   const [programaId, setProgramaId] = useState<string>("");
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(() => hoyISO());
   const [error, setError] = useState<string | null>(null);
   const [enviando, startTransition] = useTransition();
 

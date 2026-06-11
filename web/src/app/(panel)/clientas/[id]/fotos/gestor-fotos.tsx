@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Select } from "@/components/ui/campo";
 import { SubirArchivo } from "@/components/ui/subir-archivo";
-import { formatearFecha } from "@/lib/utilidades";
+import { formatearFecha, hoyISO } from "@/lib/utilidades";
 import {
   agregarFoto,
   eliminarFoto,
@@ -47,7 +47,7 @@ export function GestorFotos({
   const [agregando, setAgregando] = useState(false);
   const [tipoNueva, setTipoNueva] = useState<string>("frontal");
   const [fechaNueva, setFechaNueva] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+    hoyISO()
   );
   const [notasNueva, setNotasNueva] = useState("");
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { crearMetrica } from "./acciones";
+import { hoyISO } from "@/lib/utilidades";
 
 type ClientaBasica = {
   id: string;
@@ -26,7 +27,7 @@ export function NuevaMetricaBoton({ clientas }: { clientas: ClientaBasica[] }) {
   const [clientaId, setClientaId] = useState(clientas[0]?.id ?? "");
   const [tipo, setTipo] = useState<string>(TIPOS[0].valor);
   const [valor, setValor] = useState("");
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(() => hoyISO());
   const [notas, setNotas] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, startTransition] = useTransition();

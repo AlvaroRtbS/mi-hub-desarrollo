@@ -13,6 +13,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { hoyISO } from "@/lib/utilidades";
 
 function cliente() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -77,7 +78,7 @@ async function ingerir(
   return NextResponse.json({
     ok: true,
     pasos,
-    fecha: fecha ?? new Date().toISOString().slice(0, 10),
+    fecha: fecha ?? hoyISO(),
   });
 }
 

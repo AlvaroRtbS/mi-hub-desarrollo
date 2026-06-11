@@ -33,7 +33,8 @@ export async function crearMetrica(formData: FormData): Promise<ResultadoAccion>
 
   if (!clientaId) return { ok: false, error: "Falta la clienta." };
   if (!tipo) return { ok: false, error: "Falta el tipo de métrica." };
-  if (!Number.isFinite(valor)) return { ok: false, error: "Valor inválido." };
+  if (!Number.isFinite(valor) || valor < 0)
+    return { ok: false, error: "Valor inválido." };
   if (!fecha) return { ok: false, error: "Falta la fecha." };
 
   const { data, error } = await supabase

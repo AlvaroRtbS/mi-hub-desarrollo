@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hoyISO } from "@/lib/utilidades";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
 
@@ -19,6 +20,17 @@ export async function guardarRespuestaFormulario(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticada." };
+
+  // La UI ya oculta los formularios aún no disponibles, pero la fecha de
+  // apertura también se valida aquí para que no baste con llamar a la acción.
+  const { data: asignacion } = await supabase
+    .from("formulario_asignaciones")
+    .select("id, disponible_desde")
+    .eq("id", asignacionId)
+    .maybeSingle<{ id: string; disponible_desde: string | null }>();
+  if (!asignacion) return { ok: false, error: "Formulario no encontrado." };
+  if (asignacion.disponible_desde && asignacion.disponible_desde > hoyISO())
+    return { ok: false, error: "Este formulario aún no está disponible." };
 
   const { error } = await supabase
     .from("formulario_asignaciones")

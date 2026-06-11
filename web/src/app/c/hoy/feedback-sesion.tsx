@@ -79,7 +79,7 @@ export function FeedbackSesion({
         toast.success("¡Gracias por tu feedback! 💬");
         router.refresh();
       } else {
-        toast.error?.(r.error);
+        toast.error(r.error);
       }
     });
   }

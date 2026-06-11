@@ -27,6 +27,7 @@ import {
   type DatosClientaParaLogros,
   type TipoLogro,
 } from "@/lib/gamificacion";
+import { hoyISO } from "@/lib/utilidades";
 
 async function obtenerCoachId(): Promise<string | null> {
   const supabase = await createSupabaseServerClient();
@@ -109,7 +110,7 @@ async function recalcularParaClienta(
   let diasEnAsignacion = 0;
 
   if (asignActiva) {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = hoyISO();
     const programados = diasProgramadosDeAsignacion(
       asignActiva.fecha_inicio,
       asignActiva.estructura_snapshot as EstructuraPrograma,

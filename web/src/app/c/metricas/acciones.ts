@@ -26,7 +26,8 @@ export async function registrarMiMetrica(
 
   if (!clienta) return { ok: false, error: "No eres una clienta." };
 
-  if (!Number.isFinite(valor)) return { ok: false, error: "Valor inválido." };
+  if (!Number.isFinite(valor) || valor < 0)
+    return { ok: false, error: "Valor inválido." };
 
   const { error } = await supabase.from("metricas").insert({
     coach_id: clienta.coach_id,

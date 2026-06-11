@@ -5,7 +5,7 @@ import { EtiquetaEstado } from "@/components/ui/etiqueta-estado";
 import { EtiquetaEtapa } from "@/components/ui/etiqueta-etapa";
 import { BuscadorDebounced } from "@/components/ui/buscador-debounced";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatearFecha, inicialesNombre } from "@/lib/utilidades";
+import { formatearFecha, inicialesNombre, hoyISO } from "@/lib/utilidades";
 import type { Clienta, EstadoClienta, EtapaClienta } from "@/lib/supabase/tipos";
 
 const FILTROS: Array<{ valor: EstadoClienta | "todas"; label: string }> = [
@@ -105,7 +105,7 @@ export default async function ClientasPage({
     sesionesPorClienta.set(s.clienta_id, arr);
   }
 
-  const hoyIso = new Date().toISOString().slice(0, 10);
+  const hoyIso = hoyISO();
   function indicadorActividad(clientaId: string): {
     racha: number;
     diasSinEntrenar: number | null;

@@ -104,11 +104,15 @@ export async function crearInscripcion(input: {
 
   if (input.generarCuotas) {
     const importeCuota = Math.round((input.importeTotal / cuotas) * 100) / 100;
+    // La última cuota absorbe el resto del redondeo para que la suma de las
+    // cuotas sea EXACTAMENTE el importe total (p. ej. 400/3 → 133,33 + 133,33 + 133,34).
+    const importeUltima =
+      Math.round((input.importeTotal - importeCuota * (cuotas - 1)) * 100) / 100;
     const filas = Array.from({ length: cuotas }, (_, i) => ({
       coach_id: coachId,
       clienta_id: input.clientaId,
       inscripcion_id: insc.id,
-      importe: importeCuota,
+      importe: i === cuotas - 1 ? importeUltima : importeCuota,
       concepto: input.concepto.trim() || "Programa 1-a-1",
       fecha_vencimiento: sumarMeses(input.fechaInicio, i),
       estado: "pendiente" as const,

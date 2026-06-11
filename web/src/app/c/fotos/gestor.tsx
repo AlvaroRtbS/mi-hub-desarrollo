@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { SubirArchivo } from "@/components/ui/subir-archivo";
-import { formatearFecha } from "@/lib/utilidades";
+import { formatearFecha, hoyISO } from "@/lib/utilidades";
 import { registrarMiFoto, eliminarMiFoto } from "./acciones";
 import { Confetti } from "@/components/confetti";
 import { useToast } from "@/components/ui/toast";
@@ -123,7 +123,8 @@ export function GestorMisFotos({
               <input
                 type="date"
                 name="fecha"
-                defaultValue={new Date().toISOString().slice(0, 10)}
+                defaultValue={hoyISO()}
+                max={hoyISO()}
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
               />
             </div>

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatearFecha, inicialesNombre } from "@/lib/utilidades";
+import { formatearFecha, inicialesNombre, hoyISO } from "@/lib/utilidades";
 import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import { BotonImprimirCabecera } from "../../../boton-imprimir-cabecera";
 
@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 function isoHoy(): string {
-  return new Date().toISOString().slice(0, 10);
+  return hoyISO();
 }
 
 function diasEntre(a: string, b: string): number {

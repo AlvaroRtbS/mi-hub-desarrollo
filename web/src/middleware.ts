@@ -77,11 +77,17 @@ export async function middleware(request: NextRequest) {
       !esRutaClienta && !esRutaPublica && !path.startsWith("/api/");
 
     if (esRutaCoach || esRutaClienta) {
-      const { data: coach } = await supabase
+      const { data: coach, error: errorCoach } = await supabase
         .from("coaches")
         .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      // Si la consulta falla (red/BD), no podemos saber el rol: dejamos pasar
+      // y que decida el layout del panel (que también comprueba el rol). Así un
+      // fallo transitorio no expulsa al coach a la vista de clienta. Los datos
+      // siguen protegidos por RLS en cualquier caso.
+      if (errorCoach) return response;
 
       if (esRutaCoach && !coach) {
         const url = request.nextUrl.clone();

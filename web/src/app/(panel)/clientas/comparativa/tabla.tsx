@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Download } from "lucide-react";
-import { inicialesNombre } from "@/lib/utilidades";
+import { inicialesNombre, hoyISO } from "@/lib/utilidades";
 
 type GrupoFila = { id: string; nombre: string; color: string | null };
 
@@ -155,7 +155,7 @@ export function TablaComparativa({ filas }: { filas: FilaComparativa[] }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    const fecha = new Date().toISOString().slice(0, 10);
+    const fecha = hoyISO();
     a.download = `comparativa-clientas-${fecha}.csv`;
     document.body.appendChild(a);
     a.click();

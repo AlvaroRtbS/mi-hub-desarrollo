@@ -16,6 +16,7 @@ import {
   type DatosClientaParaLogros,
   type TipoLogro,
 } from "@/lib/gamificacion";
+import { hoyISO } from "@/lib/utilidades";
 
 function verificarCron(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -99,7 +100,7 @@ export async function GET(request: Request) {
     let diasEnAsignacion = 0;
 
     if (asignActiva) {
-      const hoy = new Date().toISOString().slice(0, 10);
+      const hoy = hoyISO();
       const programados = diasProgramadosDeAsignacion(
         asignActiva.fecha_inicio,
         asignActiva.estructura_snapshot as EstructuraPrograma,

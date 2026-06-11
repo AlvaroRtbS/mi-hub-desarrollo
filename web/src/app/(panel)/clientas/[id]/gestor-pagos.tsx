@@ -155,7 +155,7 @@ export function GestorInscripcionPagos({
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold">Inscripción y pagos</h2>
         <div className="flex gap-2 text-xs">
-          {!inscripcion && (
+          {inscripcion?.estado !== "activa" && (
             <button
               onClick={() => setVerFormInsc((v) => !v)}
               className="px-2.5 py-1 rounded-lg border border-neutral-700 text-neutral-300 hover:border-neutral-500"
@@ -212,22 +212,24 @@ export function GestorInscripcionPagos({
             <div className="flex gap-2 mt-3 text-xs">
               <button
                 disabled={guardando}
-                onClick={() =>
+                onClick={() => {
+                  if (!confirm("¿Marcar la inscripción como finalizada?")) return;
                   accionPago(() =>
                     cambiarEstadoInscripcion(inscripcion.id, clientaId, "finalizada")
-                  )
-                }
+                  );
+                }}
                 className="px-2.5 py-1 rounded-lg border border-neutral-700 text-neutral-300 hover:border-neutral-500"
               >
                 Marcar finalizada
               </button>
               <button
                 disabled={guardando}
-                onClick={() =>
+                onClick={() => {
+                  if (!confirm("¿Cancelar esta inscripción?")) return;
                   accionPago(() =>
                     cambiarEstadoInscripcion(inscripcion.id, clientaId, "cancelada")
-                  )
-                }
+                  );
+                }}
                 className="px-2.5 py-1 rounded-lg border border-neutral-700 text-neutral-400 hover:border-red-700 hover:text-red-400"
               >
                 Cancelar
@@ -413,7 +415,10 @@ export function GestorInscripcionPagos({
                   <button
                     disabled={guardando}
                     title="Eliminar"
-                    onClick={() => accionPago(() => eliminarPago(p.id, clientaId))}
+                    onClick={() => {
+                      if (!confirm(`¿Eliminar este pago de ${fmtEur(p.importe)}?`)) return;
+                      accionPago(() => eliminarPago(p.id, clientaId));
+                    }}
                     className="text-xs px-2 py-1 rounded-lg border border-neutral-700 hover:border-red-700 hover:text-red-400"
                   >
                     ✕

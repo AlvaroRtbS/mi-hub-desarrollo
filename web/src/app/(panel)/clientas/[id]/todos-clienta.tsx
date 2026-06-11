@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { crearTodo, alternarTodo, eliminarTodo } from "./acciones-todos";
+import { hoyISO } from "@/lib/utilidades";
 
 type Todo = {
   id: string;
@@ -144,7 +145,7 @@ function TodoFila({
   const vencida =
     !todo.completado &&
     todo.fecha_limite &&
-    new Date(todo.fecha_limite) < new Date(new Date().toISOString().slice(0, 10));
+    new Date(todo.fecha_limite) < new Date(hoyISO());
 
   return (
     <li className="group flex items-start gap-2 px-3 py-2 rounded-lg hover:bg-neutral-900/50 transition">
@@ -193,7 +194,7 @@ function TodoFila({
 
 function formatearFechaLimite(iso: string, vencida: boolean): string {
   const f = new Date(iso);
-  const hoy = new Date(new Date().toISOString().slice(0, 10));
+  const hoy = new Date(hoyISO());
   const dias = Math.round((f.getTime() - hoy.getTime()) / 86400000);
   if (dias === 0) return "Vence hoy";
   if (dias === 1) return "Vence mañana";

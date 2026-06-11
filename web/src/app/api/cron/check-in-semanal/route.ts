@@ -12,6 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { hoyISO } from "@/lib/utilidades";
 
 const MENSAJE_RECORDATORIO = `¡Hola! Es domingo — ¿me cuentas cómo te ha ido la semana?\n\nResponde rápido al check-in semanal cuando puedas (5 min): energía, descanso, motivación y cómo te has sentido en los entrenos.`;
 
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
 
   // Para cada clienta, insertar mensaje del coach con el recordatorio.
   // Idempotencia: solo si NO hay ya un mensaje del coach hoy con este texto.
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
   let insertados = 0;
 
   for (const c of clientas) {

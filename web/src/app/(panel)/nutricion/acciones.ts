@@ -56,9 +56,18 @@ export async function crearPlanNutricion(
   return { ok: true, id: data.id };
 }
 
-export async function eliminarPlanNutricion(id: string): Promise<void> {
+export async function eliminarPlanNutricion(
+  id: string
+): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
-  await supabase.from("nutricion_planes").delete().eq("id", id);
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+  const { error } = await supabase
+    .from("nutricion_planes")
+    .delete()
+    .eq("id", id)
+    .eq("coach_id", coachId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/nutricion");
   redirect("/nutricion");
 }
@@ -116,9 +125,18 @@ export async function crearListaCompra(
   return { ok: true, id: data.id };
 }
 
-export async function eliminarListaCompra(id: string): Promise<void> {
+export async function eliminarListaCompra(
+  id: string
+): Promise<ResultadoAccion> {
   const supabase = await createSupabaseServerClient();
-  await supabase.from("listas_compra").delete().eq("id", id);
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
+  const { error } = await supabase
+    .from("listas_compra")
+    .delete()
+    .eq("id", id)
+    .eq("coach_id", coachId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/nutricion");
   redirect("/nutricion");
 }

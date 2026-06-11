@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hoyISO } from "@/lib/utilidades";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
 
@@ -25,6 +26,10 @@ export async function registrarMiFoto(
   if (!clienta) return { ok: false, error: "No eres una clienta." };
 
   if (!url || !fecha) return { ok: false, error: "Faltan datos." };
+  // Fecha bien formada y no futura: una foto "de 2099" rompería el orden
+  // cronológico del comparador antes/ahora.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > hoyISO())
+    return { ok: false, error: "La fecha de la foto no es válida." };
 
   const { error } = await supabase.from("fotos_progreso").insert({
     coach_id: clienta.coach_id,

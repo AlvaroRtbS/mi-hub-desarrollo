@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { registrarMiMetrica } from "./acciones";
 import { Confetti } from "@/components/confetti";
 import { useToast } from "@/components/ui/toast";
+import { hoyISO } from "@/lib/utilidades";
 
 const TIPOS = [
   { id: "peso", label: "Peso", unidad: "kg" },
@@ -21,7 +22,7 @@ export function FormularioMiMetrica() {
   const [abierto, setAbierto] = useState(false);
   const [tipo, setTipo] = useState(TIPOS[0]!.id);
   const [valor, setValor] = useState("");
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(() => hoyISO());
   const [error, setError] = useState<string | null>(null);
   const [enviando, startTransition] = useTransition();
   const [celebrar, setCelebrar] = useState(false);
@@ -102,6 +103,7 @@ export function FormularioMiMetrica() {
           <input
             type="number"
             step="0.1"
+            min="0"
             inputMode="decimal"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
@@ -123,6 +125,7 @@ export function FormularioMiMetrica() {
         <input
           type="date"
           value={fecha}
+          max={hoyISO()}
           onChange={(e) => setFecha(e.target.value)}
           className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
         />

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { obtenerUrlFirmada } from "@/lib/supabase/archivos";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatearFecha } from "@/lib/utilidades";
+import { formatearFecha, hoyISO } from "@/lib/utilidades";
 import type {
   EstructuraPrograma,
   ElementoEjercicio,
@@ -225,8 +225,8 @@ export default async function HistoricoEjercicioPage({
                 a.realSeries !== null &&
                 a.realSeries.length > 0 &&
                 a.realSeries.every((s) => s.completado);
-              const esHoy = a.fechaProgramada === new Date().toISOString().slice(0, 10);
-              const esPasado = a.fechaProgramada < new Date().toISOString().slice(0, 10);
+              const esHoy = a.fechaProgramada === hoyISO();
+              const esPasado = a.fechaProgramada < hoyISO();
               return (
                 <div
                   key={i}

@@ -36,11 +36,14 @@ export default async function MetricasClientaPage() {
 
   const { data: clienta } = await supabase
     .from("clientas")
-    .select("id, pasos_ingest_token, coaches(marca_nombre, marca_logo_url)")
+    .select(
+      "id, pasos_ingest_token, comparador_fotos_activo, coaches(marca_nombre, marca_logo_url)"
+    )
     .eq("user_id", user.id)
     .maybeSingle<{
       id: string;
       pasos_ingest_token: string | null;
+      comparador_fotos_activo: boolean | null;
       coaches: { marca_nombre: string | null; marca_logo_url: string | null } | null;
     }>();
   if (!clienta) return null;
@@ -93,29 +96,51 @@ export default async function MetricasClientaPage() {
     .eq("clienta_id", clienta.id)
     .eq("completada", true);
 
-  // Foto más antigua y más reciente para "antes / ahora"
-  const { data: fotosEvol } = await supabase
-    .from("fotos_progreso")
-    .select("url, fecha")
-    .eq("clienta_id", clienta.id)
-    .order("fecha", { ascending: true })
-    .returns<{ url: string; fecha: string }[]>();
-  const listaFotos = fotosEvol ?? [];
+  // Foto más antigua y más reciente para "antes / ahora". Solo si la clienta
+  // tiene el comparador activo (mismo flag que respeta /c/fotos) y siempre
+  // emparejando fotos del MISMO tipo (frontal con frontal, no frontal con lateral).
   let fotoAntes: { url: string; fecha: string } | null = null;
   let fotoAhora: { url: string; fecha: string } | null = null;
-  if (listaFotos.length >= 2) {
-    const prim = listaFotos[0]!;
-    const ult = listaFotos[listaFotos.length - 1]!;
-    const firmadas = await obtenerUrlsFirmadas(
-      "fotos-progreso",
-      [prim.url, ult.url],
-      3600
-    );
-    const uA = firmadas.get(prim.url);
-    const uB = firmadas.get(ult.url);
-    if (uA && uB) {
-      fotoAntes = { url: uA, fecha: prim.fecha };
-      fotoAhora = { url: uB, fecha: ult.fecha };
+  if (clienta.comparador_fotos_activo ?? true) {
+    const { data: fotosEvol } = await supabase
+      .from("fotos_progreso")
+      .select("url, fecha, tipo")
+      .eq("clienta_id", clienta.id)
+      .order("fecha", { ascending: true })
+      .returns<{ url: string; fecha: string; tipo: string | null }[]>();
+    const porTipoFoto = new Map<string, { url: string; fecha: string }[]>();
+    (fotosEvol ?? []).forEach((f) => {
+      const clave = f.tipo ?? "(sin tipo)";
+      const lista = porTipoFoto.get(clave) ?? [];
+      lista.push({ url: f.url, fecha: f.fecha });
+      porTipoFoto.set(clave, lista);
+    });
+    // Preferimos frontal; si no hay 2 frontales, el tipo con mayor recorrido temporal.
+    const recorridoDias = (lista: { fecha: string }[]) =>
+      new Date(lista[lista.length - 1]!.fecha).getTime() -
+      new Date(lista[0]!.fecha).getTime();
+    const candidatos = Array.from(porTipoFoto.entries())
+      .filter(([, lista]) => lista.length >= 2)
+      .sort(([tipoA, a], [tipoB, b]) => {
+        if ((tipoA === "frontal") !== (tipoB === "frontal"))
+          return tipoA === "frontal" ? -1 : 1;
+        return recorridoDias(b) - recorridoDias(a);
+      });
+    const pareja = candidatos[0]?.[1];
+    if (pareja) {
+      const prim = pareja[0]!;
+      const ult = pareja[pareja.length - 1]!;
+      const firmadas = await obtenerUrlsFirmadas(
+        "fotos-progreso",
+        [prim.url, ult.url],
+        3600
+      );
+      const uA = firmadas.get(prim.url);
+      const uB = firmadas.get(ult.url);
+      if (uA && uB) {
+        fotoAntes = { url: uA, fecha: prim.fecha };
+        fotoAhora = { url: uB, fecha: ult.fecha };
+      }
     }
   }
 

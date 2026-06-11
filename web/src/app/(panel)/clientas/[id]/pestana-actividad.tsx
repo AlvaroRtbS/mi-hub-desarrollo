@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { obtenerUrlsFirmadas } from "@/lib/supabase/archivos";
 import { LOGROS, type TipoLogro } from "@/lib/gamificacion";
+import { hoyISO } from "@/lib/utilidades";
 
 type Evento = {
   id: string;
@@ -402,7 +403,7 @@ function agruparPorSeccion(eventos: Evento[]): Array<{
   label: string;
   eventos: Evento[];
 }> {
-  const hoy = new Date(new Date().toISOString().slice(0, 10));
+  const hoy = new Date(hoyISO());
   const ayer = new Date(hoy.getTime() - 86400000);
   const semana = new Date(hoy.getTime() - 7 * 86400000);
   const mes = new Date(hoy.getTime() - 30 * 86400000);

@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import { generarTextoGemini } from "@/lib/gemini";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { lunesDeEstaSemana } from "@/lib/checkin";
+import { hoyISO } from "@/lib/utilidades";
 
 const SYSTEM_PROMPT = `Eres la asistente del entrenador dentro de su plataforma de gestión de clientas. Respondes preguntas sobre SUS clientas usando ÚNICAMENTE los datos del snapshot que se te pasa.
 
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
   if (!coach) return NextResponse.json({ ok: false, error: "Coach no encontrada." }, { status: 404 });
 
   // ----- Snapshot de clientas (RLS limita al coach) -----
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
   const lunes = lunesDeEstaSemana();
   const hace30 = new Date();
   hace30.setDate(hace30.getDate() - 30);
