@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Sidebar } from "./sidebar";
 import { AtajosGlobales } from "@/components/atajos-globales";
+import { TutorialesFlotante } from "./tutoriales-flotante";
+import manualCoach from "@/contenido/manual-administrador.md";
+import manualClienta from "@/contenido/manual-clienta.md";
 
 export default async function PanelLayout({
   children,
@@ -49,6 +52,7 @@ export default async function PanelLayout({
       <Sidebar coachLabel={coachLabel} badgeMensajes={mensajesNoLeidos ?? 0} />
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
       <AtajosGlobales />
+      <TutorialesFlotante manualCoach={manualCoach} manualClienta={manualClienta} />
     </div>
   );
 }

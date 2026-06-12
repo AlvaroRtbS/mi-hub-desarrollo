@@ -73,9 +73,16 @@ export function VisorManual({ texto }: { texto: string }) {
   const [{ intro, secciones }] = useState(() => trocear(texto));
   const [activa, setActiva] = useState<number | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
+  const montado = useRef(false);
 
-  // Al cambiar de sección, volver arriba (el scroll vive en el contenedor padre)
+  // Al cambiar de sección, volver arriba (el scroll vive en el contenedor
+  // padre). Se omite el primer render: el visor puede vivir montado de fondo
+  // (cajón flotante) y no debe mover el scroll de la página al cargar.
   useEffect(() => {
+    if (!montado.current) {
+      montado.current = true;
+      return;
+    }
     topRef.current?.scrollIntoView({ block: "start" });
   }, [activa]);
 

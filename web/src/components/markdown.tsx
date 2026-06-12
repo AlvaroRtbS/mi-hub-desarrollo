@@ -2,7 +2,7 @@ import React from "react";
 
 /**
  * Renderer de Markdown minimalista para contenido PROPIO y de confianza (los
- * manuales de /tutoriales y /c/ayuda). No es un parser general: cubre lo que
+ * manuales del cajón de tutoriales y /c/ayuda). No es un parser general: cubre lo que
  * usan esos documentos — encabezados, negrita/cursiva/código, enlaces, listas
  * (con un nivel de anidado), citas, tablas y separadores. Sin dependencias.
  *
