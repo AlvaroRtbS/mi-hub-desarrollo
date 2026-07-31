@@ -41,7 +41,8 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/i/") || // invitación de clienta (acepta sin login)
     path.startsWith("/api/whatsapp/") || // webhook entrante
     path.startsWith("/api/pasos/") || // ingesta de pasos (atajo iPhone, token propio)
-    path.startsWith("/api/consentimientos/"); // firma de contrato (Google Form, secreto propio)
+    path.startsWith("/api/consentimientos/") || // firma de contrato (Google Form, secreto propio)
+    path === "/api/ping"; // keep-alive de Supabase (cron de Vercel)
 
   if (!user && !esRutaPublica) {
     const url = request.nextUrl.clone();
