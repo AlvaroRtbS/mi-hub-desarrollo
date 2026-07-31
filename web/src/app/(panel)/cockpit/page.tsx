@@ -202,6 +202,11 @@ export default async function CockpitPage() {
             descripcion="Sube las recetas del Recetario local a la web."
           />
           <BotonJob
+            tipo="sync_negocio"
+            etiqueta="Sincronizar negocio"
+            descripcion="Actualiza MRR, alertas y cobros de Stripe en /negocio."
+          />
+          <BotonJob
             tipo="activar_bot_wa"
             etiqueta="Arrancar bot WhatsApp"
             descripcion="Levanta el panel y el bot en tu PC."

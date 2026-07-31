@@ -8,6 +8,7 @@ export type ResultadoAccion = { ok: true } | { ok: false; error: string };
 // Tipos de job que la UI puede encolar (espejo de worker/handlers.py).
 const TIPOS_PERMITIDOS = new Set([
   "sync_cockpit",
+  "sync_negocio",
   "sync_recetario",
   "generar_brief",
   "activar_bot_wa",

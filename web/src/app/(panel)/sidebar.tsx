@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Activity,
+  BarChart3,
   Gauge,
   Home,
   Calendar,
@@ -45,6 +46,7 @@ const GRUPOS: {
       { href: "/adherencia", label: "Adherencia", Icon: Activity },
       { href: "/clientas/comparativa", label: "Comparativa", Icon: LineChart },
       { href: "/pagos", label: "Pagos", Icon: CreditCard },
+      { href: "/negocio", label: "Negocio", Icon: BarChart3 },
       { href: "/calendario", label: "Calendario", Icon: Calendar },
       { href: "/formularios", label: "Formularios", Icon: FileText },
       { href: "/mensajes", label: "Mensajes", Icon: MessageSquare },
