@@ -25,15 +25,21 @@ export async function obtenerUrlsFirmadas(
   paths: (string | null)[],
   segundos = 3600
 ): Promise<Map<string, string>> {
+  const mapa = new Map<string, string>();
+  // Las URLs absolutas (p. ej. vídeos migrados a R2) pasan tal cual, igual
+  // que hace obtenerUrlFirmada: los llamadores hacen mapa.get(path).
+  for (const p of paths) {
+    if (p && p.startsWith("http")) mapa.set(p, p);
+  }
+
   const validos = paths.filter((p): p is string => !!p && !p.startsWith("http"));
-  if (validos.length === 0) return new Map();
+  if (validos.length === 0) return mapa;
 
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.storage
     .from(bucket)
     .createSignedUrls(validos, segundos);
 
-  const mapa = new Map<string, string>();
   data?.forEach((item) => {
     if (item.path && item.signedUrl) mapa.set(item.path, item.signedUrl);
   });
