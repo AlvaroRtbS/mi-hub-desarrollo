@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Activity,
+  Gauge,
   Home,
   Calendar,
   Users,
@@ -32,6 +33,7 @@ const GRUPOS: {
     titulo: null,
     enlaces: [
       { href: "/inicio", label: "Inicio", Icon: Home },
+      { href: "/cockpit", label: "Cockpit", Icon: Gauge },
       { href: "/agenda", label: "Agenda", Icon: ListChecks },
       { href: "/asistente", label: "Asistente", Icon: Sparkles },
     ],
