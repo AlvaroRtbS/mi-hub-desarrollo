@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  Activity,
   Home,
   Calendar,
   Users,
@@ -39,6 +40,7 @@ const GRUPOS: {
     titulo: "Gestión",
     enlaces: [
       { href: "/clientas", label: "Clientas", Icon: Users },
+      { href: "/adherencia", label: "Adherencia", Icon: Activity },
       { href: "/clientas/comparativa", label: "Comparativa", Icon: LineChart },
       { href: "/pagos", label: "Pagos", Icon: CreditCard },
       { href: "/calendario", label: "Calendario", Icon: Calendar },
