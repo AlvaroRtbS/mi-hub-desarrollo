@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { obtenerUrlFirmada } from "@/lib/supabase/archivos";
 import { formatearFecha } from "@/lib/utilidades";
@@ -96,8 +97,16 @@ export default async function NutricionClientaPage() {
     .order("actualizada_en", { ascending: false });
   const listas = (listasData ?? []) as Lista[];
 
+  // Recetario publicado del coach (RLS filtra)
+  const { count: nRecetas } = await supabase
+    .from("recetas")
+    .select("id", { count: "exact", head: true });
+
   const sinNada =
-    !planEstruct && planesConUrl.length === 0 && listas.length === 0;
+    !planEstruct &&
+    planesConUrl.length === 0 &&
+    listas.length === 0 &&
+    (nRecetas ?? 0) === 0;
 
   return (
     <div>
@@ -112,6 +121,22 @@ export default async function NutricionClientaPage() {
           titulo="Sin plan de nutrición todavía"
           descripcion="Tu entrenador aún no te ha asignado un plan. Cuando lo haga, aparecerá aquí."
         />
+      )}
+
+      {/* Recetario del coach */}
+      {(nRecetas ?? 0) > 0 && (
+        <Link
+          href="/c/recetas"
+          className="flex items-center justify-between border border-neutral-800 rounded-2xl p-4 bg-neutral-950 hover:border-neutral-700 transition mb-6"
+        >
+          <div>
+            <div className="font-medium">🍳 Recetario</div>
+            <div className="text-xs text-neutral-500 mt-0.5">
+              {nRecetas} receta{nRecetas === 1 ? "" : "s"} con macros por ración
+            </div>
+          </div>
+          <span className="text-neutral-600">›</span>
+        </Link>
       )}
 
       {/* Plan estructurado por equivalencias */}

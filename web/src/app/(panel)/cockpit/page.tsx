@@ -197,6 +197,11 @@ export default async function CockpitPage() {
             descripcion="Ejecuta el brief diario y lo sube a Storage (tarda minutos)."
           />
           <BotonJob
+            tipo="sync_recetario"
+            etiqueta="Sincronizar recetario"
+            descripcion="Sube las recetas del Recetario local a la web."
+          />
+          <BotonJob
             tipo="activar_bot_wa"
             etiqueta="Arrancar bot WhatsApp"
             descripcion="Levanta el panel y el bot en tu PC."

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Boton } from "@/components/ui/boton";
 import { formatearFecha } from "@/lib/utilidades";
+import { BotonActivo } from "./boton-activo";
 
 type Plan = {
   id: string;
@@ -26,6 +27,7 @@ type PlanEstruct = {
   id: string;
   nombre: string;
   calorias: number | null;
+  activo: boolean;
   clienta_id: string | null;
   clientas: { nombre: string; apellidos: string | null } | null;
 };
@@ -47,7 +49,7 @@ export default async function NutricionPage() {
         .order("creada_en", { ascending: false }),
       supabase
         .from("nutricion_planes_estructurados")
-        .select("id, nombre, calorias, clienta_id, clientas(nombre, apellidos)")
+        .select("id, nombre, calorias, activo, clienta_id, clientas(nombre, apellidos)")
         .order("actualizado_en", { ascending: false }),
     ]);
 
@@ -68,6 +70,9 @@ export default async function NutricionPage() {
         <div className="flex gap-2 flex-wrap justify-end">
           <Boton variante="secundario" href="/nutricion/alimentos">
             Tabla de alimentos
+          </Boton>
+          <Boton variante="secundario" href="/nutricion/recetas">
+            Recetario
           </Boton>
           <Boton variante="secundario" href="/nutricion/lista/nueva">
             + Lista de compra
@@ -97,7 +102,10 @@ export default async function NutricionPage() {
               href={`/nutricion/equivalencias/${p.id}`}
               className="block border border-neutral-800 rounded-2xl p-4 hover:border-neutral-700 hover:bg-neutral-900/50"
             >
-              <div className="font-medium truncate">{p.nombre}</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-medium truncate">{p.nombre}</div>
+                <BotonActivo id={p.id} activo={p.activo} />
+              </div>
               <div className="text-xs text-neutral-500 mt-1">
                 {p.clientas
                   ? `${p.clientas.nombre} ${p.clientas.apellidos ?? ""}`

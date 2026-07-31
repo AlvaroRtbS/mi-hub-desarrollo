@@ -33,7 +33,7 @@ export function TabBar({
 
   return (
     <nav className="shrink-0 border-t border-neutral-800 bg-neutral-950/90 backdrop-blur z-10 pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-6">
+      <div className="grid grid-flow-col auto-cols-fr">
         {tabs.map((t) => {
           const Icon = ICONS[t.href as keyof typeof ICONS];
           const activa = pathname === t.href || pathname.startsWith(t.href + "/");
