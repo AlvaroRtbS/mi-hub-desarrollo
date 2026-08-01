@@ -28,6 +28,17 @@ export async function generarInvitacion(
   const coachId = await obtenerCoachId();
   if (!coachId) return { ok: false, error: "No autenticada." };
 
+  // El clientaId llega del cliente: hay que comprobar que esa clienta es de
+  // ESTA coach. Sin esto, cualquiera con una cuenta de coach podía emitir una
+  // invitación para la clienta de otra y quedarse con su cuenta.
+  const { data: propia } = await supabase
+    .from("clientas")
+    .select("id")
+    .eq("id", clientaId)
+    .eq("coach_id", coachId)
+    .maybeSingle();
+  if (!propia) return { ok: false, error: "Clienta no encontrada." };
+
   // Verifica si ya hay una invitación válida (no usada y no expirada)
   const { data: existente } = await supabase
     .from("invitaciones_clienta")
@@ -60,10 +71,13 @@ export async function revocarInvitacion(
   clientaId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createSupabaseServerClient();
+  const coachId = await obtenerCoachId();
+  if (!coachId) return { ok: false, error: "No autenticada." };
   const { error } = await supabase
     .from("invitaciones_clienta")
     .delete()
     .eq("clienta_id", clientaId)
+    .eq("coach_id", coachId)
     .is("usada_en", null);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/clientas/${clientaId}`);

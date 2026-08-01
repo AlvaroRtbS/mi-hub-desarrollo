@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type Modo = "login" | "registro" | "recuperar";
+type Modo = "login" | "recuperar";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,17 +37,6 @@ export default function LoginPage() {
       } else {
         router.push("/");
         router.refresh();
-      }
-    } else if (modo === "registro") {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { nombre } },
-      });
-      if (error) {
-        setError(error.message);
-      } else {
-        setMensaje("Cuenta creada. Si tu Supabase pide confirmación por email, revisa tu bandeja.");
       }
     } else if (modo === "recuperar") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -84,14 +73,11 @@ export default function LoginPage() {
     setCargando(false);
   }
 
-  const titulo =
-    modo === "login" ? "Entrar" : modo === "registro" ? "Crear cuenta" : "Recuperar contraseña";
+  const titulo = modo === "login" ? "Entrar" : "Recuperar contraseña";
   const subtitulo =
     modo === "login"
       ? "Accede a tu cuenta."
-      : modo === "registro"
-        ? "Regístrate para crear tu panel."
-        : "Te enviaremos un email para crear una contraseña nueva.";
+      : "Te enviaremos un email para crear una contraseña nueva.";
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
@@ -103,20 +89,6 @@ export default function LoginPage() {
           <h1 className="text-2xl font-semibold">{titulo}</h1>
           <p className="text-sm text-neutral-400 mt-1">{subtitulo}</p>
         </div>
-
-        {modo === "registro" && (
-          <label className="block">
-            <span className="text-sm text-neutral-300">Nombre</span>
-            <input
-              type="text"
-              required
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="mt-1 w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"
-              placeholder="Tu nombre"
-            />
-          </label>
-        )}
 
         <label className="block">
           <span className="text-sm text-neutral-300">Email</span>
@@ -175,9 +147,7 @@ export default function LoginPage() {
             ? "Cargando..."
             : modo === "login"
               ? "Entrar"
-              : modo === "registro"
-                ? "Crear cuenta"
-                : "Enviar email de recuperación"}
+              : "Enviar email de recuperación"}
         </button>
 
         {modo === "login" && (
@@ -191,18 +161,16 @@ export default function LoginPage() {
           </button>
         )}
 
+        {/* Sin alta pública: las cuentas de coach se crean a mano y las de
+            clienta solo por invitación (/i/[token]). El enlace de "crear
+            cuenta" permitía a cualquiera abrirse un panel en este mismo
+            proyecto de Supabase. */}
         <button
           type="button"
-          onClick={() =>
-            cambiarModo(modo === "registro" ? "login" : modo === "recuperar" ? "login" : "registro")
-          }
+          onClick={() => cambiarModo(modo === "recuperar" ? "login" : "recuperar")}
           className="w-full text-sm text-neutral-400 hover:text-neutral-200"
         >
-          {modo === "login"
-            ? "¿No tienes cuenta? Crear una"
-            : modo === "registro"
-              ? "¿Ya tienes cuenta? Entrar"
-              : "← Volver a entrar"}
+          {modo === "login" ? "¿Has olvidado tu contraseña?" : "← Volver a entrar"}
         </button>
       </form>
     </main>

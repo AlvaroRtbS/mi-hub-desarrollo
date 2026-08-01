@@ -19,8 +19,9 @@ import {
 import { hoyISO } from "@/lib/utilidades";
 
 function verificarCron(request: Request): boolean {
+  // Fail-closed en producción (ver check-in-semanal: corre con service_role).
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
+  if (!secret) return process.env.NODE_ENV !== "production";
   const auth = request.headers.get("authorization");
   return auth === `Bearer ${secret}`;
 }

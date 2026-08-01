@@ -17,10 +17,12 @@ import { hoyISO } from "@/lib/utilidades";
 const MENSAJE_RECORDATORIO = `¡Hola! Es domingo — ¿me cuentas cómo te ha ido la semana?\n\nResponde rápido al check-in semanal cuando puedas (5 min): energía, descanso, motivación y cómo te has sentido en los entrenos.`;
 
 function verificarCron(request: Request): boolean {
-  // En Vercel Cron, el header es automático. En desarrollo, permitir si no
-  // hay CRON_SECRET configurado (avisamos pero no bloqueamos local).
+  // En Vercel Cron, el header es automático. FAIL-CLOSED en producción: si
+  // falta CRON_SECRET no se abre la puerta (este endpoint corre con
+  // service_role y escribe mensajes firmados como el coach a TODAS las
+  // clientas, así que un fail-open aquí es un megáfono para cualquiera).
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
+  if (!secret) return process.env.NODE_ENV !== "production";
   const auth = request.headers.get("authorization");
   return auth === `Bearer ${secret}`;
 }
