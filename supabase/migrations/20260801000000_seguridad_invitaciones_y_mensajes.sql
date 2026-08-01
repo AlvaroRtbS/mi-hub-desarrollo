@@ -103,13 +103,12 @@ create trigger mensajes_proteger_columnas_trg
   for each row execute function public.mensajes_proteger_columnas();
 
 -- ─── 3. Invitaciones de vida corta ──────────────────────────────────────────
--- 30 días era demasiado para un enlace que da acceso a datos de salud.
+-- 30 días era demasiado para un enlace que da acceso a datos de salud: vive en
+-- un chat de WhatsApp y se reenvía solo.
+--
+-- OJO: esto cambia el plazo de las invitaciones NUEVAS. Las 13 ya generadas y
+-- documentadas (Documentacion-RTBS\invitaciones-mihub-2026-08-01.md) se dejan
+-- a propósito con su plazo original para no romper el rollout; lo suyo es
+-- regenerarlas en el momento de enviarlas, que es un botón por clienta.
 alter table public.invitaciones_clienta
   alter column expira_en set default (now() + interval '72 hours');
-
--- Las que sigan vivas y sin usar de la tanda anterior se recortan a 72 h desde
--- ahora (ninguna se ha enviado todavía; si alguna caduca, se regenera).
-update public.invitaciones_clienta
-   set expira_en = now() + interval '72 hours'
- where usada_en is null
-   and expira_en > now() + interval '72 hours';
