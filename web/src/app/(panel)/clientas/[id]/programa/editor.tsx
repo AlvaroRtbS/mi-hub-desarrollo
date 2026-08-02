@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { usarAvisoSinGuardar } from "@/lib/usar-aviso-sin-guardar";
 import type {
   EstructuraPrograma,
   SerieEjercicio,
@@ -101,6 +102,7 @@ export function EditorAsignacionCliente({
   );
   const [semanaIdx, setSemanaIdx] = useState(0);
   const [sucio, setSucio] = useState(false);
+  usarAvisoSinGuardar(sucio);
   const [guardando, startTransition] = useTransition();
   // Modal de "Añadir ejercicio": guarda dónde se insertaría
   const [añadirA, setAñadirA] = useState<{

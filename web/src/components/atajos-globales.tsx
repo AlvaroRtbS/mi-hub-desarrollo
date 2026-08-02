@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Keyboard, X } from "lucide-react";
+import { puedeNavegarFuera } from "@/lib/usar-aviso-sin-guardar";
 
 /**
  * Atajos de teclado globales del panel del coach.
@@ -67,6 +68,8 @@ export function AtajosGlobales() {
       if (e.metaKey || e.ctrlKey) {
         const navegar = (path: string) => {
           e.preventDefault();
+          // Si hay un editor con cambios sin guardar, pregunta antes de irse.
+          if (!puedeNavegarFuera()) return;
           router.push(path);
         };
         switch (e.key.toLowerCase()) {
@@ -89,15 +92,17 @@ export function AtajosGlobales() {
       // Modo "leader" G + tecla (estilo Gmail/Linear)
       if (leaderActivo) {
         const k = e.key.toLowerCase();
+        const irA = (path: string) => {
+          e.preventDefault();
+          if (!puedeNavegarFuera()) return;
+          router.push(path);
+        };
         if (k === "n") {
-          e.preventDefault();
-          router.push("/clientas/nueva");
+          irA("/clientas/nueva");
         } else if (k === "e") {
-          e.preventDefault();
-          router.push("/ejercicios/nuevo");
+          irA("/ejercicios/nuevo");
         } else if (k === "p") {
-          e.preventDefault();
-          router.push("/programas/nuevo");
+          irA("/programas/nuevo");
         }
         resetLeader();
         return;

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { usarAvisoSinGuardar } from "@/lib/usar-aviso-sin-guardar";
 import {
   DndContext,
   KeyboardSensor,
@@ -137,6 +138,8 @@ export function EditorPrograma({
   const [progPeso, setProgPeso] = useState(0);
   const [diaIdx, setDiaIdx] = useState(0);
   const [sucio, setSucio] = useState(false);
+  // Un mesociclo son 40 minutos de trabajo en memoria: avisar antes de salir.
+  usarAvisoSinGuardar(sucio);
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [guardando, startTransition] = useTransition();
   const [selectorAbierto, setSelectorAbierto] = useState<null | { bloqueId: string }>(null);
