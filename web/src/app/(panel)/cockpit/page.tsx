@@ -230,8 +230,11 @@ export default async function CockpitPage() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
           Últimos jobs
         </h2>
-        <div className="mt-3 rounded-xl border border-neutral-800 overflow-hidden">
-          <table className="w-full text-sm">
+        {/* overflow-x-auto: la fila hora+tipo+estado no cabe en móvil y con
+            "hidden" se perdía el estado del job, que es justo lo que vienes a
+            mirar cuando algo ha fallado. */}
+        <div className="mt-3 rounded-xl border border-neutral-800 overflow-x-auto">
+          <table className="w-full min-w-[28rem] text-sm">
             <tbody className="divide-y divide-neutral-800/70">
               {(jobs as Job[] | null)?.map((j) => (
                 <tr key={j.id}>

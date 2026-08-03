@@ -196,8 +196,10 @@ export default async function NegocioPage() {
         {proximos.length === 0 ? (
           <p className="mt-3 text-sm text-neutral-500">Nada previsto en 30 días.</p>
         ) : (
-          <div className="mt-3 rounded-xl border border-neutral-800 overflow-hidden">
-            <table className="w-full text-sm">
+          // overflow-x-auto: en móvil la fila fecha+clienta+importe no cabe y
+          // con "hidden" se perdía el importe por la derecha.
+          <div className="mt-3 rounded-xl border border-neutral-800 overflow-x-auto">
+            <table className="w-full min-w-[26rem] text-sm">
               <tbody className="divide-y divide-neutral-800/70">
                 {proximos.map((p, i) => (
                   <tr key={i} className={p.fecha < hoyIso ? "bg-red-950/20" : ""}>

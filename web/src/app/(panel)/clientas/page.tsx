@@ -129,14 +129,16 @@ export default async function ClientasPage({
 
   return (
     <div className="p-4 pt-16 md:p-8 mx-auto max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
+      {/* flex-wrap: en móvil los cuatro botones no caben junto al título y se
+          salían de la pantalla. Ahora bajan a su propia línea. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Clientas</h1>
           <p className="text-sm text-neutral-400 mt-1">
             Gestiona tu lista de clientas, ve su estado y accede a sus perfiles.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Boton variante="secundario" href="/clientas/comparativa">
             📊 Comparativa
           </Boton>

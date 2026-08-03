@@ -77,8 +77,12 @@ export default async function AdherenciaPage() {
         </div>
       )}
 
-      <div className="mt-6 rounded-xl border border-neutral-800 overflow-hidden">
-        <table className="w-full text-sm">
+      {/* overflow-x-auto y no overflow-hidden: con 5 columnas de ancho fijo la
+          tabla no cabe en un móvil, y "hidden" recortaba las columnas de 30 y
+          90 días sin dejar forma de verlas. min-w fuerza el scroll en vez de
+          apelotonar el texto. */}
+      <div className="mt-6 rounded-xl border border-neutral-800 overflow-x-auto">
+        <table className="w-full min-w-[38rem] text-sm">
           <thead>
             <tr className="bg-neutral-900/60 text-left text-xs uppercase tracking-wide text-neutral-500">
               <th className="px-4 py-2.5 font-medium">Clienta</th>

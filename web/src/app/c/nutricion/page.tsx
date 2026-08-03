@@ -115,11 +115,14 @@ export default async function NutricionClientaPage() {
         Tu plan de alimentación y tu lista de la compra.
       </p>
 
+      {/* No prometemos un plan que quizá no venga: hay clientas que solo
+          contratan la parte de entrenamiento. Se dice lo que hay, sin dar por
+          hecho lo que falta. */}
       {sinNada && (
         <EmptyState
           icono="🥗"
-          titulo="Sin plan de nutrición todavía"
-          descripcion="Tu entrenador aún no te ha asignado un plan. Cuando lo haga, aparecerá aquí."
+          titulo="Todavía no hay nada aquí"
+          descripcion="Cuando tu entrenador te prepare un plan de alimentación, lo verás en esta pantalla."
         />
       )}
 

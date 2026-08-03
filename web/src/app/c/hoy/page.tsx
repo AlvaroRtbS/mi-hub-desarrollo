@@ -152,22 +152,71 @@ export default async function HoyPage() {
   const xp = calcularXpTotal(logros.map((l) => l.tipo));
   const nivel = calcularNivel(xp);
 
-  // Sin programa
+  // Sin programa de entreno.
+  //
+  // Ojo con lo que se le dice aquí: hay clientas que SOLO contratan nutrición
+  // (Pedrona, por ejemplo) y entrenan por su cuenta. A ellas, un "tu entrenador
+  // aún no te ha asignado un programa, pronto lo tendrás" les promete algo que
+  // no va a llegar nunca y les hace sentir que su portal está a medias. Así que
+  // primero se mira si tiene plan de nutrición y se le enseña lo que SÍ tiene.
   if (!asign) {
+    const { count: tienePlanNutricion } = await supabase
+      .from("nutricion_planes_estructurados")
+      .select("id", { count: "exact", head: true })
+      .eq("clienta_id", clienta.id)
+      .eq("activo", true);
+    const { count: tienePlanDocumento } = await supabase
+      .from("nutricion_planes")
+      .select("id", { count: "exact", head: true })
+      .eq("clienta_id", clienta.id);
+    const soloNutricion = (tienePlanNutricion ?? 0) + (tienePlanDocumento ?? 0) > 0;
+
     return (
       <div>
         <h1 className="text-2xl font-semibold mb-1">¡Hola, {clienta.nombre}!</h1>
         <p className="text-sm text-neutral-400 mb-6">
-          Tu entrenador aún no te ha asignado un programa.
+          {soloNutricion
+            ? "Aquí tienes tu plan y tu seguimiento."
+            : "Tu entrenador está preparando tu plan."}
         </p>
         {formularioPendiente && onboardingAsigId && (
           <div className="mb-6">
             <AvisoFormularioInicial href={`/c/formularios/${onboardingAsigId}`} />
           </div>
         )}
-        <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
-          Cuando te asigne uno, aparecerá aquí con tu entreno del día.
-        </div>
+        {soloNutricion ? (
+          <div className="space-y-3">
+            <Link
+              href="/c/nutricion"
+              className="flex items-center justify-between border border-neutral-800 rounded-2xl p-4 bg-neutral-950 hover:border-neutral-700 transition"
+            >
+              <div>
+                <div className="font-medium">🥗 Mi plan de alimentación</div>
+                <div className="text-xs text-neutral-500 mt-0.5">
+                  Tus tomas del día, los intercambios y la lista de la compra
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-neutral-600" />
+            </Link>
+            <Link
+              href="/c/metricas"
+              className="flex items-center justify-between border border-neutral-800 rounded-2xl p-4 bg-neutral-950 hover:border-neutral-700 transition"
+            >
+              <div>
+                <div className="font-medium">📈 Mi progreso</div>
+                <div className="text-xs text-neutral-500 mt-0.5">
+                  Apunta tu peso, tus medidas y tus pasos
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-neutral-600" />
+            </Link>
+          </div>
+        ) : (
+          <div className="border border-dashed border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-500">
+            En cuanto lo tenga listo, lo verás aquí. Mientras tanto puedes ir
+            rellenando lo que te haya pedido.
+          </div>
+        )}
       </div>
     );
   }
