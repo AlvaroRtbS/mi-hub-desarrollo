@@ -11,9 +11,7 @@ export const metadata: Metadata = {
 // ANTES de crear la cuenta, desde el enlace de invitación. El art. 13 del RGPD
 // exige informar "en el momento de la recogida", no después.
 //
-// ⚠️ PENDIENTE DE ÁLVARO antes de enviar invitaciones: NIF y domicilio fiscal
-// (marcados abajo como [PENDIENTE]). Sin eso, el responsable no está
-// identificado y la información queda incompleta.
+// Datos del responsable facilitados por Álvaro el 2-ago-2026.
 
 const ACTUALIZADO = "2 de agosto de 2026";
 
@@ -57,8 +55,8 @@ export default function PrivacidadPortalPage() {
         <Seccion titulo="Quién es responsable de tus datos">
           <p>
             Álvaro Arisqueta Alonso, entrenador personal online (Álvaro RTBS).
-            NIF <strong>[PENDIENTE]</strong>, con domicilio en{" "}
-            <strong>[PENDIENTE]</strong>.
+            NIF <strong>72075753D</strong>, con domicilio en{" "}
+            <strong>c/ Marià Canals, 24 · 07005 Palma de Mallorca</strong>.
           </p>
           <p>
             Para cualquier cosa relacionada con tus datos, incluido pedir una
