@@ -39,6 +39,8 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/reset-password") || // fijar nueva contraseña
     path.startsWith("/p/") || // programa compartido por link público
     path.startsWith("/i/") || // invitación de clienta (acepta sin login)
+    path.startsWith("/legal/") || // privacidad: el RGPD obliga a informar ANTES
+    // de crear la cuenta, así que no puede exigir sesión
     path.startsWith("/api/whatsapp/") || // webhook entrante
     path.startsWith("/api/pasos/") || // ingesta de pasos (atajo iPhone, token propio)
     path.startsWith("/api/consentimientos/") || // firma de contrato (Google Form, secreto propio)

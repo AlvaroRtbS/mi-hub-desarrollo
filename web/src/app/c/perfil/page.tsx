@@ -46,6 +46,22 @@ export default async function PerfilClientaPage() {
         </span>
         <span className="text-neutral-600">→</span>
       </Link>
+
+      {/* La clienta tiene que poder consultar en cualquier momento qué datos
+          suyos hay y qué puede pedir. Aquí es donde lo buscaría. */}
+      <Link
+        href="/legal/privacidad"
+        className="mt-3 flex items-center gap-3 border border-neutral-800 rounded-2xl p-4 hover:bg-neutral-900/50 transition"
+      >
+        <span className="text-2xl">🔒</span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-medium">Privacidad y tus datos</span>
+          <span className="block text-xs text-neutral-500">
+            Qué guardamos, cuánto tiempo y cómo pedir una copia o el borrado.
+          </span>
+        </span>
+        <span className="text-neutral-600">→</span>
+      </Link>
     </div>
   );
 }

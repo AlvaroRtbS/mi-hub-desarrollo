@@ -182,6 +182,24 @@ export function AceptarInvitacion({
       >
         {enviando ? "Activando cuenta..." : "Crear cuenta y entrar"}
       </button>
+
+      {/* El art. 13 del RGPD obliga a informar EN EL MOMENTO de la recogida,
+          no después: por eso el enlace va aquí, antes de crear la cuenta, y
+          la página es pública (no exige sesión). */}
+      <p className="text-[11px] leading-relaxed text-neutral-500">
+        Al crear tu cuenta aceptas que tratemos tus datos para preparar y seguir
+        tu plan, como se explica en{" "}
+        <a
+          href="/legal/privacidad"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-neutral-300"
+        >
+          la información de privacidad
+        </a>
+        . Los datos de salud y las fotos se piden aparte y son cosa tuya:
+        puedes decir que no y seguir usando el portal.
+      </p>
     </form>
   );
 }
