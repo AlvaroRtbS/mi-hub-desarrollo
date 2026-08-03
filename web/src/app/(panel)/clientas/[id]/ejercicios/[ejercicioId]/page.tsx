@@ -148,7 +148,7 @@ export default async function HistoricoEjercicioPage({
   }
 
   return (
-    <div className="p-8 mx-auto max-w-5xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-5xl">
       <Link
         href={`/clientas/${clientaId}?tab=actividad`}
         className="text-sm text-neutral-400 hover:text-neutral-200"

@@ -31,7 +31,7 @@ export default async function AdherenciaPage() {
 
   if (clientas === null) {
     return (
-      <div className="p-8 mx-auto max-w-4xl">
+      <div className="p-4 pt-16 md:p-8 mx-auto max-w-4xl">
         <h1 className="text-2xl font-semibold">Adherencia</h1>
         <div className="mt-6 rounded-xl border border-amber-900/50 bg-amber-950/30 p-5 text-sm text-amber-200">
           No se pudo consultar Trainer Studio. Si es la primera vez que ves esto,
@@ -47,7 +47,7 @@ export default async function AdherenciaPage() {
   clientas.forEach((c) => resumen[semaforoDe(c.adherencia30d)]++);
 
   return (
-    <div className="p-8 mx-auto max-w-4xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-4xl">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-semibold">Adherencia</h1>

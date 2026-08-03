@@ -108,7 +108,7 @@ export default async function NegocioPage() {
   );
 
   return (
-    <div className="p-8 mx-auto max-w-5xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-5xl">
       <AutoRefresh />
       <div className="flex items-baseline justify-between flex-wrap gap-2">
         <div>

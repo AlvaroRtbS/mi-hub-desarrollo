@@ -43,7 +43,7 @@ export default async function MensajesPage() {
 
   if (clientas.length === 0) {
     return (
-      <div className="p-8 mx-auto max-w-3xl">
+      <div className="p-4 pt-16 md:p-8 mx-auto max-w-3xl">
         <h1 className="text-2xl font-semibold mb-1">Mensajes</h1>
         <p className="text-sm text-neutral-400 mb-6">
           Chat directo con tus clientas.
@@ -110,7 +110,7 @@ export default async function MensajesPage() {
     });
 
   return (
-    <div className="p-8 mx-auto max-w-5xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-5xl">
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold mb-1">Mensajes</h1>

@@ -2,7 +2,7 @@ import { Skeleton, SkeletonTexto } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 pt-16 md:p-8 max-w-5xl">
       <Skeleton className="h-3 w-16 mb-4" />
       {/* Cabecera */}
       <div className="flex items-start gap-4 mb-6">

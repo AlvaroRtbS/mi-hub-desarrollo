@@ -23,7 +23,7 @@ export default async function AjustesPage() {
 
   if (!coach) {
     return (
-      <div className="p-8 mx-auto max-w-3xl">
+      <div className="p-4 pt-16 md:p-8 mx-auto max-w-3xl">
         <p className="text-red-400">
           No se encontró tu perfil de coach. ¿Has terminado el registro?
         </p>
@@ -32,7 +32,7 @@ export default async function AjustesPage() {
   }
 
   return (
-    <div className="p-8 mx-auto max-w-3xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-3xl">
       <h1 className="text-2xl font-semibold mb-1">Ajustes</h1>
       <p className="text-sm text-neutral-500 mb-6">
         Personaliza tu perfil y la marca con la que te ven tus clientas.

@@ -93,7 +93,7 @@ export default async function PagosPage() {
   ];
 
   return (
-    <div className="p-8 mx-auto max-w-6xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-6xl">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Pagos</h1>
         <p className="text-sm text-neutral-400 mt-1">

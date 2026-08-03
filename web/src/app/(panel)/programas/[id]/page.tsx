@@ -55,7 +55,7 @@ export default async function ProgramaPage({
     .order("nombre");
 
   return (
-    <div className="p-8 mx-auto max-w-7xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-7xl">
       <Link
         href="/programas"
         className="text-sm text-neutral-400 hover:text-neutral-200"

@@ -40,7 +40,7 @@ export default async function EditarEjercicioPage({
   const videoUrl = await obtenerUrlFirmada("ejercicios-videos", ejercicio.video_url, 3600);
 
   return (
-    <div className="p-8 mx-auto max-w-5xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-5xl">
       <Link href="/ejercicios" className="text-sm text-neutral-400 hover:text-neutral-200">
         ← Volver
       </Link>

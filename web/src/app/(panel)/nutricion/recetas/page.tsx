@@ -24,7 +24,7 @@ export default async function RecetasCoachPage() {
   const recetas = data ?? [];
 
   return (
-    <div className="p-8 mx-auto max-w-4xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-4xl">
       <Link
         href="/nutricion"
         className="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-neutral-200 mb-3"

@@ -122,7 +122,7 @@ export default async function EjerciciosClientaPage({
   );
 
   return (
-    <div className="p-8 mx-auto max-w-4xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-4xl">
       <Link
         href={`/clientas/${clientaId}`}
         className="text-sm text-neutral-400 hover:text-neutral-200"

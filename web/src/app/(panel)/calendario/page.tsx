@@ -139,7 +139,7 @@ export default async function CalendarioPage({
       : sumarDias(fechaActual, vista === "semana" ? 7 : 1);
 
   return (
-    <div className="p-8 mx-auto max-w-7xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-7xl">
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold">Calendario</h1>

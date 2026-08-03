@@ -16,7 +16,7 @@ export default async function NuevaListaPage() {
     .order("nombre");
 
   return (
-    <div className="p-8 mx-auto max-w-3xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-3xl">
       <h1 className="text-2xl font-semibold mb-1">Nueva lista de la compra</h1>
       <p className="text-sm text-neutral-400 mb-6">
         Una línea por producto. La clienta podrá marcar lo que ya tiene.

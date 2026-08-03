@@ -42,7 +42,7 @@ export default async function FormularioClientaCoachPage({
   }
 
   return (
-    <div className="p-8 mx-auto max-w-2xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-2xl">
       <Link
         href={`/clientas/${clientaId}`}
         className="text-sm text-neutral-400 hover:text-neutral-200"

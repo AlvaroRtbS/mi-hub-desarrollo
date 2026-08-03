@@ -18,7 +18,7 @@ export default async function NuevoEjercicioPage() {
   if (!coach) redirect("/login");
 
   return (
-    <div className="p-8 mx-auto max-w-3xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-3xl">
       <h1 className="text-2xl font-semibold mb-1">Nuevo ejercicio</h1>
       <p className="text-sm text-neutral-400 mb-6">
         Crea un ejercicio para tu biblioteca personal.

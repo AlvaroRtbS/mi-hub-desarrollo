@@ -60,7 +60,7 @@ export default async function FotosPage({
   }));
 
   return (
-    <div className="p-8 mx-auto max-w-5xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-5xl">
       <Link
         href={`/clientas/${id}`}
         className="text-sm text-neutral-400 hover:text-neutral-200"

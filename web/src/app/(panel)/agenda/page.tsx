@@ -15,7 +15,7 @@ export default async function AgendaPage() {
     .returns<TareaCoach[]>();
 
   return (
-    <div className="p-8 mx-auto max-w-3xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Agenda</h1>
         <p className="text-sm text-neutral-400 mt-1">

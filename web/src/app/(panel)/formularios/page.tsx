@@ -32,7 +32,7 @@ export default async function FormulariosCoachPage() {
   const lista = formularios ?? [];
 
   return (
-    <div className="p-8 mx-auto max-w-3xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-3xl">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-semibold">Formularios</h1>
         <NuevoFormularioBtn />

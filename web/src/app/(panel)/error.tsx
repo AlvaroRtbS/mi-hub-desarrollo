@@ -16,7 +16,7 @@ export default function PanelError({
   }, [error]);
 
   return (
-    <div className="p-8 max-w-md mx-auto">
+    <div className="p-4 pt-16 md:p-8 max-w-md mx-auto">
       <div className="border border-red-900/50 bg-red-950/30 rounded-2xl p-6 text-center">
         <div className="text-3xl mb-3">⚠️</div>
         <h2 className="text-lg font-semibold mb-2">Algo no salió bien</h2>

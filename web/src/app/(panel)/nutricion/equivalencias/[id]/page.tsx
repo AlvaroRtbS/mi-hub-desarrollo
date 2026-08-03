@@ -41,7 +41,7 @@ export default async function EditarPlanEquivalenciasPage({
     .returns<{ id: string; nombre: string; apellidos: string | null }[]>();
 
   return (
-    <div className="p-8 mx-auto max-w-5xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-5xl">
       <Link
         href="/nutricion"
         className="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-neutral-200 mb-3"

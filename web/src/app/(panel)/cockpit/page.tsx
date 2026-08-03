@@ -79,7 +79,7 @@ export default async function CockpitPage() {
   const avisos = items.filter((i) => i.severidad !== "crit");
 
   return (
-    <div className="p-8 mx-auto max-w-5xl">
+    <div className="p-4 pt-16 md:p-8 mx-auto max-w-5xl">
       <AutoRefresh />
 
       <div className="flex items-baseline justify-between flex-wrap gap-2">
